@@ -17,5 +17,6 @@
     "DELETE /api/notes/:id"
   ],
   "originalApiUrl": "https://kolzruwueiachnjjkcya.supabase.co/rest/v1/notes",
+  "publishableKey": "sb_publishable_3D_1RN4Dd6nO8BeqsEgpLQ_6zwwEInV",
   "restoreRoute": null
 }

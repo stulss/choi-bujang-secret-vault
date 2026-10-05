@@ -38,5 +38,8 @@ export function deploymentIdentity(env, config) {
   if (config.step >= 5 && typeof config.originalApiUrl === 'string') {
     identity.originalApiUrl = config.originalApiUrl;
   }
+  if (config.publishableKey) {
+    identity.publishableKey = config.publishableKey;
+  }
   return identity;
 }

@@ -42,11 +42,13 @@ export default async function handler(request, response) {
     verified = await verifier(authHeader);
   } catch (err) {
     console.log('[NOTES_API]', method, request.url, 'AUTH_ERROR:', err.message, 'authHeaderPresent:', !!authHeader);
+    response.setHeader('WWW-Authenticate', 'Bearer');
     return response.status(401).json({ error: 'UNAUTHORIZED' });
   }
 
   if (!verified || !verified.userId) {
     console.log('[NOTES_API]', method, request.url, 'UNAUTHORIZED (no userId)', 'authHeaderPresent:', !!authHeader);
+    response.setHeader('WWW-Authenticate', 'Bearer');
     return response.status(401).json({ error: 'UNAUTHORIZED' });
   }
 
