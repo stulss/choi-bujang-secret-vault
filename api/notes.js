@@ -87,6 +87,7 @@ export default async function handler(request, response) {
         return response.status(200).json({
           id: data.id,
           title: data.title,
+          content: data.content ?? data.body ?? '',
           body: data.body ?? data.content ?? '',
         });
       }
@@ -105,6 +106,7 @@ export default async function handler(request, response) {
       const list = (data ?? []).map(row => ({
         id: row.id,
         title: row.title,
+        content: row.content ?? row.body ?? '',
         body: row.body ?? row.content ?? '',
       }));
 
@@ -136,6 +138,7 @@ export default async function handler(request, response) {
       return response.status(201).json({
         id,
         title,
+        content: bodyText,
         body: bodyText,
       });
     }
@@ -194,6 +197,7 @@ export default async function handler(request, response) {
       return response.status(200).json({
         id: data.id,
         title: data.title,
+        content: data.content ?? data.body ?? '',
         body: data.body ?? data.content ?? '',
       });
     }
