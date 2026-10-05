@@ -40,13 +40,17 @@ export default async function handler(request, response) {
   try {
     const verifier = await getVerifier();
     verified = await verifier(authHeader);
-  } catch {
+  } catch (err) {
+    console.log('[NOTES_API]', method, request.url, 'AUTH_ERROR:', err.message, 'authHeaderPresent:', !!authHeader);
     return response.status(401).json({ error: 'UNAUTHORIZED' });
   }
 
   if (!verified || !verified.userId) {
+    console.log('[NOTES_API]', method, request.url, 'UNAUTHORIZED (no userId)', 'authHeaderPresent:', !!authHeader);
     return response.status(401).json({ error: 'UNAUTHORIZED' });
   }
+
+  console.log('[NOTES_API]', method, request.url, 'VERIFIED_USER:', verified.userId);
 
   const supabase = createClient(supabaseUrl, supabaseSecretKey, {
     auth: {
