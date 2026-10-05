@@ -72,6 +72,18 @@
 - **원본 API 경로 설정**: `aleph.config.json`에 쿼리 없는 원본 자료 HTTPS 경로(`originalApiUrl: https://kolzruwueiachnjjkcya.supabase.co/rest/v1/notes`)를 등록했습니다. 심판의 직접 요청 시 HTTP 401(권한 거부)로 차단됨을 확인했습니다.
 - **기존 인가 및 정상 동작 보존**: 서버 함수 내부에서는 서버 전용 키를 사용해 인증된 본인 메모의 CRUD 정상 동작과 소유자 인가를 완벽히 유지했습니다.
 
+### 5단계 점검 항목 및 검증 절차
+1. **브라우저의 서버 함수 단일 창구 호출 검증**:
+   - 화면 소스코드(`public/index.html`, `public/app.js` 등)에서 Supabase PostgREST(`rest/v1`)를 직접 호출하는 코드가 일체 없으며, 메모 요청은 동일 호스트의 `/api/notes`로만 전달됨을 확인했습니다.
+   - 브라우저 JS 번들 및 정적 파일에 서버 전용 키(`service_role`, `sb_secret_`, 개인키)가 포함되지 않음을 확인했습니다.
+2. **A 정상 · B 거부 · 무로그인 확인 절차**:
+   - **무로그인 거절**: 인증 헤더 없이 `GET /api/notes` 호출 시 HTTP 401 Unauthorized가 반환되며 자료가 유출되지 않음을 확인했습니다.
+   - **A 계정 정상 동작**: A 사용자로 로그인한 후 메모 조회(GET), 추가(POST), 수정(PUT), 삭제(DELETE)가 정상 수행됨을 확인했습니다.
+   - **B 계정 접근 격리**: B 사용자로 로그인한 후 A 사용자의 메모 ID로 직접 조회/수정/삭제를 시도할 경우 HTTP 404(`NOTE_NOT_FOUND`)로 거부되어 엄격한 소유자 인가가 유지됨을 확인했습니다.
+3. **원본 자료 주소 직접 접근 차단 검증**:
+   - 공개 키(`anon` 키) 및 임의 인증 헤더를 붙여 원본 자료 주소(`originalApiUrl: https://kolzruwueiachnjjkcya.supabase.co/rest/v1/notes`)로 직접 `GET`, `POST`, `PATCH`, `DELETE` 요청을 보냈을 때 `401 Unauthorized` 또는 `403 Forbidden` (`permission denied for table notes`)이 반환되며 가상 메모 데이터가 일체 반환되지 않음을 확인했습니다.
+
+
 ## 다음 단계의 코딩 도구에 전달할 규칙
 
 [AGENTS.md](AGENTS.md)를 먼저 읽히고 한 번에 한 제작 단위만 요청하세요. 2단계부터는 자료 보호를 구현할 때 `public/data.json`을 복사하는 1단계 빌드 흐름도 함께 바꿔야 합니다. 3단계 이후의 로그인, 허용 경로, 5단계의 원본 API 주소, 6단계 이후 정책 규칙은 해당 단계 원고와 계약에 맞춰 추가합니다. 비밀번호·토큰·서버 전용 키·실제 학생 기록을 코드, Git, 제출 묶음에 넣지 않습니다.
