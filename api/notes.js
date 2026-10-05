@@ -28,6 +28,12 @@ export default async function handler(request, response) {
     return response.status(500).json({ error: 'SERVER_CONFIGURATION_ERROR' });
   }
 
+  const method = (request.method || 'GET').toUpperCase();
+  if (method === 'OPTIONS') {
+    response.setHeader('Allow', 'GET, POST, PUT, DELETE, OPTIONS');
+    return response.status(204).end();
+  }
+
   // 1. Token Verification via src/verify-login.mjs
   const authHeader = request.headers['authorization'] || request.headers['Authorization'];
   let verified = null;
@@ -57,7 +63,6 @@ export default async function handler(request, response) {
   const isIdInPath = lastPart !== 'notes' && lastPart !== 'api' && lastPart !== '';
   const noteId = request.query?.id || (isIdInPath ? lastPart : null);
 
-  const method = (request.method || 'GET').toUpperCase();
 
   try {
     if (method === 'GET') {

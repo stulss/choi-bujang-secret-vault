@@ -82,6 +82,28 @@
    - **B 계정 접근 격리**: B 사용자로 로그인한 후 A 사용자의 메모 ID로 직접 조회/수정/삭제를 시도할 경우 HTTP 404(`NOTE_NOT_FOUND`)로 거부되어 엄격한 소유자 인가가 유지됨을 확인했습니다.
 3. **원본 자료 주소 직접 접근 차단 검증**:
    - 공개 키(`anon` 키) 및 임의 인증 헤더를 붙여 원본 자료 주소(`originalApiUrl: https://kolzruwueiachnjjkcya.supabase.co/rest/v1/notes`)로 직접 `GET`, `POST`, `PATCH`, `DELETE` 요청을 보냈을 때 `401 Unauthorized` 또는 `403 Forbidden` (`permission denied for table notes`)이 반환되며 가상 메모 데이터가 일체 반환되지 않음을 확인했습니다.
+4. **학습용 메모 테이블 권한 회수 SQL 및 적용 전후 확인 방법 (BUILD 2)**:
+   - **권한 회수 SQL**:
+     ```sql
+     REVOKE ALL ON TABLE public.notes FROM PUBLIC, anon, authenticated;
+     ALTER TABLE public.notes ENABLE ROW LEVEL SECURITY;
+     ```
+   - **확인 방법 1: `information_schema.role_table_grants`**:
+     ```sql
+     SELECT grantee, table_schema, table_name, privilege_type
+     FROM information_schema.role_table_grants
+     WHERE table_schema = 'public' AND table_name = 'notes';
+     ```
+     - 결과: `anon` 및 `authenticated` 역할에 대한 권한 행이 일체 조회되지 않음(권한 회수 확인).
+   - **확인 방법 2: `has_table_privilege` 함수**:
+     ```sql
+     SELECT
+       has_table_privilege('anon', 'public.notes', 'select') AS anon_select,
+       has_table_privilege('anon', 'public.notes', 'insert') AS anon_insert,
+       has_table_privilege('authenticated', 'public.notes', 'select') AS auth_select,
+       has_table_privilege('authenticated', 'public.notes', 'insert') AS auth_insert;
+     ```
+     - 결과: `anon_select`, `anon_insert`, `auth_select`, `auth_insert` 모두 `false`로 반환되어 직접 접근 차단 확인.
 
 
 ## 다음 단계의 코딩 도구에 전달할 규칙

@@ -237,6 +237,23 @@ export async function runAttackChecks(config) {
     }
 
     try {
+      const singleRes = await fetch(new URL('/api/notes/00000000-0000-4000-8000-000000000001', app), {
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      checks.push({
+        attackId: 'unauthenticated_single_note_blocked',
+        expected: '비로그인 단건 메모 접근 시 거부됨 (HTTP 401)',
+        observed: singleRes.status === 401 ? '비로그인 단건 메모 접근 차단 확인 (HTTP 401)' : `비로그인 단건 접근 차단 미확인 (HTTP ${singleRes.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'unauthenticated_single_note_blocked',
+        expected: '비로그인 단건 메모 접근 시 거부됨 (HTTP 401)',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+
+    try {
       const origRes = await fetch(config.originalApiUrl, {
         redirect: 'error', signal: AbortSignal.timeout(10000),
       });

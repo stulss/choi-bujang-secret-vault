@@ -8,6 +8,7 @@ const output = resolve(root, 'public', 'data.json');
 const config = JSON.parse(await readFile(resolve(root, 'aleph.config.json'), 'utf8'));
 await mkdir(resolve(root, 'public'), { recursive: true });
 await copyFile(source, output);
+await copyFile(resolve(root, 'aleph.config.json'), resolve(root, 'public', 'aleph.config.json'));
 
 if (config.step === 1) {
   const data = JSON.parse(await readFile(source, 'utf8'));
