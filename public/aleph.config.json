@@ -7,7 +7,8 @@
   "identityProvider": {
     "issuer": "https://kolzruwueiachnjjkcya.supabase.co/auth/v1",
     "jwksUrl": "https://kolzruwueiachnjjkcya.supabase.co/auth/v1/.well-known/jwks.json",
-    "audience": "authenticated"
+    "audience": "authenticated",
+    "anonKey": "sb_publishable_3D_1RN4Dd6nO8BeqsEgpLQ_6zwwEInV"
   },
   "allowedRoutes": [
     "GET /api/notes",
@@ -17,6 +18,7 @@
     "DELETE /api/notes/:id"
   ],
   "originalApiUrl": "https://kolzruwueiachnjjkcya.supabase.co/rest/v1/notes",
+  "anonKey": "sb_publishable_3D_1RN4Dd6nO8BeqsEgpLQ_6zwwEInV",
   "publishableKey": "sb_publishable_3D_1RN4Dd6nO8BeqsEgpLQ_6zwwEInV",
   "restoreRoute": null
 }
