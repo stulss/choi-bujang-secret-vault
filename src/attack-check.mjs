@@ -130,5 +130,68 @@ export async function runAttackChecks(config) {
     return checks;
   }
 
+  if (config.step === 4) {
+    const checks = [];
+    try {
+      const dataRes = await fetch(new URL('/data.json', app), {
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      let notesEmpty = false;
+      if (dataRes.ok) {
+        try {
+          const data = await dataRes.json();
+          notesEmpty = Array.isArray(data.notes) && data.notes.length === 0 && !data.sampleMarker;
+        } catch {}
+      }
+      checks.push({
+        attackId: 'data_json_notes_cleared',
+        expected: '공개 data.json에서 가상 메모 문장과 확인 표시가 제거되고 비어 있음',
+        observed: notesEmpty ? '정적 data.json에 메모 본문 및 확인 표시가 제거되어 있음 확인' : `정적 data.json 비우기 미확인 (HTTP ${dataRes.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'data_json_notes_cleared',
+        expected: '공개 data.json에서 가상 메모 문장과 확인 표시가 제거되고 비어 있음',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const apiRes = await fetch(new URL('/api/notes', app), {
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      checks.push({
+        attackId: 'unauthenticated_api_blocked',
+        expected: '비로그인 요청에서 /api/notes 접근이 거부됨 (HTTP 401)',
+        observed: apiRes.status === 401 ? '비로그인 요청에서 /api/notes 접근 차단 확인 (HTTP 401)' : `비로그인 접근 차단 미확인 (HTTP ${apiRes.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'unauthenticated_api_blocked',
+        expected: '비로그인 요청에서 /api/notes 접근이 거부됨 (HTTP 401)',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const singleRes = await fetch(new URL('/api/notes/00000000-0000-4000-8000-000000000001', app), {
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      checks.push({
+        attackId: 'unauthenticated_single_note_blocked',
+        expected: '비로그인 단건 메모 접근 시 거부됨 (HTTP 401)',
+        observed: singleRes.status === 401 ? '비로그인 단건 메모 접근 차단 확인 (HTTP 401)' : `비로그인 단건 접근 차단 미확인 (HTTP ${singleRes.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'unauthenticated_single_note_blocked',
+        expected: '비로그인 단건 메모 접근 시 거부됨 (HTTP 401)',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+
+    return checks;
+  }
+
   throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
 }
