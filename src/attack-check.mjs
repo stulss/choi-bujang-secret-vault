@@ -151,7 +151,7 @@ export async function runAttackChecks(config) {
     } catch (err) {
       checks.push({
         attackId: 'data_json_notes_cleared',
-        expected: '공개 data.json에서 가상 메모 문장과 확인 표시가 제거되고 비어 있음',
+        expected: '공개 data.json에서 가상 메모 문장이 제거되고 비어 있음',
         observed: `요청 실패 (${err.message})`,
       });
     }
@@ -186,6 +186,69 @@ export async function runAttackChecks(config) {
       checks.push({
         attackId: 'unauthenticated_single_note_blocked',
         expected: '비로그인 단건 메모 접근 시 거부됨 (HTTP 401)',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+
+    return checks;
+  }
+
+  if (config.step === 5) {
+    const checks = [];
+    try {
+      const dataRes = await fetch(new URL('/data.json', app), {
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      let notesEmpty = false;
+      if (dataRes.ok) {
+        try {
+          const data = await dataRes.json();
+          notesEmpty = Array.isArray(data.notes) && data.notes.length === 0 && !data.sampleMarker;
+        } catch {}
+      }
+      checks.push({
+        attackId: 'data_json_notes_cleared',
+        expected: '공개 data.json에서 가상 메모 문장과 확인 표시가 제거되고 비어 있음',
+        observed: notesEmpty ? '정적 data.json에 메모 본문 및 확인 표시가 제거되어 있음 확인' : `정적 data.json 비우기 미확인 (HTTP ${dataRes.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'data_json_notes_cleared',
+        expected: '공개 data.json에서 가상 메모 문장이 제거되고 비어 있음',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const apiRes = await fetch(new URL('/api/notes', app), {
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      checks.push({
+        attackId: 'unauthenticated_api_blocked',
+        expected: '비로그인 요청에서 /api/notes 접근이 거부됨 (HTTP 401)',
+        observed: apiRes.status === 401 ? '비로그인 요청에서 /api/notes 접근 차단 확인 (HTTP 401)' : `비로그인 접근 차단 미확인 (HTTP ${apiRes.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'unauthenticated_api_blocked',
+        expected: '비로그인 요청에서 /api/notes 접근이 거부됨 (HTTP 401)',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const origRes = await fetch(config.originalApiUrl, {
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      checks.push({
+        attackId: 'original_api_direct_access_blocked',
+        expected: '원본 자료 API(originalApiUrl) 직접 접근 시 권한 거부됨 (HTTP 401)',
+        observed: origRes.status === 401 ? '원본 자료 API 직접 접근 차단 확인 (HTTP 401)' : `원본 자료 직접 접근 차단 미확인 (HTTP ${origRes.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'original_api_direct_access_blocked',
+        expected: '원본 자료 API(originalApiUrl) 직접 접근 시 권한 거부됨 (HTTP 401)',
         observed: `요청 실패 (${err.message})`,
       });
     }
