@@ -4,7 +4,6 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>BYTE BACK | 내 자료실</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root { color-scheme: dark; font-family: system-ui, -apple-system, sans-serif; }
     body { margin: 0; min-height: 100vh; background: #101a28; color: #ecf4ff; }
@@ -104,15 +103,14 @@
   </main>
 
   <script type="module">
-    const SUPABASE_URL = 'https://kolzruwueiachnjjkcya.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvbHpydXd1ZWlhY2huamprY3lhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxNjYyODYsImV4cCI6MjEwMzc0MjI4Nn0.sur_pCCKVZJ6o2HXTBSRMJ0b2bTFLx6v86nM1emLkyM';
-    const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_3D_1RN4Dd6nO8BeqsEgpLQ_6zwwEInV';
-    const anonKey = SUPABASE_PUBLISHABLE_KEY;
-    const publishableKey = SUPABASE_PUBLISHABLE_KEY;
-    window.anonKey = SUPABASE_ANON_KEY;
-    window.publishableKey = SUPABASE_PUBLISHABLE_KEY;
-
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // 로그인은 서버 함수(/api/auth)가 대신 호출합니다. 화면 코드에는 어떤 키도 두지 않습니다.
+    const SESSION_KEY = 'vault-session';
+    const authCall = (body) => fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      cache: 'no-store'
+    }).then(async (res) => ({ ok: res.ok, data: await res.json().catch(() => ({})) }));
 
     const unauthView = document.getElementById('unauth-view');
     const authView = document.getElementById('auth-view');
@@ -142,12 +140,13 @@
       loginBtn.disabled = true;
       loginBtn.textContent = '로그인 중...';
       try {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) {
-          showError(error.message || '로그인에 실패했습니다.');
+        const { ok, data } = await authCall({ email, password });
+        if (!ok || !data.access_token) {
+          showError(data.message || '로그인에 실패했습니다.');
         } else {
-          currentSession = data.session;
-          onLoginSuccess(data.session.user);
+          currentSession = { access_token: data.access_token, user: data.user };
+          sessionStorage.setItem(SESSION_KEY, JSON.stringify(currentSession));
+          onLoginSuccess(currentSession.user);
         }
       } catch (err) {
         showError(err.message || '로그인 중 오류가 발생했습니다.');
@@ -159,7 +158,7 @@
 
     // Logout action
     logoutBtn.addEventListener('click', async () => {
-      await supabase.auth.signOut();
+      sessionStorage.removeItem(SESSION_KEY);
       currentSession = null;
       onLogoutSuccess();
     });
@@ -327,12 +326,14 @@
       }
     }
 
-    // Initial session check
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      currentSession = session;
-      onLoginSuccess(session.user);
-    }
+    // Initial session check (탭 세션 저장소)
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
+      if (saved?.access_token) {
+        currentSession = saved;
+        onLoginSuccess(saved.user || {});
+      }
+    } catch { sessionStorage.removeItem(SESSION_KEY); }
   </script>
 </body>
 </html>

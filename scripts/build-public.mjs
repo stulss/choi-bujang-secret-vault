@@ -8,7 +8,16 @@ const output = resolve(root, 'public', 'data.json');
 const config = JSON.parse(await readFile(resolve(root, 'aleph.config.json'), 'utf8'));
 await mkdir(resolve(root, 'public'), { recursive: true });
 await copyFile(source, output);
-await copyFile(resolve(root, 'aleph.config.json'), resolve(root, 'public', 'aleph.config.json'));
+{
+  const publicConfig = { ...config };
+  delete publicConfig.anonKey;
+  delete publicConfig.publishableKey;
+  if (publicConfig.identityProvider) {
+    publicConfig.identityProvider = { ...publicConfig.identityProvider };
+    delete publicConfig.identityProvider.anonKey;
+  }
+  await writeFile(resolve(root, 'public', 'aleph.config.json'), `${JSON.stringify(publicConfig, null, 2)}\n`, 'utf8');
+}
 
 if (config.step === 1) {
   const data = JSON.parse(await readFile(source, 'utf8'));
