@@ -1,7 +1,7 @@
 import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { isIP } from 'node:net';
 import { dirname } from 'node:path';
-import { isClearAttack } from './decide.mjs';
+import { decide } from './decide.mjs';
 import { extractAlert } from './read-alerts.mjs';
 
 export const DENY_RULE_ID = 'xdr.brute-force.deny';
@@ -31,18 +31,19 @@ export function alertLine(alert, decision, enforced) {
 }
 
 // 차단 후보를 고릅니다. 정상 사용자를 막지 않도록 세 가지를 다시 확인합니다.
-// 1) 규칙만으로 명확한 공격인가 (Jev 확신도만으로는 막지 않음)
+// 1) 규칙만으로 명확한 공격인가: Jev 없이 decide 를 다시 불러도 block 인가 (Jev 확신도만으로는 막지 않음)
 // 2) 올바른 IP 주소인가
 // 3) 같은 주소에서 정상(record) 이벤트가 나오지 않았는가
-export function planBlocks(alerts, decisions, ttlMs = DENY_TTL_MS) {
+export async function planBlocks(alerts, decisions, ttlMs = DENY_TTL_MS) {
   const normalSources = new Set();
   alerts.forEach((alert, i) => {
     if (decisions[i].action === 'record') normalSources.add(extractAlert(alert).srcip);
   });
   const rules = new Map();
+  const ruleOnly = await Promise.all(alerts.map((alert) => decide(alert)));
   const enforced = alerts.map((alert, i) => {
     const decision = decisions[i];
-    if (decision.action !== 'block' || !isClearAttack(alert)) return false;
+    if (decision.action !== 'block' || ruleOnly[i].action !== 'block') return false;
     const { srcip } = extractAlert(alert);
     if (!isIP(srcip) || normalSources.has(srcip)) return false;
     if (!rules.has(srcip)) rules.set(srcip, makeDenyRule(alert, decision, ttlMs));
@@ -52,7 +53,7 @@ export function planBlocks(alerts, decisions, ttlMs = DENY_TTL_MS) {
 }
 
 export async function writeBlocks({ alerts, decisions, rulesPath, logPath, ttlMs }) {
-  const plan = planBlocks(alerts, decisions, ttlMs);
+  const plan = await planBlocks(alerts, decisions, ttlMs);
   await mkdir(dirname(rulesPath), { recursive: true });
   await writeFile(rulesPath, `${JSON.stringify({ schema: 'aleph.xdr.deny-rules.v1', rules: plan.rules }, null, 2)}\n`, 'utf8');
 

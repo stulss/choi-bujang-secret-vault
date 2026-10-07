@@ -1,13 +1,13 @@
 // patterns.json 과 같은 내용을 담은 내장 패턴입니다. 실행 때 다른 파일을 읽지 않아 격리 실행에서도 같은 결과를 냅니다.
-// (test/xdr-brute-force.test.mjs 가 patterns.json 과 이름·근거가 같은지 확인합니다.)
-export const PATTERNS = Object.freeze([
+// (test/xdr-brute-force.test.mjs 가 reason 이 patterns.json 의 이름인지 확인합니다.) 내보내는 것은 decide 하나입니다.
+const PATTERNS = Object.freeze([
   { id: 'multi-account-same-password', name: '여러 계정 같은 비밀번호 대입', tier: 'clear', baseConfidence: 0.9, test: (e) => e.accounts >= 5 },
   { id: 'same-source-failure-burst', name: '같은 주소 로그인 실패 연속', tier: 'clear', baseConfidence: 0.95, test: (e) => e.failures >= 30 || e.level >= 10 },
   { id: 'failures-below-threshold', name: '기준 미만 로그인 실패', tier: 'suspect', baseConfidence: 0.5, test: (e) => e.failures >= 3 || e.level >= 5 },
 ]);
 
-export const BLOCK_AT = 0.85;
-export const ALERT_AT = 0.5;
+const BLOCK_AT = 0.85;
+const ALERT_AT = 0.5;
 const JEV_TIMEOUT_MS = 3000;
 const LOGIN_CONTEXT = /로그인|비밀번호|계정|login|password|auth/i;
 
@@ -35,11 +35,6 @@ function matchTier(alert, tier) {
   const evidence = evidenceOf(alert);
   if (!evidence.bruteContext) return undefined;
   return PATTERNS.find((pattern) => pattern.tier === tier && pattern.test(evidence));
-}
-
-// 차단 연결이 한 번 더 확인하는 기준: 규칙만으로 명확한 공격인가.
-export function isClearAttack(alert) {
-  return Boolean(matchTier(alert, 'clear'));
 }
 
 function toAction(confidence) {

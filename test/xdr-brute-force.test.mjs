@@ -1,4 +1,4 @@
-﻿import assert from 'node:assert/strict';
+import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 import { decide } from '../xdr/brute-force/decide.mjs';
@@ -36,7 +36,7 @@ test('Jev 무응답은 alert, 높은 확신도는 block, 낮은 확신도는 rec
 });
 
 test('시험 경보를 다시 흘리면 명확한 공격 주소만 막히고 정상 요청은 통과한다', async () => {
-  const { rules, enforced } = planBlocks(alerts, decisions);
+  const { rules, enforced } = await planBlocks(alerts, decisions);
   assert.ok(rules.every((rule) => rule.expiresAt && rule.sourceAlertId));
   const guarded = withBruteForceGuard(async (request) => ({ decision: 'allow', requestId: request.requestId }), rules, () => new Date('2026-09-27T12:00:00+09:00'));
 
@@ -56,9 +56,14 @@ test('시험 경보를 다시 흘리면 명확한 공격 주소만 막히고 정
   assert.equal((await expired({ requestId: 'c' }, { srcip: '203.0.113.10' })).decision, 'allow');
 });
 
-test('내장 패턴이 patterns.json 과 이름이 같고 근거가 한 줄씩 있다', async () => {
-  const { PATTERNS } = await import('../xdr/brute-force/decide.mjs');
+test('decide 하나만 내보내고, reason 은 patterns.json 의 패턴 이름 한 줄이다', async () => {
+  const mod = await import('../xdr/brute-force/decide.mjs');
+  assert.deepEqual(Object.keys(mod), ['decide']);
   const file = JSON.parse(await readFile(new URL('../xdr/brute-force/patterns.json', import.meta.url), 'utf8'));
-  assert.deepEqual(PATTERNS.map((p) => p.name).sort(), file.patterns.map((p) => p.name).sort());
+  const names = file.patterns.map((p) => p.name);
   assert.ok(file.patterns.every((p) => typeof p.evidence === 'string' && p.evidence.length > 0 && !p.evidence.includes('\n')));
+  decisions.forEach((d, i) => {
+    assert.ok(!d.reason.includes('\n'), alerts[i].id);
+    if (d.action !== 'record') assert.ok(names.some((name) => d.reason.startsWith(name)), alerts[i].id);
+  });
 });
