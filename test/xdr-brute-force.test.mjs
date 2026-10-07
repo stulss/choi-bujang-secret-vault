@@ -1,4 +1,4 @@
-import assert from 'node:assert/strict';
+﻿import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 import { decide } from '../xdr/brute-force/decide.mjs';
@@ -54,4 +54,11 @@ test('시험 경보를 다시 흘리면 명확한 공격 주소만 막히고 정
   // 만료 뒤에는 막지 않는다
   const expired = withBruteForceGuard(async () => ({ decision: 'allow' }), rules, () => new Date('2026-09-29T12:00:00+09:00'));
   assert.equal((await expired({ requestId: 'c' }, { srcip: '203.0.113.10' })).decision, 'allow');
+});
+
+test('내장 패턴이 patterns.json 과 이름이 같고 근거가 한 줄씩 있다', async () => {
+  const { PATTERNS } = await import('../xdr/brute-force/decide.mjs');
+  const file = JSON.parse(await readFile(new URL('../xdr/brute-force/patterns.json', import.meta.url), 'utf8'));
+  assert.deepEqual(PATTERNS.map((p) => p.name).sort(), file.patterns.map((p) => p.name).sort());
+  assert.ok(file.patterns.every((p) => typeof p.evidence === 'string' && p.evidence.length > 0 && !p.evidence.includes('\n')));
 });

@@ -1,4 +1,5 @@
 import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { isIP } from 'node:net';
 import { dirname } from 'node:path';
 import { isClearAttack } from './decide.mjs';
 import { extractAlert } from './read-alerts.mjs';
@@ -6,8 +7,6 @@ import { extractAlert } from './read-alerts.mjs';
 export const DENY_RULE_ID = 'xdr.brute-force.deny';
 export const DENY_REASON_CODE = 'brute_force_blocked';
 export const DENY_TTL_MS = 24 * 60 * 60 * 1000;
-
-const IPV4 = /^(?:\d{1,3}\.){3}\d{1,3}$/;
 
 export function makeDenyRule(alert, decision, ttlMs = DENY_TTL_MS) {
   const row = extractAlert(alert);
@@ -33,7 +32,7 @@ export function alertLine(alert, decision, enforced) {
 
 // 차단 후보를 고릅니다. 정상 사용자를 막지 않도록 세 가지를 다시 확인합니다.
 // 1) 규칙만으로 명확한 공격인가 (Jev 확신도만으로는 막지 않음)
-// 2) 올바른 IPv4 주소인가
+// 2) 올바른 IP 주소인가
 // 3) 같은 주소에서 정상(record) 이벤트가 나오지 않았는가
 export function planBlocks(alerts, decisions, ttlMs = DENY_TTL_MS) {
   const normalSources = new Set();
@@ -45,7 +44,7 @@ export function planBlocks(alerts, decisions, ttlMs = DENY_TTL_MS) {
     const decision = decisions[i];
     if (decision.action !== 'block' || !isClearAttack(alert)) return false;
     const { srcip } = extractAlert(alert);
-    if (!IPV4.test(srcip) || normalSources.has(srcip)) return false;
+    if (!isIP(srcip) || normalSources.has(srcip)) return false;
     if (!rules.has(srcip)) rules.set(srcip, makeDenyRule(alert, decision, ttlMs));
     return true;
   });

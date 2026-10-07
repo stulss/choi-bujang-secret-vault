@@ -9,7 +9,7 @@
       "name": "같은 주소 로그인 실패 연속",
       "tier": "clear",
       "baseConfidence": 0.95,
-      "condition": { "mitre": "T1110", "minLevel": 10, "minFailures": 30 },
+      "condition": { "context": "T1110 또는 로그인 실패 설명", "anyOf": { "minFailures": 30, "minLevel": 10 } },
       "evidence": "ATT&CK T1110.001 비밀번호 추측: 한 출발지가 짧은 시간에 실패를 연속으로 쌓는 형태."
     },
     {
@@ -17,7 +17,7 @@
       "name": "여러 계정 같은 비밀번호 대입",
       "tier": "clear",
       "baseConfidence": 0.9,
-      "condition": { "mitre": "T1110", "minLevel": 10, "minAccounts": 5 },
+      "condition": { "context": "T1110 또는 로그인 실패 설명", "minAccounts": 5 },
       "evidence": "ATT&CK T1110.003 비밀번호 뿌리기: 한 출발지가 여러 계정에 같은 비밀번호를 넣어 잠금을 피하는 형태."
     },
     {
@@ -25,7 +25,7 @@
       "name": "기준 미만 로그인 실패",
       "tier": "suspect",
       "baseConfidence": 0.5,
-      "condition": { "mitre": "T1110", "minFailures": 3 },
+      "condition": { "context": "T1110 또는 로그인 실패 설명", "anyOf": { "minFailures": 3, "minLevel": 5 } },
       "evidence": "ATT&CK T1110 로 분류된 실패이나 건수가 기준 미만이라 단독으로 공격 확정 불가, 사람이 보는 단서."
     }
   ]
