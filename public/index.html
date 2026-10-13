@@ -82,7 +82,11 @@
     </div>
 
     <!-- Notice -->
-    <div class="notice" id="notice-box">
+    <div class="notice" id="notice-box" data-resource-id="notice-01">
+      <div style="font-weight:600; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
+        <span>강사 공지</span>
+        <span style="font-size:12px; color:#8ad8df; font-family:monospace;">자원 ID: notice-01</span>
+      </div>
       정적 data.json 파일의 가상 메모는 서버 저장소로 이전되었습니다. 이전 공개 커밋 이력 및 이전 배포 이력은 지워지지 않고 남아 있으므로 과거 노출은 완전히 해소되지 않았습니다. 현재는 로그인 전 자료 API 접근이 차단되어 메모가 표시되지 않습니다.
     </div>
 
@@ -226,12 +230,18 @@
       for (const item of items) {
         const li = document.createElement('li');
         li.className = 'note-item';
+        li.dataset.resourceId = item.id;
 
         const header = document.createElement('div');
         header.className = 'note-header';
         const titleEl = document.createElement('h4');
         titleEl.className = 'note-title';
         titleEl.textContent = item.title;
+        const idBadge = document.createElement('span');
+        idBadge.className = 'resource-id';
+        idBadge.style.cssText = 'font-size:12px; color:#7e93ab; font-family:monospace; margin-left:8px; font-weight:normal;';
+        idBadge.textContent = `(자원 ID: ${item.id})`;
+        titleEl.appendChild(idBadge);
         header.appendChild(titleEl);
 
         const bodyEl = document.createElement('p');

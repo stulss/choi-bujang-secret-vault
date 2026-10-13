@@ -112,7 +112,10 @@ export default async function handler(request, response) {
           .maybeSingle();
 
         if (error || !data || data.owner_id !== verified.userId) {
-          return response.status(404).json({ error: 'NOTE_NOT_FOUND' });
+          return response.status(404).json({
+            error: 'NOTE_NOT_FOUND',
+            message: '해당 구역의 자료가 존재하지 않거나 접근 권한이 없습니다.',
+          });
         }
 
         return response.status(200).json({
@@ -191,14 +194,23 @@ export default async function handler(request, response) {
         .maybeSingle();
 
       if (fetchErr || !existing || existing.owner_id !== verified.userId) {
-        return response.status(404).json({ error: 'NOTE_NOT_FOUND' });
+        return response.status(404).json({
+          error: 'NOTE_NOT_FOUND',
+          message: '해당 구역의 자료가 존재하지 않거나 수정 권한이 없습니다.',
+        });
       }
 
       if (bodyData?.owner_id && bodyData.owner_id !== verified.userId) {
-        return response.status(403).json({ error: 'FORBIDDEN' });
+        return response.status(403).json({
+          error: 'FORBIDDEN',
+          message: '타 사용자의 소유권을 지정할 수 없습니다.',
+        });
       }
       if (request.query?.owner_id && request.query.owner_id !== verified.userId) {
-        return response.status(403).json({ error: 'FORBIDDEN' });
+        return response.status(403).json({
+          error: 'FORBIDDEN',
+          message: '타 사용자의 소유권을 지정할 수 없습니다.',
+        });
       }
 
       const title = bodyData?.title;
@@ -222,7 +234,10 @@ export default async function handler(request, response) {
         .maybeSingle();
 
       if (error || !data) {
-        return response.status(404).json({ error: 'NOTE_NOT_FOUND' });
+        return response.status(404).json({
+          error: 'NOTE_NOT_FOUND',
+          message: '해당 구역의 자료를 수정할 수 없습니다.',
+        });
       }
 
       return response.status(200).json({
@@ -246,7 +261,10 @@ export default async function handler(request, response) {
         .maybeSingle();
 
       if (fetchErr || !existing || existing.owner_id !== verified.userId) {
-        return response.status(404).json({ error: 'NOTE_NOT_FOUND' });
+        return response.status(404).json({
+          error: 'NOTE_NOT_FOUND',
+          message: '해당 구역의 자료가 존재하지 않거나 삭제 권한이 없습니다.',
+        });
       }
 
       const { error } = await supabase

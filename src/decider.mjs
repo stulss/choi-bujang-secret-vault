@@ -111,7 +111,7 @@ function resolveUser(str) {
 
 function extractGenericUser(str) {
   if (!str || typeof str !== 'string') return null;
-  const match = str.toLowerCase().match(/(?:user|student|learner|owner)[_-]([a-z0-9]+)/);
+  const match = str.toLowerCase().match(/(?:student[_-]user|user|student|learner|owner)[_-]([a-z0-9]+)/);
   return match ? match[1] : null;
 }
 
@@ -217,28 +217,30 @@ export async function decide(request) {
       || resolveUser(request.targetOwnerId) || resolveUser(request.ownerId);
 
     // 대상 메모 소유자와 요청 사용자 구역이 다를 경우 차단 (B의 A 메모)
-    if (subjectUser && targetUser && subjectUser !== targetUser) {
-      return {
-        schema: 'aleph.decision.v1',
-        requestId,
-        decision: 'deny',
-        reasonCode: 'zone_owner_forbidden',
-        ruleIds: ['zone_partitioning'],
-      };
-    }
-
-    // 일반 사용자 식별자(user_1 vs user_2 등) 대조
-    const genericSubject = extractGenericUser(subjectId);
-    const genericTarget = extractGenericUser(path) || extractGenericUser(resourceId)
-      || extractGenericUser(request.targetOwnerId) || extractGenericUser(request.ownerId);
-    if (genericSubject && genericTarget && genericSubject !== genericTarget) {
-      return {
-        schema: 'aleph.decision.v1',
-        requestId,
-        decision: 'deny',
-        reasonCode: 'zone_owner_forbidden',
-        ruleIds: ['zone_partitioning'],
-      };
+    if (subjectUser && targetUser) {
+      if (subjectUser !== targetUser) {
+        return {
+          schema: 'aleph.decision.v1',
+          requestId,
+          decision: 'deny',
+          reasonCode: 'zone_owner_forbidden',
+          ruleIds: ['zone_partitioning'],
+        };
+      }
+    } else {
+      // 일반 사용자 식별자(user_1 vs user_2 등) 대조
+      const genericSubject = extractGenericUser(subjectId);
+      const genericTarget = extractGenericUser(path) || extractGenericUser(resourceId)
+        || extractGenericUser(request.targetOwnerId) || extractGenericUser(request.ownerId);
+      if (genericSubject && genericTarget && genericSubject !== genericTarget) {
+        return {
+          schema: 'aleph.decision.v1',
+          requestId,
+          decision: 'deny',
+          reasonCode: 'zone_owner_forbidden',
+          ruleIds: ['zone_partitioning'],
+        };
+      }
     }
 
     // 대상 소유자 명시 필드가 존재하나 본인과 일치하지 않는 경우 차단
