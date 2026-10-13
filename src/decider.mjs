@@ -32,6 +32,8 @@ const ALLOWED_ROUTES = new Set([
   'POST /restore',
   // 11단계 기기 승인 경로: 승인 여부는 api/device.js가 개인키 보유 증명과 서명으로 정합니다.
   'GET /device', 'POST /device',
+  // 12단계 탈환 작전실 요약: 읽기만 허용합니다. 소유자 범위는 api/ops.js가 토큰 신원으로 정합니다.
+  'GET /ops',
 ]);
 
 // 공지 구역의 자료 ID 모양 (메모 ID로 공지 구역을, 공지 ID로 메모 구역을 열 수 없음)

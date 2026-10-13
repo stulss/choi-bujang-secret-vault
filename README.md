@@ -237,6 +237,70 @@
 | 4 | 화면: 로그인 → 승인 전 메모 없음 → 승인 요청 → 「서버 확인 완료」 뒤 메모 목록 | 승인 뒤 기존 자료실 열림 | 승인 전 메모 없음 | **미실행** (실제 계정으로 화면을 직접 조작하지 않음) |
 | 5 | 승인한 계정 토큰으로 서명 없이 `GET /api/notes` | — | HTTP 401 | **미실행** (배포 환경) |
 
+## 12단계: 설치·실행·중지·복구 안내
+
+### 기준 커밋과 범위
+- **검사한 커밋**: `5ec5f26` (배포 커밋 `5ec5f268089c…`). 2026-10-13 `npm run evidence`가 배포 주소의 `GET /aleph.json`에서 읽은 값이며, 이 저장소의 HEAD와 같습니다.
+- 이 안내와 아래 파일들은 그 커밋 **뒤에 만든 12단계 저장점**입니다: `api/ops.js`, `src/ops-summary.mjs`(탈환 작전실), `src/evidence.mjs`·`scripts/evidence.mjs`(실측 표 절차), `docs/ATTACKS.json`(41종 목록), 해당 시험, `docs/EVIDENCE.md`, 화면의 「탈환 작전실」 칸, 허용 경로 `GET /api/ops`, 12단계 점검(`src/attack-check.mjs`), `.gitattributes`, `aleph.config.json`의 `step: 12`. `docs/EVIDENCE.md`의 실측은 저장점 이전 배포(`5ec5f26`)를 대상으로 한 것입니다. 저장점이 배포되기 전에는 배포 주소에서 `/api/ops`와 작전실 화면을 확인할 수 없습니다.
+
+### 누가 만든 것인가
+
+| 구분 | 내용 | 위치 |
+|---|---|---|
+| **학생 몫** | 판정기 규칙 3개 (`device_registered`, `step_up_required`, `zone_partitioning`) | `src/decider.mjs` |
+| **학생 몫** | 탐지 규칙 (10분 안 같은 사용자·기기의 GET 120건 초과 + 낯선 네트워크 → 회수 **제안**) | `src/detect.mjs` |
+| **학생 몫** | 접속 앱 (설치형 웹앱 화면, 기기 승인·서명, 작전실 화면) | `public/index.html`, `public/sw.js`, `public/manifest.webmanifest`, `public/offline.html` |
+| **학생 몫** | 자료실 서버 함수와 DB (로그인 중계, 메모, 공지, 복구, 기기 승인, 작전실 요약) | `api/*.js`, `src/verify-login.mjs`, `src/device-auth.mjs`, `src/note-owner.mjs`, `schema.sql` |
+| **학생 몫** | 정책 사본과 되돌리기 | `policy/`, `scripts/policy-restore.mjs` |
+| **제공: ALEPH SDP 엔진** | 신원·기기·경로를 확인해 `aleph.decision.v1` 요청을 판정기에 전달하고 응답을 받는 엔진, 사건 전달, 접속 회수 집행과 경과 시간 측정, 심판 접수 | **이 저장소에 엔진 코드는 없습니다.** 계약만 `docs/DECIDER_REQUEST.md`(`student-kit/sdp-core/decision-contract.mjs` 설명)에 있고, 심판 접수 주소는 운영 측이 채운 `aleph.config.json`의 `judgeIssuer`입니다. |
+| **제공: 시작 틀** (`ChoiTimo/aleph-defense-starter`) | 1단계 틀과 빌드, `src/decider.mjs`·`src/detect.mjs`의 출발 템플릿, 판정기 연습 도구 `scripts/decider-test.mjs`, 보너스 연습 경보(`xdr/`), 배포 양식(`package/`) | 커밋 기록상 작성자 ChoiTimo (`0f9a3c9`, `de3cf4f`, `8fb5b6d`) |
+| **제공 자료 (원 출처 미확인)** | 계약 문서 `docs/DECIDER_REQUEST.md`·`docs/DETECT_EVENTS.md`, 연습 도구 `scripts/detect-test.mjs`·`scripts/fixture-7.mjs` | 이 저장소에는 `chacha1650a`의 첫 커밋(`f14b7f7`, 2026-10-07)으로 들어왔습니다. 문서 본문은 ALEPH SDP 엔진의 계약(`student-kit/sdp-core`)을 설명하지만, 시작 틀에서 왔는지는 기록으로 확인하지 못했습니다. |
+| **외부 서비스** | Supabase(로그인·DB), Vercel(배포) | 계정과 환경변수는 본인 것 |
+
+`npm run decider:test`·`detect:test`·`fixture:7`과 이 저장소의 모든 로컬 시험은 **가상 요청 연습**입니다. ALEPH SDP 엔진이나 심판의 판정·회수 결과가 아닙니다. 접속 회수 API는 만들지 않았고, 탐지 규칙은 제안만 냅니다.
+
+### 설치 (처음 한 번)
+1. 준비: Node 22 이상, Git, GitHub·Vercel·Supabase 계정.
+2. `git clone <본인 저장소 주소>` 후 `npm install`.
+3. Supabase SQL Editor에서 `schema.sql`을 위에서부터 실행합니다 (기본 표와 5단계 권한 회수 → 「10단계」 부분 → 「11단계」 부분). 가상 메모 4건이 들어갑니다.
+4. Vercel에서 **새 프로젝트**로 저장소를 연결하고 환경변수 **이름** 두 개를 비밀 입력란에 직접 넣습니다: `SUPABASE_URL`, `SUPABASE_SECRET_KEY`(서버 전용). 로그인 중계가 공개 키를 환경변수로 받으려면 `SUPABASE_PUBLISHABLE_KEY`도 쓸 수 있습니다(없으면 `aleph.config.json`의 값을 씁니다). **값은 README, 코드, Git, 제출 묶음, 캡처에 쓰지 않습니다.**
+5. 배포합니다. 빌드 명령 `npm run build`는 Vercel이 주는 저장소·커밋·배포 URL이 없으면 일부러 실패합니다.
+
+### 실행
+- 로컬 연습 (엔진·배포 없이): `npm run decider:test` · `npm run fixture:7` · `npm run detect:test` · `npm run policy:diff` · `node --test test/ops-summary.test.mjs test/evidence.test.mjs test/package-starter.test.mjs test/r5.test.mjs test/xdr-brute-force.test.mjs test/xdr-run.test.mjs`
+- 배포 화면: 주소를 열고 시험 계정으로 로그인 → 「이 기기 승인 요청」 → 「서버 확인 완료」 뒤 자료실과 「탈환 작전실」이 열립니다. 승인 전에는 메모를 불러오지 않습니다.
+- 실측 표 (1~11단계 정상·금지 요청 한 장): `npm run evidence` → `docs/EVIDENCE.md`. 로그인 없는 요청만 보냅니다. 시험 계정 요청까지 보내려면 본인 터미널에서 환경변수 `EVIDENCE_EMAIL`·`EVIDENCE_PASSWORD`(A 계정), `EVIDENCE_B_EMAIL`·`EVIDENCE_B_PASSWORD`(B 계정, 남의 메모 접근 거부 확인용)를 직접 넣고 `npm run evidence -- --with-account`를 실행합니다. 이 명령은 계정마다 승인 기기 1개를 남기고 A 계정에 가상 메모 1건을 만들었다 지웁니다(복구용 비공개 사본은 추가 전용이라 남습니다). 계정 값은 화면·표·기록·Git에 남지 않으며, 실행 기록 `artifacts/evidence.json`은 커밋하지 않습니다.
+- 41종 시험 목록은 `docs/ATTACKS.json`(`[{stage, code, name, measuredBy:[행 ID]}]`)에 있습니다. 단계·코드·이름은 이전 12단계 시도의 기록(커밋 `7490adb`의 `docs/EVIDENCE.md`)에서 가져왔고, 근거 행(`measuredBy`)은 **지금 표의 행 가운데 같은 요청을 실제로 보내는 것만** 연결했습니다. 연결하지 않은 시험은 미실행이며 통과로 세지 않습니다. 목록 파일이 없으면 종별 판정을 하지 않습니다.
+- 41종 중 26종은 근거 행이 없습니다: 만료·다른 대상 토큰, 배포 번들·저장소의 시험 비밀값 검색, 심판 소유 메모(R3), 원본 DB 직접 조회·수정(사용자 토큰 사용), 미등록 기기·기기 불일치·mTLS, 7·9단계 가상 사건과 회수 뒤 재접속, 복구 후 재전송, 12단계 연속 공격. 이들은 심판·엔진이 보내는 요청이거나 이 절차가 아직 같은 요청을 보내지 못하는 것입니다.
+
+### 중지
+- 로컬에는 계속 떠 있는 서버가 없습니다. 위 명령은 한 번 실행하고 끝납니다.
+- 화면 사용 중지: 「로그아웃」을 누르거나 탭을 닫으면 토큰과 기기 키가 사라집니다(저장소에 저장하지 않음). 다시 쓰려면 로그인하고 기기를 다시 승인합니다.
+- 기기 하나만 막기: Supabase SQL Editor에서 `update public.devices set status = 'revoked' where owner_id = '<계정 UUID>' and device_id = '<기기 ID 16자리>';` 이후 그 기기의 서명 요청은 거부되고 같은 기기의 재승인도 거부됩니다(`DEVICE_REVOKED`). 탐지 제안을 자동으로 집행하는 경로는 없으므로 이 절차는 사람이 합니다.
+- 서비스 전체 중지: Vercel에서 프로젝트(또는 배포)를 삭제합니다. 이 안내의 중지 절차는 이번 점검에서 **실행하지 않았습니다**.
+
+### 복구
+| 대상 | 방법 |
+|---|---|
+| 메모 한 건 | 로그인·기기 서명 후 `POST /api/restore`, 본문 `{"id":"<메모 UUID>","dryRun":true}`로 먼저 계획만 확인하고 `dryRun` 없이 다시 보냅니다. 사본이 없거나 해시가 다르면 멈춥니다. (위 「10단계」 참고) |
+| 시험 정책 | `npm run policy:diff`로 사본 검증과 바뀔 항목 확인 → `npm run policy:restore -- --service notes --version v9-9f13368 --yes` |
+| 코드 | 되돌릴 커밋을 `git revert`로 되돌립니다. `git reset --hard`는 쓰지 않습니다. (`5ec5f26`이 11단계 저장점 `25f906c`로 되돌린 기록입니다.) |
+
+**줄바꿈 문제와 해결**: 줄바꿈 변환(`core.autocrlf=true`, Windows)이 켜진 PC에서는 정책 사본 `policy/backups/policy-v9-9f13368.json`이 CRLF로 체크아웃되어 SHA-256이 `manifest.json`과 달라지고, `policy:diff`와 작전실의 정책 사본 칸이 「중단·읽지 못함」으로 나왔습니다. 사본 내용이 바뀐 것은 아니었고 커밋된 파일의 해시는 기록과 같았습니다. `.gitattributes`에 `policy/backups/*.json text eol=lf`를 추가해 이 파일들을 LF로 고정했습니다. **이미 CRLF로 받아 둔 PC에서는** 두 파일(`policy-v9-9f13368.json`, `manifest.json`)을 지우고 `git checkout -- policy/backups`로 다시 받아야 LF가 됩니다(내용 변경이 없는 파일에만 하세요). 이 PC에서는 그렇게 해서 `policy:diff`가 「검증 통과」가 되었습니다. 사본의 SHA-256이 다르면 어떤 환경에서도 버전을 믿지 않고 멈추는 동작은 그대로입니다.
+
+### 재현 순서와 이번 기준 결과
+
+| 순서 | 명령·화면 | 정상 기대 | 거부 기대 | 이번 결과 |
+|---|---|---|---|---|
+| 1 | `node --test` 6개 파일 | 36건 통과 | — | 실행함 (로컬, 작업 트리 기준): 36건 통과 |
+| 2 | `npm run decider:test` / `fixture:7` / `detect:test` | 7개 통과 / allow·step_up / 6개 통과 | 미등록 기기 deny | 실행함 (로컬): 통과 |
+| 3 | `npm run evidence` (로그인 없음, 배포 `5ec5f26`) | 정상 4건 허용 (HTTP 200) | 금지 15건 거부 (HTTP 401/405 등) | 실행함: 정상 4 허용 · 금지 15 거부 · 다름 0 (요청 ID·시각은 `docs/EVIDENCE.md`) |
+| 4 | 같은 표의 함수 호출 행 (판정기·탐지기·정책) | 13건 기대와 같음 | — | 실행함 (요청 아님): 13건 같음 · 다름 0 (정책 사본 SHA-256 검증 통과) |
+| 4-1 | 같은 표의 41종 (`docs/ATTACKS.json`) | 근거 행이 실제 요청이고 모두 기대와 같을 때만 「막음」 | — | 실행함: **막음 7 · 못 막음 0 · 미실행 34**. 계정 없이는 막음으로 세지 않습니다. 근거 행이 없는 26종은 같은 요청을 보내는 행이 아직 없어 미실행입니다 |
+| 5 | `npm run evidence -- --with-account` | 로그인 후 서명 요청 허용 (A 계정 기준) | 서명 없음·변경·B 계정의 A 메모 접근 거부 | **미실행** (계정 값은 사용자가 본인 터미널에서 넣어야 함). 계정 필요 행 정상 11 · 금지 10건이 표에 미실행으로 남아 있음 |
+| 6 | 화면에서 로그인 → 기기 승인 → 작전실 확인 | 승인 뒤 자료실과 작전실 열림 | 승인 전 메모 없음 | **미실행** (화면을 직접 조작하지 않음) |
+| 7 | `npm run bundle` | 점검 결과가 제출 묶음에 기록 | — | **미실행** |
+
 ## 다음 단계의 코딩 도구에 전달할 규칙
 
 [AGENTS.md](AGENTS.md)를 먼저 읽히고 한 번에 한 제작 단위만 요청하세요. 2단계부터는 자료 보호를 구현할 때 `public/data.json`을 복사하는 1단계 빌드 흐름도 함께 바꿔야 합니다. 3단계 이후의 로그인, 허용 경로, 5단계의 원본 API 주소, 6단계 이후 정책 규칙은 해당 단계 원고와 계약에 맞춰 추가합니다. 비밀번호·토큰·서버 전용 키·실제 학생 기록을 코드, Git, 제출 묶음에 넣지 않습니다.

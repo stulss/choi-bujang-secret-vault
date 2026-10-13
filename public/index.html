@@ -61,13 +61,21 @@
     .pill.wait { color: #fde68a; border-color: #a16207; }
     .pill.bad { color: #fca5a5; border-color: #b91c1c; }
     .hint { font-size: 13px; color: #7e93ab; margin: 8px 0 0; }
+    .ops-section { border-top: 1px solid #3d5066; margin-top: 16px; padding-top: 14px; }
+    .ops-section h4 { margin: 0 0 8px; font-size: 15px; color: #ffffff; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .ops-row { font-size: 14px; color: #bfd0e5; margin: 4px 0; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+    .ops-row code { color: #8ad8df; }
+    .ops-table-wrap { max-height: 220px; overflow: auto; border: 1px solid #3d5066; border-radius: 8px; margin-top: 8px; }
+    .ops-table { width: 100%; border-collapse: collapse; font-size: 12px; font-family: monospace; color: #c5d6eb; }
+    .ops-table th, .ops-table td { padding: 4px 8px; text-align: left; border-bottom: 1px solid #243449; white-space: nowrap; }
+    .ops-table th { position: sticky; top: 0; background: #1a2a3d; color: #8ad8df; }
     #offline-banner { display: none; margin: 0 0 16px; padding: 10px 14px; border-radius: 8px; background: #3b2a10; color: #fde68a; font-size: 14px; }
   </style>
 </head>
 <body>
   <main>
     <div id="offline-banner" role="status">오프라인입니다. 연결되면 로그인과 기기 승인을 다시 확인한 뒤 자료실을 엽니다.</div>
-    <div class="eyebrow">BYTE BACK · 11단계 나만의 접속 앱</div>
+    <div class="eyebrow">BYTE BACK · 12단계 탈환 작전실</div>
     <h1>최부장 비밀 자료실</h1>
     <p>서버가 토큰의 신원과 이 기기의 승인을 확인한 뒤에만 가상 메모를 보여 줍니다.</p>
     <div class="status-row">
@@ -133,6 +141,22 @@
     <ul id="notes" class="notes-list" aria-live="polite">
       <li style="color:#7e93ab; font-size:15px;">로그인하고 이 기기가 서버에서 승인되면 메모가 표시됩니다.</li>
     </ul>
+
+    <!-- 12단계 탈환 작전실 (기기 승인 뒤에만 열림) -->
+    <div class="card-box" id="ops-box" style="display:none;">
+      <h3 style="margin-top:0; margin-bottom:8px; font-size:16px;">탈환 작전실</h3>
+      <p class="hint" style="margin-top:0;">서버가 이 계정에 대해 방금 읽은 요약입니다. 메모 제목·본문은 표시하지 않고 메모 번호는 가려 둡니다.
+        <span class="pill ok">서버 확인</span> 이 응답에서 서버가 직접 읽은 값
+        <span class="pill wait">연습</span> 가상 사건 연습이며 심판·운영 엔진 결과가 아님
+        <span class="pill">미실행</span> 연결하거나 실행하지 않음
+        <span class="pill bad">읽지 못함</span> 조회 실패</p>
+      <div class="status-row">
+        <span>화면 수치 ↔ 가린 서버 기록: <span id="ops-match" class="pill wait">읽는 중</span></span>
+        <span id="ops-time"></span>
+        <button id="ops-refresh" class="secondary" style="padding:4px 12px; font-size:13px;">다시 읽기</button>
+      </div>
+      <div id="ops-body"></div>
+    </div>
   </main>
 
   <script type="module">
@@ -314,6 +338,7 @@
       deviceIdEl.textContent = device?.id || '-';
       setDeviceState('wait', '승인 전', '승인 전에는 메모를 불러오지 않습니다. 버튼은 승인 요청만 보내고, 승인 여부는 서버 응답으로 정해집니다.');
       createBox.style.display = 'none';
+      hideOps();
       placeholder('이 기기가 서버에서 승인되면 메모가 표시됩니다.');
     }
 
@@ -321,6 +346,7 @@
       if (!deviceApproved) return;
       createBox.style.display = 'block';
       loadNotes();
+      loadOps();
     }
 
     function onLogoutSuccess() {
@@ -328,8 +354,220 @@
       authView.style.display = 'none';
       deviceBox.style.display = 'none';
       createBox.style.display = 'none';
+      hideOps();
       passwordInput.value = '';
       placeholder('로그인 후 메모가 표시됩니다.');
+    }
+
+    // ---- 탈환 작전실 (승인 기기만) ----
+    // 서버 요약(GET /api/ops)을 그대로 보여 줍니다. 모든 글자는 textContent로만 넣고, 메모 본문은 받지도 않습니다.
+    const opsBox = document.getElementById('ops-box');
+    const opsBody = document.getElementById('ops-body');
+    const opsMatch = document.getElementById('ops-match');
+    const opsTime = document.getElementById('ops-time');
+    const opsRefresh = document.getElementById('ops-refresh');
+    const STATE = {
+      verified: ['ok', '서버 확인'], practice: ['wait', '연습'], not_run: ['', '미실행'], unavailable: ['bad', '읽지 못함'],
+    };
+    const ERROR_TEXT = {
+      TABLE_NOT_CREATED: '표가 아직 없습니다 (schema.sql의 해당 단계 실행 필요)',
+      DATABASE_QUERY_ERROR: '서버가 조회하지 못했습니다',
+      PRACTICE_FAILED: '연습을 실행하지 못했습니다',
+      POLICY_BACKUP_UNVERIFIED: '정책 사본 검증에 실패해 버전을 믿지 않습니다',
+      POLICY_FILES_UNREADABLE: '정책 파일을 읽지 못했습니다',
+      POLICY_AUDIT_NOT_FOUND: '정책 감사 기록 파일이 없습니다',
+    };
+
+    function node(tag, className, text) {
+      const item = document.createElement(tag);
+      if (className) item.className = className;
+      if (text !== undefined) item.textContent = text;
+      return item;
+    }
+    function pill(status, extra) {
+      const [kind, label] = STATE[status] || STATE.unavailable;
+      return node('span', 'pill' + (kind ? ' ' + kind : ''), extra ? label + ' · ' + extra : label);
+    }
+    function row(...parts) {
+      const item = node('div', 'ops-row');
+      for (const part of parts) item.append(typeof part === 'string' ? document.createTextNode(part) : part);
+      return item;
+    }
+    function section(title, status, extra) {
+      const box = node('div', 'ops-section');
+      const heading = node('h4', '', title);
+      if (status) heading.append(pill(status, extra));
+      box.append(heading);
+      return box;
+    }
+    const failureRow = (part) => row(ERROR_TEXT[part.error] || '읽지 못했습니다', part.message ? ' (' + part.message + ')' : '');
+
+    // 가린 기록에서 수치를 다시 세어 서버 요약과 맞는지 확인합니다.
+    function recount(records) {
+      const count = (test) => records.filter(test).length;
+      return {
+        shown: records.length,
+        requested: count(r => r.stage === 'requested'),
+        dryRun: count(r => r.stage === 'plan' && r.result === 'dry_run'),
+        restored: count(r => r.stage === 'apply' && r.result === 'restored'),
+        stopped: count(r => String(r.result).startsWith('stopped')),
+        failed: count(r => String(r.result).startsWith('failed')),
+      };
+    }
+    function checkOps(data) {
+      const problems = [];
+      let checked = 0;
+      const audit = data.restore?.notes?.audit;
+      if (audit?.status === 'verified') {
+        const again = recount(audit.records);
+        for (const key of Object.keys(again)) {
+          checked += 1;
+          if (again[key] !== audit.summary[key]) problems.push('복구 기록 ' + key);
+        }
+        checked += 1;
+        if (audit.summary.shown !== Math.min(audit.summary.total, 50)) problems.push('복구 기록 표시 건수');
+      }
+      const policyAudit = data.restore?.policy?.audit;
+      if (policyAudit?.status === 'verified') {
+        checked += 1;
+        const sum = Object.values(policyAudit.summary.byAction).reduce((a, b) => a + b, 0);
+        if (sum !== policyAudit.records.length || policyAudit.summary.shown !== policyAudit.records.length
+            || policyAudit.summary.total !== policyAudit.records.length + policyAudit.summary.unreadable) {
+          problems.push('정책 감사 기록');
+        }
+      }
+      return { checked, problems };
+    }
+
+    function table(headers, rows) {
+      const wrap = node('div', 'ops-table-wrap');
+      const tbl = node('table', 'ops-table');
+      const head = node('tr');
+      for (const label of headers) head.append(node('th', '', label));
+      tbl.append(head);
+      for (const cells of rows) {
+        const tr = node('tr');
+        for (const cell of cells) tr.append(node('td', '', String(cell)));
+        tbl.append(tr);
+      }
+      wrap.append(tbl);
+      return wrap;
+    }
+
+    function renderOps(data) {
+      opsBody.replaceChildren();
+
+      const decider = data.decider;
+      const dBox = section('판정기 규칙', decider.status, decider.total ? decider.passed + '/' + decider.total + ' 통과' : '');
+      for (const rule of decider.rules || []) dBox.append(row(node('code', '', rule.id), rule.label));
+      if (decider.error) dBox.append(failureRow(decider));
+      if (decider.note) dBox.append(node('p', 'hint', decider.note));
+      opsBody.append(dBox);
+
+      const detection = data.detection;
+      const tBox = section('탐지 사건', detection.practice.status,
+        detection.practice.total ? detection.practice.passed + '/' + detection.practice.total + ' 통과' : '');
+      tBox.append(row('규칙: 같은 사용자·기기의 GET이 ' + detection.rule.windowMinutes + '분 안에 '
+        + detection.rule.burstLimit + '건을 넘고 평소와 다른 네트워크가 함께일 때 ', node('code', '', detection.rule.reasonCode)));
+      if (detection.practice.error) tBox.append(failureRow(detection.practice));
+      tBox.append(row('실제 접속 사건', pill(detection.liveEvents.status)));
+      tBox.append(node('p', 'hint', detection.liveEvents.note));
+      opsBody.append(tBox);
+
+      const revocation = data.revocation;
+      const rBox = section('회수 상태', revocation.devices.status);
+      if (revocation.devices.status === 'verified') {
+        const d = revocation.devices;
+        rBox.append(row('승인 기기 ', node('code', '', String(d.approved)), ' · 회수된 기기 ',
+          node('code', '', String(d.revoked)), ' · 전체 ', node('code', '', String(d.total))));
+        if (d.thisRequestDeviceApproved !== null) rBox.append(row('이번 요청의 서명 기기', d.thisRequestDeviceApproved ? '승인 기기로 확인' : '승인 기기 아님'));
+      } else {
+        rBox.append(failureRow(revocation.devices));
+      }
+      rBox.append(row('탐지 제안에 따른 회수 집행', pill(revocation.proposal.status)));
+      rBox.append(node('p', 'hint', revocation.proposal.note));
+      opsBody.append(rBox);
+
+      const restore = data.restore;
+      const bBox = section('복구 버전', restore.notes.backups.status);
+      if (restore.notes.backups.status === 'verified') {
+        bBox.append(row('메모 사본 ', node('code', '', String(restore.notes.backups.count)), '건 · 가장 최근 사본 ',
+          restore.notes.backups.latestAt || '없음'));
+      } else {
+        bBox.append(failureRow(restore.notes.backups));
+      }
+      const audit = restore.notes.audit;
+      if (audit.status === 'verified') {
+        const s = audit.summary;
+        bBox.append(row('복구 감사 기록 전체 ', node('code', '', String(s.total)), '건 중 최근 ', node('code', '', String(s.shown)),
+          '건 기준 → 요청 ', node('code', '', String(s.requested)), ' · 미리보기 ', node('code', '', String(s.dryRun)),
+          ' · 복원 완료 ', node('code', '', String(s.restored)), ' · 멈춤 ', node('code', '', String(s.stopped)),
+          ' · 실패 ', node('code', '', String(s.failed))));
+        if (!s.restored) bBox.append(row('복원 완료 기록', pill('not_run', '복원 완료 기록 없음')));
+      } else {
+        bBox.append(failureRow(audit));
+      }
+      const policy = restore.policy;
+      bBox.append(row('시험 정책 사본', pill(policy.status)));
+      if (policy.status === 'verified') {
+        bBox.append(row('사본 ', node('code', '', policy.backupVersion), ' (출처 커밋 ' + policy.sourceCommit + ', SHA-256 '
+          + policy.sha256 + '… 다시 계산해 일치) · 현재 정책 ', node('code', '', String(policy.currentVersion)),
+        ' · 사본과 다른 항목 ', node('code', '', String(policy.differenceCount)) , '개'));
+      } else {
+        bBox.append(failureRow(policy));
+      }
+      if (audit.status === 'verified' && audit.records.length) {
+        bBox.append(node('p', 'hint', '가린 복구 기록 (메모 번호는 해시 앞 8자리, 본문·제목 없음)'));
+        bBox.append(table(['메모', '단계', '결과', '동작', '미리보기', '시각'],
+          audit.records.map(r => [r.ref, r.stage, r.result, r.action || '-', r.dryRun ? '예' : '아니오', r.at])));
+      }
+      if (policy.audit?.status === 'verified' && policy.audit.records.length) {
+        bBox.append(node('p', 'hint', '정책 감사 기록 ' + policy.audit.summary.total + '줄'));
+        bBox.append(table(['시각', '동작', '서비스', '바뀐 항목 수'],
+          policy.audit.records.map(r => [r.at, r.action, r.service || '-', r.changedKeyCount])));
+      }
+      opsBody.append(bBox);
+
+      const { checked, problems } = checkOps(data);
+      if (!checked) {
+        opsMatch.className = 'pill';
+        opsMatch.textContent = '대조할 기록 없음';
+      } else if (problems.length) {
+        opsMatch.className = 'pill bad';
+        opsMatch.textContent = '불일치 · ' + problems.join(', ');
+      } else {
+        opsMatch.className = 'pill ok';
+        opsMatch.textContent = '일치 · ' + checked + '개 항목 대조';
+      }
+      opsTime.textContent = '읽은 시각 ' + data.generatedAt;
+    }
+
+    async function loadOps() {
+      if (!currentSession?.access_token || !deviceApproved) return;
+      opsBox.style.display = 'block';
+      opsMatch.className = 'pill wait';
+      opsMatch.textContent = '읽는 중';
+      try {
+        const res = await signedFetch('GET', '/api/ops');
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.schema !== 'byteback.ops.v1') {
+          opsBody.replaceChildren(node('p', 'hint', '작전실 요약을 받지 못했습니다 (' + (data.error || 'HTTP ' + res.status) + ').'));
+          opsMatch.className = 'pill bad';
+          opsMatch.textContent = '읽지 못함';
+          return;
+        }
+        renderOps(data);
+      } catch (err) {
+        opsBody.replaceChildren(node('p', 'hint', '작전실 오류: ' + err.message));
+        opsMatch.className = 'pill bad';
+        opsMatch.textContent = '읽지 못함';
+      }
+    }
+    opsRefresh.addEventListener('click', loadOps);
+
+    function hideOps() {
+      opsBox.style.display = 'none';
+      opsBody.replaceChildren();
     }
 
     // ---- 자료실 (승인 기기만) ----
