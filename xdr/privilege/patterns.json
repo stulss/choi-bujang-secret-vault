@@ -1,0 +1,96 @@
+{
+  "schema": "aleph.xdr.patterns.v1",
+  "moduleKey": "privilege",
+  "source": "MITRE ATT&CK T1068 Exploitation for Privilege Escalation (https://attack.mitre.org/techniques/T1068/) · T1078 Valid Accounts (https://attack.mitre.org/techniques/T1078/)",
+  "note": "confidence 숫자와 count 기준은 이 과제의 시험 경보에 맞춘 값이며 ATT&CK 이 정한 값이 아닙니다. 시험 경보는 관리자 그룹 추가·관리자 명령을 T1068·T1078 로 표시했습니다. 수업용 관리 계정(admin)과 서비스 계정(svc-)의 평소 활동은 정상 운영으로 보고 패턴에 넣지 않았습니다.",
+  "patterns": [
+    {
+      "id": "admin-group-add-then-command",
+      "name": "관리자 그룹에 들어간 뒤 곧바로 관리자 명령 실행",
+      "tier": "clear",
+      "baseConfidence": 0.97,
+      "condition": { "context": "T1068·T1078 표시", "signal": "관리자 그룹 추가(또는 방금 관리자가 됨)와 관리자 명령 실행이 함께 나옴" },
+      "evidence": "ATT&CK T1078: 탈취한 계정을 관리자 그룹에 넣어 권한을 높인 뒤 곧바로 관리자 명령을 쓰는 것은 정상 승인 절차 없이 권한을 키우는 형태."
+    },
+    {
+      "id": "borrowed-credentials-admin-command",
+      "name": "다른 계정의 권한으로 관리자 명령 실행",
+      "tier": "clear",
+      "baseConfidence": 0.95,
+      "condition": { "context": "T1068·T1078 표시", "signal": "다른 계정의 권한 사용", "also": "관리자 명령 실행" },
+      "evidence": "ATT&CK T1078: 남의 정상 계정 권한을 빌려 관리자 명령을 실행하는 것은 계정 도용으로 권한 있는 작업을 하는 형태."
+    },
+    {
+      "id": "admin-group-add-burst",
+      "name": "같은 주소에서 여러 계정을 관리자 그룹에 추가",
+      "tier": "clear",
+      "baseConfidence": 0.95,
+      "condition": { "context": "T1068·T1078 표시", "signal": "관리자 그룹 추가", "count": "3건 이상" },
+      "evidence": "ATT&CK T1078: 한 주소에서 계정 여러 개를 관리자 그룹에 넣는 것은 한 계정의 실수가 아니라 권한을 한꺼번에 넓히려는 형태."
+    },
+    {
+      "id": "admin-command-from-new-address",
+      "name": "처음 보는 주소에서 관리자 권한 사용",
+      "tier": "clear",
+      "baseConfidence": 0.92,
+      "condition": { "context": "T1068·T1078 표시", "signal": "관리자 명령 실행 또는 관리자 권한으로 바뀜", "also": "처음 보는 요청 주소" },
+      "evidence": "ATT&CK T1078: 계정이 평소와 다른 주소에서 관리자 권한을 쓰는 것은 도용된 계정이 쓰이는 대표적인 형태."
+    },
+    {
+      "id": "admin-use-outside-hours",
+      "name": "업무 시간 밖 관리자 권한 사용",
+      "tier": "clear",
+      "baseConfidence": 0.9,
+      "condition": { "context": "T1068·T1078 표시", "signal": "관리자 명령 실행 또는 관리자 권한으로 바뀜", "also": "수업·업무 시간 밖" },
+      "evidence": "ATT&CK T1078: 업무 시간 밖의 관리자 권한 사용은 정상 계정을 도용한 접근에서 자주 나타나는 시각 이상 신호."
+    },
+    {
+      "id": "admin-group-add-from-remote",
+      "name": "원격 주소에서 관리자 그룹에 추가",
+      "tier": "clear",
+      "baseConfidence": 0.9,
+      "condition": { "context": "T1068·T1078 표시", "signal": "관리자 그룹 추가", "also": "원격 주소에서 요청" },
+      "evidence": "ATT&CK T1078: 원격에서 계정을 관리자 그룹에 넣는 것은 정상 관리 절차가 아니라 원격 접근으로 권한을 높이는 형태."
+    },
+    {
+      "id": "admin-group-leave-and-rejoin",
+      "name": "관리자 그룹에서 빠졌다가 곧바로 다시 들어옴",
+      "tier": "clear",
+      "baseConfidence": 0.9,
+      "condition": { "context": "T1068·T1078 표시", "signal": "관리자 그룹에서 빠진 계정이 곧바로 다시 관리자로 들어옴", "count": "2건 이상" },
+      "evidence": "ATT&CK T1078: 권한을 잠깐 내렸다가 다시 올리는 반복은 기록이나 감시를 피하며 관리자 권한을 유지하려는 형태."
+    },
+    {
+      "id": "single-admin-command",
+      "name": "관리자 명령 한 건만 있고 다른 이상 신호는 없음",
+      "tier": "suspect",
+      "baseConfidence": 0.65,
+      "condition": { "context": "T1068·T1078 표시와 규칙 수준 5 이상", "signal": "관리자 명령 실행", "absent": "그룹 추가, 처음 보는 주소, 업무 시간 밖, 다른 계정 권한" },
+      "evidence": "ATT&CK T1068: 관리자 명령은 권한 상승 수단이지만 평소 주소의 한 건이나 실패한 한 건은 정상 관리 작업과 구분되지 않아 알림으로 확인."
+    },
+    {
+      "id": "elevation-without-follow-up",
+      "name": "권한 상승 시도만 있고 이어진 명령은 없음",
+      "tier": "suspect",
+      "baseConfidence": 0.6,
+      "condition": { "context": "T1068·T1078 표시와 규칙 수준 5 이상", "signal": "권한 상승 창 또는 권한 상승 1건", "absent": "관리자 명령 실행" },
+      "evidence": "ATT&CK T1068: 권한 상승 시도는 악용의 첫 단계일 수 있지만 취소됐거나 이어진 명령이 없으면 자동 차단 없이 알림으로 확인."
+    },
+    {
+      "id": "non-admin-group-change",
+      "name": "관리자가 아닌 그룹의 추가나 변경",
+      "tier": "suspect",
+      "baseConfidence": 0.55,
+      "condition": { "context": "T1068·T1078 표시와 규칙 수준 5 이상", "signal": "그룹 추가·생성·설명 변경", "absent": "관리자 그룹 추가" },
+      "evidence": "ATT&CK T1078: 그룹 변경은 권한 확대 수단이 될 수 있지만 관리자 그룹이 아니면 정상 수업 작업과 구분되지 않아 알림으로 확인."
+    },
+    {
+      "id": "privilege-tagged-low-signal",
+      "name": "권한 기법 표시만 있는 약한 신호",
+      "tier": "suspect",
+      "baseConfidence": 0.5,
+      "condition": { "context": "T1068·T1078 표시와 규칙 수준 5 이상", "absent": "위 패턴의 신호" },
+      "evidence": "ATT&CK T1068·T1078 로 분류된 경보지만 관리자 그룹 추가나 명령 같은 악용 신호가 없으므로 자동 차단 없이 알림으로만 남김."
+    }
+  ]
+}

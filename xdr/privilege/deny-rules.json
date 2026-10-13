@@ -1,0 +1,85 @@
+{
+  "schema": "aleph.xdr.deny-rules.v1",
+  "rules": [
+    {
+      "ruleId": "xdr.privilege.deny",
+      "srcip": "203.0.113.11",
+      "account": "user01",
+      "sourceAlertId": "pv-01",
+      "reason": "원격 주소에서 관리자 그룹에 추가",
+      "confidence": 0.9,
+      "createdAt": "2026-09-27T00:15:06.000Z",
+      "expiresAt": "2026-09-28T00:15:06.000Z"
+    },
+    {
+      "ruleId": "xdr.privilege.deny",
+      "srcip": "198.51.100.11",
+      "account": "user02",
+      "sourceAlertId": "pv-03",
+      "reason": "처음 보는 주소에서 관리자 권한 사용",
+      "confidence": 0.92,
+      "createdAt": "2026-09-27T01:03:12.000Z",
+      "expiresAt": "2026-09-28T01:03:12.000Z"
+    },
+    {
+      "ruleId": "xdr.privilege.deny",
+      "srcip": "192.0.2.11",
+      "account": "user03",
+      "sourceAlertId": "pv-04",
+      "reason": "관리자 그룹에 들어간 뒤 곧바로 관리자 명령 실행",
+      "confidence": 0.97,
+      "createdAt": "2026-09-27T01:19:08.000Z",
+      "expiresAt": "2026-09-28T01:19:08.000Z"
+    },
+    {
+      "ruleId": "xdr.privilege.deny",
+      "srcip": "203.0.113.17",
+      "account": "user04",
+      "sourceAlertId": "pv-05",
+      "reason": "같은 주소에서 여러 계정을 관리자 그룹에 추가",
+      "confidence": 0.95,
+      "createdAt": "2026-09-27T02:06:21.000Z",
+      "expiresAt": "2026-09-28T02:06:21.000Z"
+    },
+    {
+      "ruleId": "xdr.privilege.deny",
+      "srcip": "198.51.100.17",
+      "account": "user05",
+      "sourceAlertId": "pv-06",
+      "reason": "처음 보는 주소에서 관리자 권한 사용",
+      "confidence": 0.92,
+      "createdAt": "2026-09-27T04:08:02.000Z",
+      "expiresAt": "2026-09-28T04:08:02.000Z"
+    },
+    {
+      "ruleId": "xdr.privilege.deny",
+      "srcip": "192.0.2.17",
+      "account": "user06",
+      "sourceAlertId": "pv-07",
+      "reason": "관리자 그룹에 들어간 뒤 곧바로 관리자 명령 실행",
+      "confidence": 0.97,
+      "createdAt": "2026-09-27T05:16:29.000Z",
+      "expiresAt": "2026-09-28T05:16:29.000Z"
+    },
+    {
+      "ruleId": "xdr.privilege.deny",
+      "srcip": "203.0.113.27",
+      "account": "user07",
+      "sourceAlertId": "pv-08",
+      "reason": "다른 계정의 권한으로 관리자 명령 실행",
+      "confidence": 0.95,
+      "createdAt": "2026-09-27T06:02:18.000Z",
+      "expiresAt": "2026-09-28T06:02:18.000Z"
+    },
+    {
+      "ruleId": "xdr.privilege.deny",
+      "srcip": "198.51.100.27",
+      "account": "user08",
+      "sourceAlertId": "pv-09",
+      "reason": "관리자 그룹에서 빠졌다가 곧바로 다시 들어옴",
+      "confidence": 0.9,
+      "createdAt": "2026-09-27T06:33:07.000Z",
+      "expiresAt": "2026-09-28T06:33:07.000Z"
+    }
+  ]
+}
