@@ -106,6 +106,24 @@
      - 결과: `anon_select`, `anon_insert`, `auth_select`, `auth_insert` 모두 `false`로 반환되어 직접 접근 차단 확인.
 
 
+## 6단계: 등록한 기기만 자료실에 들어옵니다
+
+- **판정기 기기 등록 검증 규칙 구현 (`src/decider.mjs`)**:
+  - ALEPH SDP 판정 계약(`aleph.decision.v1`)에 따라 전달된 `request.deviceRegistered` 값을 검증합니다.
+  - 등록된 기기(`request.deviceRegistered === true`)의 요청만 `allow`(이유 코드: `approved`, 규칙: `device_registered`)로 허용합니다.
+  - 미등록 기기이거나 값이 없는 요청은 `deny`(이유 코드: `device_not_registered`, 규칙: `device_registered`)로 즉시 거부합니다.
+  - `RULE_IDS`에는 실제로 구현한 `device_registered` 규칙만 등록했습니다.
+
+### 6단계 확인 순서
+1. **판정기 검증 시험 실행**:
+   ```bash
+   npm run decider:test
+   ```
+2. **출력 결과 확인**:
+   - `통과 · 등록 기기의 정상 요청` (등록 기기 요청이 allow로 승인됨)
+   - `통과 · 미등록 기기의 가상 요청` (미등록 기기 요청이 deny / device_not_registered로 거부됨)
+   - 별도의 클라이언트 접속 프로그램 설치는 필요하지 않으며, 미등록 기기를 통한 공격 시뮬레이션 및 실제 검증은 심판이 수행합니다.
+
 ## 다음 단계의 코딩 도구에 전달할 규칙
 
 [AGENTS.md](AGENTS.md)를 먼저 읽히고 한 번에 한 제작 단위만 요청하세요. 2단계부터는 자료 보호를 구현할 때 `public/data.json`을 복사하는 1단계 빌드 흐름도 함께 바꿔야 합니다. 3단계 이후의 로그인, 허용 경로, 5단계의 원본 API 주소, 6단계 이후 정책 규칙은 해당 단계 원고와 계약에 맞춰 추가합니다. 비밀번호·토큰·서버 전용 키·실제 학생 기록을 코드, Git, 제출 묶음에 넣지 않습니다.
