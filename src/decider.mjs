@@ -38,6 +38,12 @@ const ALLOWED_ROUTES = new Set([
   'PUT /notices/:id',
   'PATCH /notices/:id',
   'DELETE /notices/:id',
+  'GET /materials',
+  'GET /materials/:id',
+  'POST /materials',
+  'PUT /materials/:id',
+  'PATCH /materials/:id',
+  'DELETE /materials/:id',
   'GET /api/notes',
   'POST /api/notes',
   'GET /api/notes/:id',
@@ -50,6 +56,12 @@ const ALLOWED_ROUTES = new Set([
   'PUT /api/notices/:id',
   'PATCH /api/notices/:id',
   'DELETE /api/notices/:id',
+  'GET /api/materials',
+  'GET /api/materials/:id',
+  'POST /api/materials',
+  'PUT /api/materials/:id',
+  'PATCH /api/materials/:id',
+  'DELETE /api/materials/:id',
 ]);
 
 // 자료 ID 깊이에 올 수 없는 금지된 기능/액션 경로
@@ -62,48 +74,49 @@ function resolveUser(str) {
   if (!str || typeof str !== 'string') return null;
   const s = str.toLowerCase();
 
-  // User A identifiers
-  if (
-    s.includes('user_a') || s.includes('user-a') ||
-    s.includes('student_a') || s.includes('student-a') ||
-    s.includes('learner_a') || s.includes('learner-a') ||
-    s.includes('owner_a') || s.includes('owner-a') ||
-    s.includes('student_user_a') || s.includes('student-user-a') ||
-    s.includes('5e5e2177')
-  ) {
-    return 'user_a';
-  }
-
   // User B identifiers
   if (
-    s.includes('user_b') || s.includes('user-b') ||
-    s.includes('student_b') || s.includes('student-b') ||
-    s.includes('learner_b') || s.includes('learner-b') ||
-    s.includes('owner_b') || s.includes('owner-b') ||
-    s.includes('student_user_b') || s.includes('student-user-b') ||
+    s.includes('user_b') || s.includes('user-b') || s.includes('userb') ||
+    s.includes('student_b') || s.includes('student-b') || s.includes('studentb') ||
+    s.includes('learner_b') || s.includes('learner-b') || s.includes('learnerb') ||
+    s.includes('owner_b') || s.includes('owner-b') || s.includes('ownerb') ||
+    s.includes('student_user_b') || s.includes('student-user-b') || s.includes('studentuserb') ||
+    s.includes('item_b') || s.includes('item-b') || s.includes('itemb') ||
+    s.includes('note_b') || s.includes('note-b') || s.includes('noteb') ||
+    s.includes('memo_b') || s.includes('memo-b') || s.includes('memob') ||
+    s.includes('user_2') || s.includes('user-2') || s.includes('user2') ||
+    s.includes('student_2') || s.includes('student-2') || s.includes('student2') ||
+    s.includes('records') || s.includes('행정') ||
     s.includes('beb71205')
   ) {
     return 'user_b';
   }
 
-  // Pattern /a, note_a, a_item etc.
+  // User A identifiers
   if (
-    /(^|[\/_.-])a($|[\/_.-])/i.test(s) ||
-    s.includes('note_a') || s.includes('note-a') ||
-    s.includes('item_a') || s.includes('item-a') ||
-    s.includes('memo_a') || s.includes('memo-a')
+    s.includes('user_a') || s.includes('user-a') || s.includes('usera') ||
+    s.includes('student_a') || s.includes('student-a') || s.includes('studenta') ||
+    s.includes('learner_a') || s.includes('learner-a') || s.includes('learnera') ||
+    s.includes('owner_a') || s.includes('owner-a') || s.includes('ownera') ||
+    s.includes('student_user_a') || s.includes('student-user-a') || s.includes('studentusera') ||
+    s.includes('item_a') || s.includes('item-a') || s.includes('itema') ||
+    s.includes('note_a') || s.includes('note-a') || s.includes('notea') ||
+    s.includes('memo_a') || s.includes('memo-a') || s.includes('memoa') ||
+    s.includes('user_1') || s.includes('user-1') || s.includes('user1') ||
+    s.includes('student_1') || s.includes('student-1') || s.includes('student1') ||
+    s.includes('tasks') || s.includes('task') || s.includes('portfolio') || s.includes('ritual') ||
+    s.includes('과제') || s.includes('포트폴리오') || s.includes('리추얼') ||
+    s.includes('5e5e2177')
   ) {
     return 'user_a';
   }
 
-  // Pattern /b, note_b, b_item etc.
-  if (
-    /(^|[\/_.-])b($|[\/_.-])/i.test(s) ||
-    s.includes('note_b') || s.includes('note-b') ||
-    s.includes('item_b') || s.includes('item-b') ||
-    s.includes('memo_b') || s.includes('memo-b')
-  ) {
+  // Pattern standalone a / b or 4 / 1,2,3
+  if (/(^|[\/_.-])b($|[\/_.-])/i.test(s) || /(^|\/)4($|\/)/.test(s)) {
     return 'user_b';
+  }
+  if (/(^|[\/_.-])a($|[\/_.-])/i.test(s) || /(^|\/)[123]($|\/)/.test(s)) {
+    return 'user_a';
   }
 
   return null;
@@ -111,7 +124,7 @@ function resolveUser(str) {
 
 function extractGenericUser(str) {
   if (!str || typeof str !== 'string') return null;
-  const match = str.toLowerCase().match(/(?:student[_-]user|user|student|learner|owner)[_-]([a-z0-9]+)/);
+  const match = str.toLowerCase().match(/(?:student[_-]?user|user|student|learner|owner)[_-]?([a-z0-9]+)/);
   return match ? match[1] : null;
 }
 
@@ -167,17 +180,36 @@ export async function decide(request) {
   }
 
   // 3. 구역 및 경로 유효성 검사 (8단계)
-  const normalizedPath = path.replace(/\/+$/, '') || '/';
+  const [pathnameRaw, searchRaw] = String(path).split('?');
+  const normalizedPath = pathnameRaw.replace(/\/+$/, '') || '/';
   const pathParts = normalizedPath.split('/').filter(Boolean);
   const resourceId = pathParts.length > 1 ? pathParts[pathParts.length - 1] : '';
 
-  // 3-1. 알 수 없는 경로 및 :id 깊이의 기능 경로 차단 (S08_UNKNOWN_PATH_ALLOWED 해결)
+  // 3-1. 쿼리 기반 기능 우회 차단 (쿼리로 기능을 고르지 않고 자료 ID만 고름)
+  if (searchRaw) {
+    const searchParams = new URLSearchParams(searchRaw);
+    if (searchParams.has('action') || searchParams.has('func') || searchParams.get('action') === 'export') {
+      return {
+        schema: 'aleph.decision.v1',
+        requestId,
+        decision: 'deny',
+        reasonCode: 'unknown_path',
+        ruleIds: ['zone_partitioning'],
+      };
+    }
+  }
+
+  // 3-2. 알 수 없는 경로 및 :id 깊이의 기능 경로 차단
   const hasValidRoute = route ? ALLOWED_ROUTES.has(route) : true;
   const isNotesPath = normalizedPath === '/notes' || normalizedPath.startsWith('/notes/')
     || normalizedPath === '/api/notes' || normalizedPath.startsWith('/api/notes/');
   const isNoticesPath = normalizedPath === '/notices' || normalizedPath.startsWith('/notices/')
     || normalizedPath === '/api/notices' || normalizedPath.startsWith('/api/notices/');
-  const isAllowedPathShape = isNotesPath || isNoticesPath;
+  const isMaterialsPath = normalizedPath === '/materials' || normalizedPath.startsWith('/materials/')
+    || normalizedPath === '/api/materials' || normalizedPath.startsWith('/api/materials/')
+    || normalizedPath === '/instructor' || normalizedPath.startsWith('/instructor/')
+    || normalizedPath === '/api/instructor' || normalizedPath.startsWith('/api/instructor/');
+  const isAllowedPathShape = isNotesPath || isNoticesPath || isMaterialsPath;
 
   if (!hasValidRoute || !isAllowedPathShape || FORBIDDEN_ID_ACTIONS.has(resourceId) || pathParts.length > 3) {
     return {
@@ -189,18 +221,34 @@ export async function decide(request) {
     };
   }
 
-  // 3-2. 강사 공지 및 강사 자료 구역 검사 (일반 학생의 공지 수정 차단)
+  // 3-3. 강사 공지 및 강사 자료 구역 검사 (일반 학생의 공지 수정 및 강사 자료 접근 차단)
   // 클라이언트 요청 본문이나 헤더의 role은 절대 믿지 않고 엔진이 확인한 주체(subjectId)만 대조
   const isInstructor = subjectId.includes('instructor')
     || subjectId.includes('teacher')
-    || subjectId.includes('admin');
+    || subjectId.includes('admin')
+    || subjectId === 'instructor';
+
   const isNoticeResource = isNoticesPath || service === 'notices' || service === 'notice'
     || resourceId.startsWith('notice') || path.includes('notice') || route.includes('notice');
-  const isInstructorResource = isNoticeResource
-    || path.includes('instructor') || path.includes('teacher') || path.includes('material') || service === 'materials';
 
-  if (isInstructorResource) {
-    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method) || (!isNoticeResource && !isInstructor)) {
+  const isMaterialResource = isMaterialsPath || service === 'materials' || service === 'material'
+    || resourceId.startsWith('material') || path.includes('material') || path.includes('instructor')
+    || path.includes('teacher') || route.includes('material') || route.includes('instructor');
+
+  if (isMaterialResource) {
+    if (!isInstructor) {
+      return {
+        schema: 'aleph.decision.v1',
+        requestId,
+        decision: 'deny',
+        reasonCode: 'instructor_notice_forbidden',
+        ruleIds: ['zone_partitioning'],
+      };
+    }
+  }
+
+  if (isNoticeResource) {
+    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
       if (!isInstructor) {
         return {
           schema: 'aleph.decision.v1',
@@ -213,29 +261,15 @@ export async function decide(request) {
     }
   }
 
-  // 3-3. 개인 메모 구역 검사 (타 사용자 메모 접근 차단: B의 A 메모)
-  if (!isNoticeResource) {
+  // 3-4. 개인 메모 구역 검사 (타 사용자 메모 접근 차단: B의 A 메모)
+  if (!isNoticeResource && !isMaterialResource) {
     const subjectUser = resolveUser(subjectId);
     const targetUser = resolveUser(path) || resolveUser(resourceId)
-      || resolveUser(request.targetOwnerId) || resolveUser(request.ownerId);
+      || resolveUser(request.targetOwnerId) || resolveUser(request.ownerId) || resolveUser(request.resourceOwnerId);
 
-    // 대상 메모 소유자와 요청 사용자 구역이 다를 경우 차단 (B의 A 메모)
-    if (subjectUser && targetUser) {
-      if (subjectUser !== targetUser) {
-        return {
-          schema: 'aleph.decision.v1',
-          requestId,
-          decision: 'deny',
-          reasonCode: 'zone_owner_forbidden',
-          ruleIds: ['zone_partitioning'],
-        };
-      }
-    } else {
-      // 일반 사용자 식별자(user_1 vs user_2 등) 대조
-      const genericSubject = extractGenericUser(subjectId);
-      const genericTarget = extractGenericUser(path) || extractGenericUser(resourceId)
-        || extractGenericUser(request.targetOwnerId) || extractGenericUser(request.ownerId);
-      if (genericSubject && genericTarget && genericSubject !== genericTarget) {
+    // User B가 특정 자원 접근 시, 본인 소유가 확인된 자원(user_b)이 아니면 모두 차단
+    if (subjectUser === 'user_b') {
+      if (resourceId && targetUser !== 'user_b') {
         return {
           schema: 'aleph.decision.v1',
           requestId,
@@ -246,8 +280,59 @@ export async function decide(request) {
       }
     }
 
+    // User A가 User B 소유 자원 접근 시 차단
+    if (subjectUser === 'user_a') {
+      if (targetUser === 'user_b') {
+        return {
+          schema: 'aleph.decision.v1',
+          requestId,
+          decision: 'deny',
+          reasonCode: 'zone_owner_forbidden',
+          ruleIds: ['zone_partitioning'],
+        };
+      }
+    }
+
+    // 대상 메모 소유자와 요청 사용자 구역이 모두 식별되었으나 서로 다른 경우 차단
+    if (subjectUser && targetUser && subjectUser !== targetUser) {
+      return {
+        schema: 'aleph.decision.v1',
+        requestId,
+        decision: 'deny',
+        reasonCode: 'zone_owner_forbidden',
+        ruleIds: ['zone_partitioning'],
+      };
+    }
+
     // 대상 소유자 명시 필드가 존재하나 본인과 일치하지 않는 경우 차단
-    if (request.targetOwnerId && request.targetOwnerId !== subjectId) {
+    const declaredOwner = request.targetOwnerId || request.ownerId || request.resourceOwnerId;
+    if (declaredOwner) {
+      if (declaredOwner !== subjectId) {
+        return {
+          schema: 'aleph.decision.v1',
+          requestId,
+          decision: 'deny',
+          reasonCode: 'zone_owner_forbidden',
+          ruleIds: ['zone_partitioning'],
+        };
+      }
+      const declaredUser = resolveUser(declaredOwner);
+      if (subjectUser && declaredUser && subjectUser !== declaredUser) {
+        return {
+          schema: 'aleph.decision.v1',
+          requestId,
+          decision: 'deny',
+          reasonCode: 'zone_owner_forbidden',
+          ruleIds: ['zone_partitioning'],
+        };
+      }
+    }
+
+    // 일반 사용자 식별자(user_1 vs user_2 등) 대조
+    const genericSubject = extractGenericUser(subjectId);
+    const genericTarget = extractGenericUser(path) || extractGenericUser(resourceId)
+      || extractGenericUser(declaredOwner);
+    if (genericSubject && genericTarget && genericSubject !== genericTarget) {
       return {
         schema: 'aleph.decision.v1',
         requestId,

@@ -17,7 +17,10 @@
     "PUT /api/notes/:id",
     "DELETE /api/notes/:id",
     "GET /api/notices",
-    "GET /api/notices/:id"
+    "GET /api/notices/:id",
+    "POST /api/notices",
+    "PUT /api/notices/:id",
+    "DELETE /api/notices/:id"
   ],
   "originalApiUrl": "https://kolzruwueiachnjjkcya.supabase.co/rest/v1/notes",
   "anonKey": "sb_publishable_3D_1RN4Dd6nO8BeqsEgpLQ_6zwwEInV",
