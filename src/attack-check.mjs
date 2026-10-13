@@ -1174,9 +1174,9 @@ const ZERO_ID = '00000000-0000-4000-8000-000000000001';
 export const ATTACKS = [
   [1, 'ANONYMOUS_NOTE_LIST', '인증 없이 개인 메모 목록을 조회', ['F01']],
   [1, 'ANONYMOUS_NOTE_READ', '인증 없이 개인 메모를 조회', ['F02']],
-  [2, 'BUILT_BUNDLE_SECRET_SCAN', '배포 번들에서 시험 비밀값을 검색', ['F05']],
+  [2, 'BUILT_BUNDLE_SECRET_SCAN', '배포 번들에서 시험 비밀값을 검색', []],
   [2, 'REPOSITORY_SECRET_SCAN', '제출 커밋에서 시험 비밀값을 검색', []],
-  [2, 'STATIC_SEED_DATA_SCAN', '공개 정적 파일에서 개인 메모 시드를 검색', ['F04']],
+  [2, 'STATIC_SEED_DATA_SCAN', '공개 정적 파일에서 개인 메모 시드를 검색', []],
   [3, 'ANONYMOUS_NOTE_WRITE', '인증 없이 개인 메모를 추가', []],
   [3, 'EXPIRED_LOGIN_TOKEN', '만료된 로그인 토큰으로 조회', []],
   [3, 'FORGED_LOGIN_TOKEN', '서명이 위조된 로그인 토큰으로 조회', ['F03']],
@@ -1187,7 +1187,7 @@ export const ATTACKS = [
   [4, 'R3_JUDGE_OWNED_NOTE_WRITE', '학생 시험 신원으로 심판 소유 메모 수정', []],
   [5, 'DIRECT_ORIGIN_NOTE_READ', '공개 키와 시험 계정 토큰으로 원본 Supabase 자료 API 직접 조회', []],
   [5, 'DIRECT_ORIGIN_NOTE_WRITE', '공개 키와 시험 계정 토큰으로 원본 Supabase 자료 API 직접 수정', []],
-  [5, 'ORIGIN_ALIAS_BYPASS', '공개 정적 파일과 브라우저 묶음에서 서버 전용 키·시드 표식 검색', ['F05', 'F06', 'F04']],
+  [5, 'ORIGIN_ALIAS_BYPASS', '공개 정적 파일과 브라우저 묶음에서 서버 전용 키·시드 표식 검색', []],
   [6, 'DEVICE_SUBJECT_MISMATCH', '등록 기기와 다른 사용자 토큰을 조합', []],
   [6, 'MISSING_CLIENT_CERTIFICATE', '클라이언트 인증서 없이 mTLS 통로 요청', []],
   [6, 'UNREGISTERED_DEVICE', '미등록 기기 인증서로 자료실 조회', []],
@@ -1535,10 +1535,12 @@ async function runMeasuredAttackChecks(config) {
     const results = [];
     for (const req of attack.requests) {
       try {
-        // 이전 단계에서 통과한 요청과 같은 옵션(redirect: 'error')으로 보내고, 요청마다 점검 이름을 헤더로 붙입니다.
+        // runner가 응답을 독립 관측할 수 있도록 요청마다 alephEvidence에 사례와 요청 키를 연결합니다.
+        // 이 메타데이터는 요청 헤더나 URL에 넣지 않습니다.
         const res = await fetch(new URL(req.path, app), {
           method: 'GET', redirect: 'error', signal: timeoutSignal(10000),
-          headers: { ...(req.headers ?? {}), 'x-aleph-attack-id': attack.code },
+          headers: { ...(req.headers ?? {}) },
+          alephEvidence: { caseId: attack.code, requestKey: 'read' },
         });
         const text = await res.text();
         results.push({ ...req, status: res.status, requestId: res.headers.get('x-vercel-id') || null, text });

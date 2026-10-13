@@ -252,7 +252,7 @@
 - 시험 계정 토큰·기기 서명이 필요한 요청(T01~T05)은 보내지 않고 **미실행**으로 둡니다.
 - 41종 공격은 **실제 HTTP 요청이 막힌 경우만** 「실측 막음」으로 세고, 나머지는 「미실행」입니다. 판정기·탐지기·정책 함수의 로컬 실행은 요청 기록이 남지 않으므로 「로컬 실행(요청 아님)」으로 따로 적고 막음 수에 넣지 않습니다. 41종을 모두 막았다고 적지 않습니다.
 - `npm run bundle`(심판 격리 환경)은 41종 공격 코드를 점검 이름(attackId)으로 쓰고, **각 점검이 그 자리에서 직접 보낸 GET 요청**의 상태 코드와 요청 ID만 적습니다(7종). 토큰·기기 서명·쓰기 요청이 필요한 13종은 `observed: not_run`입니다. git 명령은 실행하지 않습니다. `npm run evidence`도 같은 조건(GET·HEAD만)으로 실행해 화면 수치와 제출 묶음의 기준을 맞춥니다.
-- 이번 저장점의 표: 검사한 배포 커밋 `7c2d1d2` · 실제 API 응답: 금지 요청 거부 12 / 다름 0 / 미실행 7 · 정상 요청 허용 4 / 다름 0 / 미실행 2 · 로컬 실행(요청 아님) 기대와 같음 13 · 41종 중 실측 막음 7(ANONYMOUS_NOTE_LIST·ANONYMOUS_NOTE_READ·MISSING_LOGIN_TOKEN·FORGED_LOGIN_TOKEN·STATIC_SEED_DATA_SCAN·BUILT_BUNDLE_SECRET_SCAN·ORIGIN_ALIAS_BYPASS), 미실행 34.
+- 이번 저장점의 표: 검사한 배포 커밋 `e73986e` · 실제 API 응답: 금지 요청 거부 12 / 다름 0 / 미실행 7 · 정상 요청 허용 4 / 다름 0 / 미실행 2 · 로컬 실행(요청 아님) 기대와 같음 13 · 41종 중 실측 막음 4(ANONYMOUS_NOTE_LIST·ANONYMOUS_NOTE_READ·FORGED_LOGIN_TOKEN·MISSING_LOGIN_TOKEN), 미실행 37.
 
 ### 출처: 제공 엔진과 학생 작업
 | 구분 | 출처 | 내용 |
