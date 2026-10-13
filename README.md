@@ -124,6 +124,33 @@
    - `통과 · 미등록 기기의 가상 요청` (미등록 기기 요청이 deny / device_not_registered로 거부됨)
    - 별도의 클라이언트 접속 프로그램 설치는 필요하지 않으며, 미등록 기기를 통한 공격 시뮬레이션 및 실제 검증은 심판이 수행합니다.
 
+## 7단계: 평소와 다른 접속은 다시 확인합니다
+
+- **판정기 복합 이상 사건 검사 및 재인증 규칙 구현 (`src/decider.mjs`)**:
+  - ALEPH SDP 계약(`aleph.decision.v1`)에 따라 엔진이 검증해 넘긴 신뢰 신호 출처(`signals.source: judge_fixture` 또는 `engine`)만 판정에 반영하고, 위조 가능한 클라이언트 헤더를 신뢰 정보로 승격하지 않습니다.
+  - 평소와 다른 시각, 처음 보는 네트워크(`unusual`), 대량 자료 읽기 급증의 복합 사건 발생 시 `step_up`(이유 코드: `step_up_required`, 규칙: `step_up_required`)으로 추가 본인 확인을 요청합니다.
+  - 지역(`region`) 단독만으로 영구 차단(`deny`)하지 않고, 복합 이상 징후를 판정하여 사유를 남기며 `step_up`으로 처리합니다.
+  - 재인증이 완료된 요청(`request.stepUp.verified === true`, 900초 이내)은 정상 허용(`allow`, 이유 코드: `approved`)합니다.
+  - 기존 6단계 등록 기기 검증 규칙(`device_registered`)은 보존되며, `RULE_IDS`에 `['device_registered', 'step_up_required']`를 등록했습니다.
+- **재로그인 시각 확인 계약 점검 결과**:
+  - 현재 엔진 계약(`docs/DECIDER_REQUEST.md`)에는 실제 계정의 재로그인 시각을 확인하는 별도 계약이 없으므로, 가상 사건 규칙만 시험하고 실제 자료 차단 실측은 안전하게 미실행으로 유지했습니다.
+
+### 7단계 확인 순서
+1. **가상 사건 픽스처 시험 실행**:
+   ```bash
+   npm run fixture:7
+   ```
+   - 정상 사건: `allow`
+   - 복합 이상 사건: `step_up`
+2. **판정기 규칙 통합 시험 실행**:
+   ```bash
+   npm run decider:test
+   ```
+   - `통과 · 등록 기기의 정상 요청` (allow)
+   - `통과 · 미등록 기기의 가상 요청` (deny · device_not_registered)
+   - `통과 · 복합 이상 접속` (step_up · step_up_required)
+   - `통과 · 다시 확인한 복합 이상 접속` (allow)
+
 ## 다음 단계의 코딩 도구에 전달할 규칙
 
 [AGENTS.md](AGENTS.md)를 먼저 읽히고 한 번에 한 제작 단위만 요청하세요. 2단계부터는 자료 보호를 구현할 때 `public/data.json`을 복사하는 1단계 빌드 흐름도 함께 바꿔야 합니다. 3단계 이후의 로그인, 허용 경로, 5단계의 원본 API 주소, 6단계 이후 정책 규칙은 해당 단계 원고와 계약에 맞춰 추가합니다. 비밀번호·토큰·서버 전용 키·실제 학생 기록을 코드, Git, 제출 묶음에 넣지 않습니다.
