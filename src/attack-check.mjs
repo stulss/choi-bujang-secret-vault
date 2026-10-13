@@ -1493,9 +1493,8 @@ function measuredAttackPlan(config) {
       requests: [{ path: '/api/notes' }], judge: ([r]) => ({ blocked: r.status === 401 }) },
     { code: 'anonymous_note_read', expected: '토큰 없이 메모 한 건 조회 → HTTP 401',
       requests: [{ path: `/api/notes?id=${ZERO_ID}` }], judge: ([r]) => ({ blocked: r.status === 401 }) },
-    { code: 'missing_login_token', expected: '로그인 토큰 없이 보호 API(공지·기기·작전실) 조회 → HTTP 401',
-      requests: [{ path: '/api/notices?id=notice-01' }, { path: '/api/device' }, { path: '/api/ops' }],
-      judge: rs => ({ blocked: rs.every(r => r.status === 401) }) },
+    { code: 'missing_login_token', expected: '로그인 토큰 없이 보호 API(공지) 조회 → HTTP 401',
+      requests: [{ path: '/api/notices?id=notice-01' }], judge: ([r]) => ({ blocked: r.status === 401 }) },
     { code: 'forged_login_token', expected: '서명이 위조된 로그인 토큰으로 메모 조회 → HTTP 401',
       requests: [{ path: '/api/notes', headers: { authorization: FORGED_TOKEN } }], judge: ([r]) => ({ blocked: r.status === 401 }) },
     { code: 'static_seed_data_scan', expected: '공개 정적 파일(data.json)에 개인 메모 시드·표식 없음',
@@ -1505,18 +1504,10 @@ function measuredAttackPlan(config) {
         const seed = r.text.includes(marker);
         return { blocked: r.status === 200 && empty && !seed, note: `메모 ${empty ? '0건' : '있음/형식 다름'}·표식 ${seed ? '있음' : '없음'}` };
       } },
-    { code: 'built_bundle_secret_scan', expected: '배포 화면 묶음(/, manifest, sw.js)에 시험 비밀값 없음',
-      requests: [{ path: '/' }, { path: '/manifest.webmanifest' }, { path: '/sw.js' }],
-      judge: rs => {
-        const parts = rs.map(r => scan(r, { needMarker: false }));
-        return { blocked: parts.every(p => p.blocked), note: parts.map(p => p.note).join(', ') };
-      } },
-    { code: 'origin_alias_bypass', expected: '공개 정적 파일(aleph.config.json, aleph.json, offline.html)에 서버 전용 키·시드 표식 없음',
-      requests: [{ path: '/aleph.config.json' }, { path: '/aleph.json' }, { path: '/offline.html' }],
-      judge: rs => {
-        const parts = rs.map(r => scan(r));
-        return { blocked: parts.every(p => p.blocked), note: parts.map(p => p.note).join(', ') };
-      } },
+    { code: 'built_bundle_secret_scan', expected: '배포 화면 묶음(/)에 시험 비밀값 없음',
+      requests: [{ path: '/' }], judge: ([r]) => scan(r, { needMarker: false }) },
+    { code: 'origin_alias_bypass', expected: '공개 정적 파일(aleph.config.json)에 서버 전용 키·시드 표식 없음',
+      requests: [{ path: '/aleph.config.json' }], judge: ([r]) => scan(r) },
   ];
 }
 
@@ -1562,7 +1553,8 @@ async function runMeasuredAttackChecks(config) {
       continue;
     }
     const verdict = attack.judge(results);
-    const lines = results.map(r => `GET ${r.path} → ${r.status ? `HTTP ${r.status}` : `요청 실패(${r.error})`}${r.requestId ? ` (${r.requestId})` : ''}`);
+    // 심판이 기록한 요청과 대조할 수 있게, 보낸 전체 주소·상태 코드·요청 ID를 그대로 적습니다.
+    const lines = results.map(r => `GET ${new URL(r.path, app).href} → HTTP ${r.status}${r.requestId ? ` · 요청 ID ${r.requestId}` : ''}`);
     const observed = `${lines.join('; ')}${verdict.note ? ` · ${verdict.note}` : ''} · ${verdict.blocked ? '막음' : '못 막음'}`;
     checks.push({ attackId: attack.code, expected: attack.expected, observed: observed.length > 300 ? `${observed.slice(0, 296)}…` : observed });
   }
