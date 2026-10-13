@@ -252,7 +252,7 @@
 - 시험 계정 토큰·기기 서명이 필요한 요청(T01~T05)은 보내지 않고 **미실행**으로 둡니다.
 - 41종 공격은 **실제 HTTP 요청이 막힌 경우만** 「실측 막음」으로 세고, 나머지는 「미실행」입니다. 판정기·탐지기·정책 함수의 로컬 실행은 요청 기록이 남지 않으므로 「로컬 실행(요청 아님)」으로 따로 적고 막음 수에 넣지 않습니다. 41종을 모두 막았다고 적지 않습니다.
 - `npm run bundle`(심판 격리 환경)은 41종 공격 코드를 점검 이름(attackId)으로 쓰고, **각 점검이 그 자리에서 직접 보낸 GET 요청**의 상태 코드와 요청 ID만 적습니다(7종). 토큰·기기 서명·쓰기 요청이 필요한 13종은 `observed: not_run`입니다. git 명령은 실행하지 않습니다. `npm run evidence`도 같은 조건(GET·HEAD만)으로 실행해 화면 수치와 제출 묶음의 기준을 맞춥니다.
-- 이번 저장점의 표: 검사한 배포 커밋 `8b2c59f` · 실제 API 응답: 금지 요청 거부 12 / 다름 0 / 미실행 7 · 정상 요청 허용 4 / 다름 0 / 미실행 2 · 로컬 실행(요청 아님) 기대와 같음 13 · 41종 중 실측 막음 4(ANONYMOUS_NOTE_LIST·ANONYMOUS_NOTE_READ·FORGED_LOGIN_TOKEN·MISSING_LOGIN_TOKEN), 미실행 37.
+- 이번 저장점의 표: 검사한 배포 커밋 `bc680ae` · 실제 API 응답: 금지 요청 거부 12 / 다름 0 / 미실행 7 · 정상 요청 허용 4 / 다름 0 / 미실행 2 · 로컬 실행(요청 아님) 기대와 같음 13 · 41종 중 실측 막음 4(ANONYMOUS_NOTE_LIST·ANONYMOUS_NOTE_READ·FORGED_LOGIN_TOKEN·MISSING_LOGIN_TOKEN), 미실행 37.
 
 ### 출처: 제공 엔진과 학생 작업
 | 구분 | 출처 | 내용 |
@@ -263,17 +263,17 @@
 
 비밀값(서버 전용 키, 토큰, 기기 개인키)은 이 안내와 제출 묶음에 넣지 않습니다. 값이 필요하면 Vercel·Supabase 설정 화면의 비밀 입력란에 직접 넣습니다.
 
-### 설치·실행·중지·복구 (검사한 커밋 `8b2c59f` 기준)
+### 설치·실행·중지·복구 (검사한 커밋 `bc680ae` 기준)
 | 대상 | 설치 | 실행 | 중지 | 복구 |
 |---|---|---|---|---|
 | 자료실 (`api/*`, Supabase) | Supabase SQL Editor에서 `schema.sql`을 단계 순서(1~6, 7~10, 11~12번)대로 실행 → Vercel 환경변수 `SUPABASE_URL`, `SUPABASE_SECRET_KEY`를 설정 화면에 직접 입력 → GitHub `main` 푸시로 배포 | 배포 주소 접속, `curl -i <배포 주소>/api/notes` → 401이면 보호 동작 | Vercel 프로젝트에서 배포 일시 중지 또는 이전 배포 지정 | 메모 한 건: `POST /api/restore` (10단계), 코드: 검사한 커밋으로 `git revert` 후 푸시 또는 Vercel에서 이전 배포 Promote |
 | 접속 앱 (`public/*`, `api/device.js`) | 자료실 배포에 함께 포함. 브라우저의 「앱 설치」는 선택(설치 표시는 기기 확인이 아님) | 열기 → 로그인 → 「이 기기 승인 요청」 → 「서버 확인 완료」 뒤 자료실·작전실 | 로그아웃 또는 탭 닫기(토큰·기기 키는 메모리라 사라짐). 서비스 워커는 브라우저 사이트 설정에서 해제 | 기기 회수: 운영자가 `devices.status`를 `revoked`로 변경. 새로고침 뒤 다시 승인 |
-| 학생 판정기 (`src/decider.mjs`) | 설치 없음 (Node 22) | 운영 중에는 ALEPH SDP 엔진이 `decide()`를 호출. 로컬: `npm run decider:test`, `npm run fixture:7` | 엔진 쪽에서 판정기 호출 중지(운영 측) | `git checkout 8b2c59f -- src/decider.mjs` 후 커밋·푸시 |
-| 탐지 규칙 (`src/detect.mjs`) | 설치 없음 | 운영 사건 전달은 ALEPH SDP 엔진. 로컬: `npm run detect:test` | 엔진 쪽 사건 전달 중지(운영 측) | `git checkout 8b2c59f -- src/detect.mjs` 후 커밋·푸시 |
+| 학생 판정기 (`src/decider.mjs`) | 설치 없음 (Node 22) | 운영 중에는 ALEPH SDP 엔진이 `decide()`를 호출. 로컬: `npm run decider:test`, `npm run fixture:7` | 엔진 쪽에서 판정기 호출 중지(운영 측) | `git checkout bc680ae -- src/decider.mjs` 후 커밋·푸시 |
+| 탐지 규칙 (`src/detect.mjs`) | 설치 없음 | 운영 사건 전달은 ALEPH SDP 엔진. 로컬: `npm run detect:test` | 엔진 쪽 사건 전달 중지(운영 측) | `git checkout bc680ae -- src/detect.mjs` 후 커밋·푸시 |
 | 시험 정책 (`policy/`) | 설치 없음 | `npm run policy:diff` | — | `npm run policy:restore -- --service notes --version v9-9f13368 --yes` |
 
 ### 재현 순서
-1. `git checkout 8b2c59f` → `npm ci`
+1. `git checkout bc680ae` → `npm ci`
 2. `node --test test/package-starter.test.mjs test/r5.test.mjs test/xdr-brute-force.test.mjs test/xdr-run.test.mjs`
 3. `npm run decider:test`, `npm run fixture:7`, `npm run detect:test`, `npm run policy:diff`
 4. `npm run evidence` → `docs/EVIDENCE.md`에서 금지 거부·정상 허용·미실행 건수와 요청 ID 확인
