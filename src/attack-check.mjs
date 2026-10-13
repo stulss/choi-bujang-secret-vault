@@ -1355,7 +1355,9 @@ export async function collectEvidence(config, { allowWrites = false } = {}) {
   const deciderModule = await optional(new URL('./decider.mjs', import.meta.url).href);
   const detectModule = await optional(new URL('./detect.mjs', import.meta.url).href);
   const fsModule = await optional('node:fs');
-  const gitModule = await optional('node:child_process');
+  // 격리 환경(npm run bundle)의 git은 제출 묶음 확인용 읽기만 허용됩니다. 그래서 bundle 모드에서는 git을 실행하지 않고
+  // 비밀값 검색 행을 not_run 으로 둡니다. 로컬 npm run evidence(allowWrites=true)에서만 git grep을 실행합니다.
+  const gitModule = allowWrites ? await optional('node:child_process') : { importError: 'bundle_mode' };
   const missing = (rowsOut, base, mod, name) => notRun(rowsOut, base, `not_run (${name} 불러오기 실패: ${String(mod.importError).slice(0, 60)})`);
 
   // 7단계 연습 요청과 같은 모양 (scripts/fixture-7.mjs와 같은 값, 쓰기 기능 없이 직접 구성)
@@ -1435,7 +1437,9 @@ export async function collectEvidence(config, { allowWrites = false } = {}) {
   }
 
   const gitBase = { id: 'L14', stage: 2, kind: 'forbidden', request: 'git grep HEAD (비밀값 검색)', expected: '서버 키·JWT·개인키 0건' };
-  if (typeof gitModule.execFileSync !== 'function') {
+  if (!allowWrites) {
+    notRun(rows, gitBase, 'not_run (격리 환경은 제출 묶음 확인용 git 읽기만 허용, 로컬 npm run evidence에서 실행)');
+  } else if (typeof gitModule.execFileSync !== 'function') {
     missing(rows, gitBase, gitModule, 'node:child_process');
   } else {
     await local(rows, gitBase, () => {
