@@ -1,0 +1,779 @@
+{
+  "schema": "aleph.ops-evidence.v1",
+  "generatedAt": "2026-10-13T07:26:07.362Z",
+  "deployedCommit": "dab2ba73290a80a249f9facb02d2d43c48340d22",
+  "writesSent": false,
+  "rows": [
+    {
+      "requestId": "icn1::qw6j7-1791876344039-d975f9978f0b",
+      "checkedAt": "2026-10-13T07:26:04.652Z",
+      "id": "N01",
+      "stage": 1,
+      "kind": "normal",
+      "request": "GET /aleph.json",
+      "expected": "HTTP 200, 배포 커밋 확인",
+      "actual": "HTTP 200, 커밋 dab2ba7",
+      "result": "pass",
+      "source": "live_http"
+    },
+    {
+      "requestId": "icn1::qw6j7-1791876344088-0ab0075acf45",
+      "checkedAt": "2026-10-13T07:26:04.686Z",
+      "id": "N02",
+      "stage": 11,
+      "kind": "normal",
+      "request": "GET /",
+      "expected": "HTTP 200 접속 화면",
+      "actual": "HTTP 200",
+      "result": "pass",
+      "source": "live_http"
+    },
+    {
+      "requestId": "icn1::4stk2-1791876344109-bca0cd15d702",
+      "checkedAt": "2026-10-13T07:26:04.719Z",
+      "id": "N03",
+      "stage": 11,
+      "kind": "normal",
+      "request": "GET /manifest.webmanifest",
+      "expected": "HTTP 200, 앱 이름 있음",
+      "actual": "HTTP 200, 이름 있음",
+      "result": "pass",
+      "source": "live_http"
+    },
+    {
+      "requestId": "icn1::gfmdp-1791876344168-0fdfc3461228",
+      "checkedAt": "2026-10-13T07:26:04.778Z",
+      "id": "N04",
+      "stage": 11,
+      "kind": "normal",
+      "request": "GET /offline.html",
+      "expected": "HTTP 200 오프라인 안내",
+      "actual": "HTTP 200",
+      "result": "pass",
+      "source": "live_http"
+    },
+    {
+      "requestId": "icn1::iad1::qw6j7-1791876344209-8cf8df89dfab",
+      "checkedAt": "2026-10-13T07:26:05.011Z",
+      "id": "F01",
+      "stage": 1,
+      "kind": "forbidden",
+      "request": "GET /api/notes (토큰 없음)",
+      "expected": "HTTP 401, 메모 없음",
+      "actual": "HTTP 401",
+      "result": "pass",
+      "source": "live_http"
+    },
+    {
+      "requestId": "icn1::iad1::b6j2x-1791876344440-5ed6f2310308",
+      "checkedAt": "2026-10-13T07:26:05.247Z",
+      "id": "F02",
+      "stage": 1,
+      "kind": "forbidden",
+      "request": "GET /api/notes?id=<가상 UUID> (토큰 없음)",
+      "expected": "HTTP 401",
+      "actual": "HTTP 401",
+      "result": "pass",
+      "source": "live_http"
+    },
+    {
+      "requestId": "icn1::iad1::9td6p-1791876344673-4198a1a8a1da",
+      "checkedAt": "2026-10-13T07:26:05.507Z",
+      "id": "F03",
+      "stage": 3,
+      "kind": "forbidden",
+      "request": "GET /api/notes (서명 위조 토큰)",
+      "expected": "HTTP 401",
+      "actual": "HTTP 401",
+      "result": "pass",
+      "source": "live_http"
+    },
+    {
+      "requestId": "icn1::dhgnr-1791876344926-9474f2efe4f7",
+      "checkedAt": "2026-10-13T07:26:05.544Z",
+      "id": "F04",
+      "stage": 2,
+      "kind": "forbidden",
+      "request": "GET /data.json (시드 검색)",
+      "expected": "메모 0건, 확인 표식 없음",
+      "actual": "HTTP 200, 메모 0건, 표식 없음",
+      "result": "pass",
+      "source": "live_http"
+    },
+    {
+      "requestId": "icn1::bmnkc-1791876344967-4a8782ce1e0e",
+      "checkedAt": "2026-10-13T07:26:05.585Z",
+      "id": "F05",
+      "stage": 2,
+      "kind": "forbidden",
+      "request": "GET / (배포 화면 비밀값·표식·저장소 검색)",
+      "expected": "서버 키·개인키·표식·저장소 저장 코드 없음",
+      "actual": "HTTP 200, 비밀값 없음, 표식 없음, 저장소 저장 없음",
+      "result": "pass",
+      "source": "live_http"
+    },
+    {
+      "requestId": "icn1::bmnkc-1791876345015-33a238bf3c4d",
+      "checkedAt": "2026-10-13T07:26:05.955Z",
+      "id": "F06",
+      "stage": 5,
+      "kind": "forbidden",
+      "request": "GET /aleph.config.json (서버 키 검색)",
+      "expected": "서버 전용 키 없음",
+      "actual": "HTTP 200, 서버 키 없음",
+      "result": "pass",
+      "source": "live_http"
+    },
+    {
+      "requestId": "01a13427-2e59-7727-a725-ab190c9c7c8f",
+      "checkedAt": "2026-10-13T07:26:06.355Z",
+      "id": "F07",
+      "stage": 5,
+      "kind": "forbidden",
+      "request": "GET 원본 자료 API (공개 키만, 사용자 토큰 없음)",
+      "expected": "HTTP 401 또는 403",
+      "actual": "HTTP 401",
+      "result": "pass",
+      "source": "live_http"
+    },
+    {
+      "requestId": "icn1::iad1::5qdvj-1791876345788-7c72d00a5b81",
+      "checkedAt": "2026-10-13T07:26:06.591Z",
+      "id": "F08",
+      "stage": 8,
+      "kind": "forbidden",
+      "request": "GET /api/notes/export (토큰 없음)",
+      "expected": "HTTP 401 또는 404",
+      "actual": "HTTP 401",
+      "result": "pass",
+      "source": "live_http"
+    },
+    {
+      "requestId": "icn1::iad1::tnqng-1791876346021-2fd299852379",
+      "checkedAt": "2026-10-13T07:26:06.839Z",
+      "id": "F09",
+      "stage": 8,
+      "kind": "forbidden",
+      "request": "GET /api/notices?id=notice-01 (토큰 없음)",
+      "expected": "HTTP 401",
+      "actual": "HTTP 401",
+      "result": "pass",
+      "source": "live_http"
+    },
+    {
+      "requestId": "icn1::iad1::4vrpc-1791876346270-4b1a8730594c",
+      "checkedAt": "2026-10-13T07:26:07.082Z",
+      "id": "F10",
+      "stage": 11,
+      "kind": "forbidden",
+      "request": "GET /api/device (토큰·서명 없음)",
+      "expected": "HTTP 401, 승인으로 처리 안 함",
+      "actual": "HTTP 401",
+      "result": "pass",
+      "source": "live_http"
+    },
+    {
+      "requestId": "icn1::iad1::5xgr4-1791876346503-48c8f0d49247",
+      "checkedAt": "2026-10-13T07:26:07.322Z",
+      "id": "F11",
+      "stage": 10,
+      "kind": "forbidden",
+      "request": "HEAD /api/restore",
+      "expected": "복원 없이 HTTP 401 또는 405",
+      "actual": "HTTP 405",
+      "result": "pass",
+      "source": "live_http"
+    },
+    {
+      "requestId": "icn1::qfqt8-1791876346755-8c6881e7216d",
+      "checkedAt": "2026-10-13T07:26:07.356Z",
+      "id": "F12",
+      "stage": 12,
+      "kind": "forbidden",
+      "request": "GET /api/ops (토큰 없음)",
+      "expected": "HTTP 401, 작전실 기록 없음",
+      "actual": "HTTP 404",
+      "result": "fail",
+      "source": "live_http"
+    },
+    {
+      "requestId": null,
+      "checkedAt": null,
+      "id": "W01",
+      "stage": 3,
+      "kind": "forbidden",
+      "request": "POST /api/notes (토큰 없음)",
+      "expected": "HTTP 401, 저장 없음",
+      "actual": "not_run (격리 환경은 GET·HEAD만 허용)",
+      "result": "not_run",
+      "source": "not_run"
+    },
+    {
+      "requestId": null,
+      "checkedAt": null,
+      "id": "W02",
+      "stage": 10,
+      "kind": "forbidden",
+      "request": "POST /api/restore (토큰 없음)",
+      "expected": "HTTP 401, 저장 없음",
+      "actual": "not_run (격리 환경은 GET·HEAD만 허용)",
+      "result": "not_run",
+      "source": "not_run"
+    },
+    {
+      "requestId": null,
+      "checkedAt": null,
+      "id": "W03",
+      "stage": 8,
+      "kind": "forbidden",
+      "request": "PUT /api/notices?id=notice-01 (토큰 없음)",
+      "expected": "HTTP 401, 저장 없음",
+      "actual": "not_run (격리 환경은 GET·HEAD만 허용)",
+      "result": "not_run",
+      "source": "not_run"
+    },
+    {
+      "requestId": "e4174b8d-f6e2-40dd-973f-181d016192f0",
+      "checkedAt": "2026-10-13T07:26:07.359Z",
+      "id": "L01",
+      "stage": 6,
+      "kind": "normal",
+      "request": "판정기: 등록 기기 정상 요청",
+      "expected": "allow",
+      "actual": "allow · approved",
+      "result": "pass",
+      "source": "local_function"
+    },
+    {
+      "requestId": "f15c8fdb-81df-4228-ab20-8f409df10f89",
+      "checkedAt": "2026-10-13T07:26:07.359Z",
+      "id": "L02",
+      "stage": 6,
+      "kind": "forbidden",
+      "request": "판정기: 미등록 가상 기기 요청",
+      "expected": "deny",
+      "actual": "deny · device_not_registered",
+      "result": "pass",
+      "source": "local_function"
+    },
+    {
+      "requestId": "d3488d9e-af11-422f-aab4-b8519a67b73b",
+      "checkedAt": "2026-10-13T07:26:07.359Z",
+      "id": "L03",
+      "stage": 7,
+      "kind": "forbidden",
+      "request": "판정기: 복합 이상 접속 (재확인 전)",
+      "expected": "step_up",
+      "actual": "step_up · step_up_required",
+      "result": "pass",
+      "source": "local_function"
+    },
+    {
+      "requestId": "c9b06200-698d-42b5-8428-ea9ac7523a11",
+      "checkedAt": "2026-10-13T07:26:07.359Z",
+      "id": "L04",
+      "stage": 7,
+      "kind": "normal",
+      "request": "판정기: 복합 이상 접속 (재확인 뒤)",
+      "expected": "allow",
+      "actual": "allow · approved",
+      "result": "pass",
+      "source": "local_function"
+    },
+    {
+      "requestId": "dfaac1b7-311d-4047-be65-c96b65d8d070",
+      "checkedAt": "2026-10-13T07:26:07.359Z",
+      "id": "L05",
+      "stage": 8,
+      "kind": "forbidden",
+      "request": "판정기: B가 A 메모 읽기",
+      "expected": "deny",
+      "actual": "deny · zone_owner_forbidden",
+      "result": "pass",
+      "source": "local_function"
+    },
+    {
+      "requestId": "b033dcca-af3d-4f9e-a1a1-1bd311325a55",
+      "checkedAt": "2026-10-13T07:26:07.359Z",
+      "id": "L06",
+      "stage": 8,
+      "kind": "normal",
+      "request": "판정기: B가 자기 메모 읽기",
+      "expected": "allow",
+      "actual": "allow · approved",
+      "result": "pass",
+      "source": "local_function"
+    },
+    {
+      "requestId": "4fa957c0-5721-4a20-9500-55b20ea73ef9",
+      "checkedAt": "2026-10-13T07:26:07.359Z",
+      "id": "L07",
+      "stage": 8,
+      "kind": "forbidden",
+      "request": "판정기: 학생 공지 수정",
+      "expected": "deny",
+      "actual": "deny · instructor_notice_forbidden",
+      "result": "pass",
+      "source": "local_function"
+    },
+    {
+      "requestId": "ff3684eb-943a-4e56-bbdd-c1e5325d673e",
+      "checkedAt": "2026-10-13T07:26:07.359Z",
+      "id": "L08",
+      "stage": 8,
+      "kind": "forbidden",
+      "request": "판정기: 메모 전체 목록",
+      "expected": "deny",
+      "actual": "deny · zone_owner_forbidden",
+      "result": "pass",
+      "source": "local_function"
+    },
+    {
+      "requestId": "340190a0-1f9f-4a10-9956-f1252bae73b9",
+      "checkedAt": "2026-10-13T07:26:07.360Z",
+      "id": "L09",
+      "stage": 9,
+      "kind": "forbidden",
+      "request": "탐지기: 낯선 네트워크 + 10분 150건 가상 사건",
+      "expected": "propose_revocation (기기 1개)",
+      "actual": "propose_revocation · burst_read · 기기 1개",
+      "result": "pass",
+      "source": "local_function"
+    },
+    {
+      "requestId": "51bf7d7a-ec49-45ef-9580-dd5bdfd2a3ed",
+      "checkedAt": "2026-10-13T07:26:07.360Z",
+      "id": "L10",
+      "stage": 9,
+      "kind": "normal",
+      "request": "탐지기: 평소 네트워크 30건",
+      "expected": "observe",
+      "actual": "observe",
+      "result": "pass",
+      "source": "local_function"
+    },
+    {
+      "requestId": "56fb079f-4217-4f3a-ab68-6fc558e9c12b",
+      "checkedAt": "2026-10-13T07:26:07.360Z",
+      "id": "L11",
+      "stage": 9,
+      "kind": "normal",
+      "request": "탐지기: 지역만 다른 150건",
+      "expected": "observe",
+      "actual": "observe",
+      "result": "pass",
+      "source": "local_function"
+    },
+    {
+      "requestId": "79f323d6-648e-499f-bd67-395262abe905",
+      "checkedAt": "2026-10-13T07:26:07.362Z",
+      "id": "L12",
+      "stage": 10,
+      "kind": "normal",
+      "request": "정책 사본 다시 읽기·SHA-256 검증",
+      "expected": "검증 통과",
+      "actual": "검증 통과 · v9-9f13368",
+      "result": "pass",
+      "source": "local_function"
+    },
+    {
+      "requestId": "e7173917-4c96-4950-bb0b-77483d8d9b58",
+      "checkedAt": "2026-10-13T07:26:07.362Z",
+      "id": "L13",
+      "stage": 10,
+      "kind": "forbidden",
+      "request": "복원한 시험 정책: B가 A 메모 읽기 / A 자기 메모",
+      "expected": "deny / allow",
+      "actual": "deny / allow",
+      "result": "pass",
+      "source": "local_function"
+    },
+    {
+      "requestId": null,
+      "checkedAt": null,
+      "id": "L14",
+      "stage": 2,
+      "kind": "forbidden",
+      "request": "git grep HEAD (비밀값 검색)",
+      "expected": "서버 키·JWT·개인키 0건",
+      "actual": "not_run (격리 환경은 제출 묶음 확인용 git 읽기만 허용, 로컬 npm run evidence에서 실행)",
+      "result": "not_run",
+      "source": "not_run"
+    },
+    {
+      "requestId": null,
+      "checkedAt": null,
+      "id": "T01",
+      "stage": 4,
+      "kind": "normal",
+      "request": "A 토큰으로 자기 메모 조회",
+      "expected": "HTTP 200",
+      "actual": "not_run (시험 계정 토큰·기기 서명 없이 실행하지 않음)",
+      "result": "not_run",
+      "source": "not_run"
+    },
+    {
+      "requestId": null,
+      "checkedAt": null,
+      "id": "T02",
+      "stage": 4,
+      "kind": "forbidden",
+      "request": "B 토큰으로 A 메모 조회·삭제",
+      "expected": "HTTP 403/404",
+      "actual": "not_run (시험 계정 토큰·기기 서명 없이 실행하지 않음)",
+      "result": "not_run",
+      "source": "not_run"
+    },
+    {
+      "requestId": null,
+      "checkedAt": null,
+      "id": "T03",
+      "stage": 10,
+      "kind": "forbidden",
+      "request": "B 메모 변조·삭제 뒤 POST /api/restore",
+      "expected": "ID·소유자·해시 일치",
+      "actual": "not_run (시험 계정 토큰·기기 서명 없이 실행하지 않음)",
+      "result": "not_run",
+      "source": "not_run"
+    },
+    {
+      "requestId": null,
+      "checkedAt": null,
+      "id": "T04",
+      "stage": 11,
+      "kind": "forbidden",
+      "request": "승인 기기 계정의 서명 없는 요청·서명 뒤 경로·본문 변경",
+      "expected": "HTTP 401",
+      "actual": "not_run (시험 계정 토큰·기기 서명 없이 실행하지 않음)",
+      "result": "not_run",
+      "source": "not_run"
+    },
+    {
+      "requestId": null,
+      "checkedAt": null,
+      "id": "T05",
+      "stage": 11,
+      "kind": "normal",
+      "request": "승인 기기에서 서명한 메모 목록",
+      "expected": "HTTP 200",
+      "actual": "not_run (시험 계정 토큰·기기 서명 없이 실행하지 않음)",
+      "result": "not_run",
+      "source": "not_run"
+    }
+  ],
+  "attacks": [
+    {
+      "stage": 1,
+      "code": "ANONYMOUS_NOTE_LIST",
+      "name": "인증 없이 개인 메모 목록을 조회",
+      "measuredBy": [
+        "F01"
+      ],
+      "status": "blocked"
+    },
+    {
+      "stage": 1,
+      "code": "ANONYMOUS_NOTE_READ",
+      "name": "인증 없이 개인 메모를 조회",
+      "measuredBy": [
+        "F02"
+      ],
+      "status": "blocked"
+    },
+    {
+      "stage": 2,
+      "code": "BUILT_BUNDLE_SECRET_SCAN",
+      "name": "배포 번들에서 시험 비밀값을 검색",
+      "measuredBy": [],
+      "status": "not_run"
+    },
+    {
+      "stage": 2,
+      "code": "REPOSITORY_SECRET_SCAN",
+      "name": "제출 커밋에서 시험 비밀값을 검색",
+      "measuredBy": [],
+      "status": "not_run"
+    },
+    {
+      "stage": 2,
+      "code": "STATIC_SEED_DATA_SCAN",
+      "name": "공개 정적 파일에서 개인 메모 시드를 검색",
+      "measuredBy": [],
+      "status": "not_run"
+    },
+    {
+      "stage": 3,
+      "code": "ANONYMOUS_NOTE_WRITE",
+      "name": "인증 없이 개인 메모를 추가",
+      "measuredBy": [],
+      "status": "not_run"
+    },
+    {
+      "stage": 3,
+      "code": "EXPIRED_LOGIN_TOKEN",
+      "name": "만료된 로그인 토큰으로 조회",
+      "measuredBy": [],
+      "status": "not_run"
+    },
+    {
+      "stage": 3,
+      "code": "FORGED_LOGIN_TOKEN",
+      "name": "서명이 위조된 로그인 토큰으로 조회",
+      "measuredBy": [
+        "F03"
+      ],
+      "status": "blocked"
+    },
+    {
+      "stage": 3,
+      "code": "MISSING_LOGIN_TOKEN",
+      "name": "로그인 토큰 없이 보호 API 조회",
+      "measuredBy": [
+        "F09",
+        "F10",
+        "F12"
+      ],
+      "status": "not_blocked"
+    },
+    {
+      "stage": 3,
+      "code": "TOKEN_WRONG_AUDIENCE",
+      "name": "다른 서비스용으로 발급된 로그인 토큰으로 메모 조회",
+      "measuredBy": [],
+      "status": "not_run"
+    },
+    {
+      "stage": 4,
+      "code": "FOREIGN_NOTE_DELETE",
+      "name": "시험 계정 B로 A의 메모 삭제",
+      "measuredBy": [],
+      "status": "not_run"
+    },
+    {
+      "stage": 4,
+      "code": "R3_JUDGE_OWNED_NOTE",
+      "name": "학생 시험 신원으로 심판 소유 메모 조회",
+      "measuredBy": [],
+      "status": "not_run"
+    },
+    {
+      "stage": 4,
+      "code": "R3_JUDGE_OWNED_NOTE_WRITE",
+      "name": "학생 시험 신원으로 심판 소유 메모 수정",
+      "measuredBy": [],
+      "status": "not_run"
+    },
+    {
+      "stage": 5,
+      "code": "DIRECT_ORIGIN_NOTE_READ",
+      "name": "공개 키와 시험 계정 토큰으로 원본 Supabase 자료 API 직접 조회",
+      "measuredBy": [],
+      "status": "not_run"
+    },
+    {
+      "stage": 5,
+      "code": "DIRECT_ORIGIN_NOTE_WRITE",
+      "name": "공개 키와 시험 계정 토큰으로 원본 Supabase 자료 API 직접 수정",
+      "measuredBy": [],
+      "status": "not_run"
+    },
+    {
+      "stage": 5,
+      "code": "ORIGIN_ALIAS_BYPASS",
+      "name": "공개 정적 파일과 브라우저 묶음에서 서버 전용 키·시드 표식 검색",
+      "measuredBy": [],
+      "status": "not_run"
+    },
+    {
+      "stage": 6,
+      "code": "DEVICE_SUBJECT_MISMATCH",
+      "name": "등록 기기와 다른 사용자 토큰을 조합",
+      "measuredBy": [],
+      "status": "not_run"
+    },
+    {
+      "stage": 6,
+      "code": "MISSING_CLIENT_CERTIFICATE",
+      "name": "클라이언트 인증서 없이 mTLS 통로 요청",
+      "measuredBy": [],
+      "status": "not_run"
+    },
+    {
+      "stage": 6,
+      "code": "UNREGISTERED_DEVICE",
+      "name": "미등록 기기 인증서로 자료실 조회",
+      "measuredBy": [],
+      "status": "not_run"
+    },
+    {
+      "stage": 6,
+      "code": "UNREGISTERED_VIRTUAL_DEVICE_RULE",
+      "name": "판정기에 등록되지 않은 가상 기기 사건을 직접 입력",
+      "measuredBy": [],
+      "status": "not_run"
+    },
+    {
+      "stage": 7,
+      "code": "ANOMALOUS_HOUR_EVENT",
+      "name": "평소와 다른 시각의 가상 접속 사건을 입력",
+      "measuredBy": [],
+      "status": "not_run"
+    },
+    {
+      "stage": 7,
+      "code": "ANOMALOUS_NETWORK_ACTION",
+      "name": "낯선 네트워크에서 대량 수정하는 가상 사건을 입력",
+      "measuredBy": [],
+      "status": "not_run"
+    },
+    {
+      "stage": 7,
+      "code": "ANOMALOUS_REGION_EVENT",
+      "name": "가상 접속 지역이 급변한 사건을 판정기에 입력",
+      "measuredBy": [],
+      "status": "not_run"
+    },
+    {
+      "stage": 7,
+      "code": "MISSING_STEP_UP",
+      "name": "추가 인증을 마치지 않은 토큰으로 민감 메모 조회",
+      "measuredBy": [],
+      "status": "not_run"
+    },
+    {
+      "stage": 8,
+      "code": "CROSS_ZONE_NOTE_LIST",
+      "name": "다른 구역의 메모 목록을 API로 조회",
+      "measuredBy": [],
+      "status": "not_run"
+    },
+    {
+      "stage": 8,
+      "code": "CROSS_ZONE_NOTE_READ",
+      "name": "다른 구역 메모를 API로 조회",
+      "measuredBy": [],
+      "status": "not_run"
+    },
+    {
+      "stage": 8,
+      "code": "CROSS_ZONE_NOTE_WRITE",
+      "name": "다른 구역 메모를 API로 수정",
+      "measuredBy": [],
+      "status": "not_run"
+    },
+    {
+      "stage": 8,
+      "code": "STUDENT_EDITS_INSTRUCTOR_NOTICE",
+      "name": "학생 시험 계정으로 강사 공지 수정",
+      "measuredBy": [],
+      "status": "not_run"
+    },
+    {
+      "stage": 9,
+      "code": "DOPPELGANGER_DETECTION",
+      "name": "합성 도플갱어 접속 사건을 기록과 탐지기에 입력",
+      "measuredBy": [],
+      "status": "not_run"
+    },
+    {
+      "stage": 9,
+      "code": "REVOKED_IDENTITY_REUSE",
+      "name": "회수된 신원으로 다음 요청을 재시도",
+      "measuredBy": [],
+      "status": "not_run"
+    },
+    {
+      "stage": 9,
+      "code": "REVOKED_LATERAL_ROUTE",
+      "name": "회수된 도플갱어가 다른 자원으로 이동",
+      "measuredBy": [],
+      "status": "not_run"
+    },
+    {
+      "stage": 9,
+      "code": "STOLEN_SESSION_AFTER_REVOKE",
+      "name": "회수 뒤 남은 탈취 세션으로 재접속",
+      "measuredBy": [],
+      "status": "not_run"
+    },
+    {
+      "stage": 10,
+      "code": "RESTORE_CHANGED_NOTE",
+      "name": "시험 계정 B의 메모를 변조한 뒤 학생이 제출한 복구 경로를 호출",
+      "measuredBy": [],
+      "status": "not_run"
+    },
+    {
+      "stage": 10,
+      "code": "RESTORE_DEFENSE_REPLAY",
+      "name": "시험 계정 B의 자료를 복구한 직후 1~9단계 대표 공격을 다시 전송",
+      "measuredBy": [],
+      "status": "not_run"
+    },
+    {
+      "stage": 10,
+      "code": "RESTORE_DELETED_NOTE",
+      "name": "시험 계정 B의 메모를 삭제한 뒤 학생이 제출한 복구 경로를 호출",
+      "measuredBy": [],
+      "status": "not_run"
+    },
+    {
+      "stage": 11,
+      "code": "SIGNED_BODY_TAMPER",
+      "name": "서명 뒤 수정 본문을 변경",
+      "measuredBy": [],
+      "status": "not_run"
+    },
+    {
+      "stage": 11,
+      "code": "SIGNED_PATH_TAMPER",
+      "name": "서명 뒤 요청 경로를 변경",
+      "measuredBy": [],
+      "status": "not_run"
+    },
+    {
+      "stage": 11,
+      "code": "UNSIGNED_CLIENT_REQUEST",
+      "name": "설치형 앱 서명 없이 보호 요청",
+      "measuredBy": [],
+      "status": "not_run"
+    },
+    {
+      "stage": 12,
+      "code": "COMBINED_ANONYMOUS_OWNER_ATTACK",
+      "name": "무인증 조회와 타인 메모 조회를 같은 제출본에 연속 전송",
+      "measuredBy": [],
+      "status": "not_run"
+    },
+    {
+      "stage": 12,
+      "code": "COMBINED_DEVICE_REVOCATION_ATTACK",
+      "name": "미등록 기기 요청 뒤 회수된 신원으로 다시 전송",
+      "measuredBy": [],
+      "status": "not_run"
+    },
+    {
+      "stage": 12,
+      "code": "COMBINED_RESTORE_SIGNATURE_ATTACK",
+      "name": "복구 뒤 서명 없는 변경 요청과 구역 밖 조회를 전송",
+      "measuredBy": [],
+      "status": "not_run"
+    }
+  ],
+  "summary": {
+    "rows": 38,
+    "forbiddenRejected": 11,
+    "forbiddenFailed": 1,
+    "forbiddenNotRun": 7,
+    "normalAllowed": 4,
+    "normalFailed": 0,
+    "normalNotRun": 2,
+    "localMatched": 13,
+    "localDiffered": 0,
+    "attacksBlocked": 3,
+    "attacksNotBlocked": 1,
+    "attacksNotRun": 37,
+    "attacksTotal": 41
+  },
+  "digest": "4d3f91003977c4d01294bd44543948b5738f5b1c312a41e2aa7328e9cf256b5b"
+}

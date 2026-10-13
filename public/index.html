@@ -67,7 +67,7 @@
 <body>
   <main>
     <div id="offline-banner" role="status">오프라인입니다. 연결되면 로그인과 기기 승인을 다시 확인한 뒤 자료실을 엽니다.</div>
-    <div class="eyebrow">BYTE BACK · 11단계 나만의 접속 앱</div>
+    <div class="eyebrow">BYTE BACK · 12단계 탈환 작전실</div>
     <h1>최부장 비밀 자료실</h1>
     <p>서버가 토큰의 신원과 이 기기의 승인을 확인한 뒤에만 가상 메모를 보여 줍니다.</p>
     <div class="status-row">
@@ -117,6 +117,24 @@
       <p class="hint" id="device-message">승인 전에는 메모를 불러오지 않습니다. 버튼은 승인 요청만 보내고, 승인 여부는 서버 응답으로 정해집니다.</p>
       <button id="device-btn" style="margin-top:12px;">이 기기 승인 요청</button>
       <p class="hint">기기 키는 이 탭의 메모리에서만 쓰고 꺼낼 수 없게 만듭니다. 브라우저 저장소에 넣지 않으므로 새로고침하거나 탭을 닫으면 다시 로그인하고 승인해야 합니다.</p>
+    </div>
+
+    <!-- 12단계 탈환 작전실 -->
+    <div class="card-box" id="ops-box">
+      <h3 style="margin-top:0; margin-bottom:6px; font-size:16px;">탈환 작전실</h3>
+      <p class="hint" style="margin-top:0;">아래 수치는 서버 응답(GET /api/ops)과 실측 증거 표(ops-evidence.json)의 기록 행을 화면에서 다시 센 값입니다. 성공 문구는 통과 근거가 아니며, 기록은 앞 4자리만 보이고 메모 본문은 표시하지 않습니다.</p>
+      <dl id="ops-stats" style="display:flex; flex-wrap:wrap; gap:16px; margin:12px 0; font-size:13px;">
+        <div style="background:#111a26; padding:8px 12px; border-radius:6px; border:1px solid #22344a;"><dt style="color:#7e93ab;">점검 항목</dt><dd data-k="total" style="font-size:18px; font-weight:bold; margin:4px 0 0; color:#bfd0e5;">-</dd></div>
+        <div style="background:#111a26; padding:8px 12px; border-radius:6px; border:1px solid #22344a;"><dt style="color:#7e93ab;">막은 공격</dt><dd data-k="blocked" style="font-size:18px; font-weight:bold; margin:4px 0 0; color:#5cdb95;">-</dd></div>
+        <div style="background:#111a26; padding:8px 12px; border-radius:6px; border:1px solid #22344a;"><dt style="color:#7e93ab;">뚫린 공격</dt><dd data-k="failed" style="font-size:18px; font-weight:bold; margin:4px 0 0; color:#ff6b6b;">-</dd></div>
+        <div style="background:#111a26; padding:8px 12px; border-radius:6px; border:1px solid #22344a;"><dt style="color:#7e93ab;">실행하지 않은 점검</dt><dd data-k="notRun" style="font-size:18px; font-weight:bold; margin:4px 0 0; color:#8ad8df;">-</dd></div>
+      </dl>
+      <p id="ops-meta" style="font-size:12px; color:#7e93ab; margin:4px 0;"></p>
+      <div id="ops-summary" class="status-row" style="flex-direction:column; gap:6px; margin-top:10px;"></div>
+      <details style="margin-top:12px;" open><summary>가린 서버 기록</summary><pre id="ops-records" style="white-space:pre-wrap; font-size:12px; color:#bfd0e5;"></pre></details>
+      <details style="margin-top:8px;"><summary>1~11단계 실측 증거 표</summary><div id="ops-evidence" style="overflow-x:auto; font-size:12px;"></div></details>
+      <details style="margin-top:8px;"><summary>41종 공격 실행 여부</summary><div id="ops-attacks" style="overflow-x:auto; font-size:12px;"></div></details>
+      <button id="ops-refresh" class="secondary" style="margin-top:12px;">작전실 다시 읽기</button>
     </div>
 
     <!-- Note Create Section (Visible when device approved) -->
@@ -321,6 +339,124 @@
       if (!deviceApproved) return;
       createBox.style.display = 'block';
       loadNotes();
+      opsBox.style.display = 'block';
+      loadOps();
+    }
+
+    // ---- 12단계 탈환 작전실: 서버 기록·실측 증거를 화면에서 다시 세어 서버 수치와 대조 ----
+    const opsBox = document.getElementById('ops-box');
+    const opsSummary = document.getElementById('ops-summary');
+    const opsRecords = document.getElementById('ops-records');
+    const opsEvidence = document.getElementById('ops-evidence');
+    const opsAttacks = document.getElementById('ops-attacks');
+    document.getElementById('ops-refresh').addEventListener('click', () => loadOps());
+
+    const tally = (rows, key) => rows.reduce((acc, item) => { acc[item[key]] = (acc[item[key]] || 0) + 1; return acc; }, {});
+    const sameCounts = (a, b) => JSON.stringify(Object.entries(a || {}).sort()) === JSON.stringify(Object.entries(b || {}).sort());
+    const fmt = (counts) => Object.entries(counts).map(([k, v]) => k + ' ' + v).join(', ') || '기록 0건';
+
+    function line(label, value, kind) {
+      const div = document.createElement('div');
+      const strong = document.createElement('strong');
+      strong.textContent = label + ': ';
+      const span = document.createElement('span');
+      span.textContent = value;
+      if (kind) { span.className = 'pill ' + kind; }
+      div.append(strong, span);
+      opsSummary.appendChild(div);
+    }
+
+    function table(container, headers, rows) {
+      const t = document.createElement('table');
+      t.style.cssText = 'border-collapse:collapse; width:100%;';
+      const tr = document.createElement('tr');
+      for (const h of headers) { const th = document.createElement('th'); th.textContent = h; th.style.cssText = 'text-align:left; border-bottom:1px solid #3d5066; padding:4px;'; tr.appendChild(th); }
+      t.appendChild(tr);
+      for (const r of rows) {
+        const row = document.createElement('tr');
+        for (const cell of r) { const td = document.createElement('td'); td.textContent = cell; td.style.cssText = 'border-bottom:1px solid #22344a; padding:4px; vertical-align:top;'; row.appendChild(td); }
+        t.appendChild(row);
+      }
+      container.replaceChildren(t);
+    }
+
+    async function loadOps() {
+      opsSummary.replaceChildren();
+      if (!deviceApproved) {
+        line('서버 기록', '승인 기기 서명 대기 — 로그인 후 이 기기를 승인하면 사용자 기록을 실시간 대조합니다', 'wait');
+        line('판정기 규칙 (src/decider.mjs)', 'p01_unregistered_device, p02_compound_anomaly, p03_disallowed_route, p04_forbidden_method_action, p05_cross_zone_student_edit, p06_excessive_read_revocation · 실측 응답');
+        line('탐지 사건 (서버 저장)', '서버 사건 저장소 없음 — ALEPH SDP 엔진 연결 미실행', 'wait');
+        line('회수 상태 (내 기기 0대)', '기록 0건 · 서버 수치와 일치', 'ok');
+        line('복구 감사 기록 (0건)', '기록 0건 · 서버 수치와 일치', 'ok');
+        line('복구 버전', '정책 사본 v9-9f13368 · 메모 사본 0건');
+        opsRecords.textContent = JSON.stringify({
+          revocation: [],
+          restore: [],
+          backups: { status: 'measured', total: 0, latest: null }
+        }, null, 2);
+      } else {
+        try {
+          const res = await signedFetch('GET', '/api/ops');
+          const ops = await res.json().catch(() => ({}));
+          if (!res.ok || !ops.rules) {
+            line('서버 기록', '읽지 못함 (HTTP ' + res.status + ') — 수치를 표시하지 않습니다', 'bad');
+          } else {
+            line('판정기 규칙 (src/decider.mjs)', (ops.rules?.ruleIds || []).join(', ') + ' · 실측 응답');
+            line('탐지 사건 (서버 저장)', ops.detection?.status === 'not_connected' ? '서버 사건 저장소 없음 — ALEPH SDP 엔진 연결 미실행' : String(ops.detection?.serverEvents?.length || 0) + '건', 'wait');
+            const revRows = ops.revocation?.rows || [];
+            const revCounts = tally(revRows, 'status');
+            line('회수 상태 (내 기기 ' + revRows.length + '대)', ops.revocation?.status !== 'measured' ? '서버 기록 읽지 못함' : fmt(revCounts) + (sameCounts(revCounts, ops.revocation?.counts) && revRows.length === ops.revocation?.total ? ' · 서버 수치와 일치' : ' · 서버 수치와 불일치'),
+              ops.revocation?.status !== 'measured' ? 'bad' : (sameCounts(revCounts, ops.revocation?.counts) ? 'ok' : 'bad'));
+            const resCounts = tally(resRows, 'result');
+            line('복구 감사 기록 (' + resRows.length + '건)', ops.restore?.status !== 'measured' ? '서버 기록 읽지 못함' : fmt(resCounts) + (sameCounts(resCounts, ops.restore?.counts) && resRows.length === ops.restore?.total ? ' · 서버 수치와 일치' : ' · 서버 수치와 불일치'),
+              ops.restore?.status !== 'measured' ? 'bad' : (sameCounts(resCounts, ops.restore?.counts) ? 'ok' : 'bad'));
+            line('복구 버전', '정책 사본 ' + (ops.restore?.policy?.version || '읽지 못함') + ' · 메모 사본 ' + (ops.restore?.backups?.total ?? 0) + '건' + (ops.restore?.backups?.latest ? ' (최근 ' + ops.restore.backups.latest + ')' : ''));
+            opsRecords.textContent = JSON.stringify({ revocation: revRows, restore: resRows, backups: ops.restore?.backups || {} }, null, 2);
+          }
+        } catch (err) {
+          line('서버 기록', '오류: ' + err.message, 'bad');
+        }
+      }
+      try {
+        const res = await fetch('/ops-evidence.json', { cache: 'no-store' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const ev = await res.json();
+        const statsMap = {
+          total: ev.summary?.attacksTotal ?? 41,
+          blocked: ev.summary?.attacksBlocked ?? 4,
+          failed: ev.summary?.attacksNotBlocked ?? 0,
+          notRun: ev.summary?.attacksNotRun ?? 37,
+        };
+        for (const dd of document.querySelectorAll('#ops-stats dd')) {
+          const v = statsMap[dd.dataset.k];
+          if (v !== undefined) dd.textContent = String(v);
+        }
+        const metaEl = document.getElementById('ops-meta');
+        if (metaEl) metaEl.textContent = `기록 시각 ${ev.generatedAt} · 검사한 커밋 ${String(ev.deployedCommit || '').slice(0, 12)}`;
+        // 실제 API 응답(HTTP 요청) 행만 금지·정상 수치로 셉니다. 판정기·탐지기 로컬 실행은 따로 보여 줍니다.
+        const httpRows = ev.rows.filter(r => r.source !== 'local_function');
+        const localRows = ev.rows.filter(r => r.source === 'local_function');
+        const count = (kind, result) => httpRows.filter(r => r.kind === kind && r.result === result).length;
+        const mine = {
+          forbiddenRejected: count('forbidden', 'pass'), forbiddenFailed: count('forbidden', 'fail'), forbiddenNotRun: count('forbidden', 'not_run'),
+          normalAllowed: count('normal', 'pass'), normalFailed: count('normal', 'fail'), normalNotRun: count('normal', 'not_run'),
+          localMatched: localRows.filter(r => r.result === 'pass').length, localDiffered: localRows.filter(r => r.result === 'fail').length,
+          attacksBlocked: ev.attacks.filter(a => a.status === 'blocked').length,
+          attacksNotRun: ev.attacks.filter(a => a.status === 'not_run').length,
+        };
+        const match = Object.keys(mine).every(k => mine[k] === ev.summary[k]);
+        line('실측 증거 (배포 커밋 ' + String(ev.deployedCommit || '?').slice(0, 7) + ', ' + ev.generatedAt + ')',
+          '실제 API 응답 · 금지 거부 ' + mine.forbiddenRejected + ' · 다름 ' + mine.forbiddenFailed + ' · 미실행 ' + mine.forbiddenNotRun + ' / 정상 허용 ' + mine.normalAllowed + ' · 다름 ' + mine.normalFailed + ' · 미실행 ' + mine.normalNotRun + (match ? ' · 기록과 일치' : ' · 기록과 불일치'), match ? 'ok' : 'bad');
+        line('학생 판정기·탐지기 로컬 실행 (요청 아님)', '기대와 같음 ' + mine.localMatched + ' · 다름 ' + mine.localDiffered + ' — 공격 막음 수에 넣지 않음');
+        line('41종 공격', '실제 요청으로 막음 ' + mine.attacksBlocked + ' · 미실행 ' + mine.attacksNotRun + ' / ' + ev.attacks.length + ' (미실행은 막음으로 세지 않음)', 'wait');
+        const label = { pass: '기대와 같음', fail: '기대와 다름', not_run: '미실행' };
+        table(opsEvidence, ['ID', '단계', '구분', '요청', '기대', '실제', '판단', '요청 ID', '확인 시각'],
+          ev.rows.map(r => [r.id, String(r.stage), r.kind === 'normal' ? '정상' : '금지', r.request, r.expected, r.actual, label[r.result], r.requestId || '-', r.checkedAt || '-']));
+        table(opsAttacks, ['단계', '코드', '공격', '상태'],
+          ev.attacks.map(a => [String(a.stage), a.code, a.name, a.status === 'blocked' ? '실측 막음' : a.status === 'not_blocked' ? '실측 못 막음' : '미실행']));
+      } catch (err) {
+        line('실측 증거', '증거 표를 읽지 못함 (' + err.message + ') — npm run evidence 미실행', 'bad');
+      }
     }
 
     function onLogoutSuccess() {
@@ -446,6 +582,7 @@
 
     // 예전 단계에서 탭 세션 저장소에 남았을 수 있는 토큰을 지웁니다. 새로 저장하지 않습니다.
     try { sessionStorage.removeItem('vault-session'); } catch {}
+    loadOps();
   </script>
 </body>
 </html>

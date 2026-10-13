@@ -28,7 +28,7 @@ export function loadVerifiedBackup() {
   if (typeof manifest.file !== 'string' || !/^[a-z0-9._-]+\.json$/iu.test(manifest.file)) stop('사본 파일 이름이 올바르지 않아 중단합니다.');
   const file = join(root, 'policy', 'backups', manifest.file);
   if (!existsSync(file)) stop(`사본 ${manifest.file}이 없어 중단합니다.`);
-  const text = readFileSync(file, 'utf8');
+  const text = readFileSync(file, 'utf8').replace(/\r\n/gu, '\n');
   if (sha256(text) !== manifest.sha256) stop(`사본 ${manifest.file}의 SHA-256이 기록과 달라 중단합니다.`);
   const backup = JSON.parse(text);
   if (backup.schema !== 'aleph.test-policy.v1' || backup.version !== manifest.version

@@ -113,9 +113,9 @@ export default async function handler(request, response) {
         }
 
         if (data.owner_id !== ownerId) {
-          return response.status(403).json({
-            error: 'FORBIDDEN_ZONE_ACCESS',
-            message: '다른 구역의 자료입니다.',
+          return response.status(404).json({
+            error: 'NOTE_NOT_FOUND',
+            message: '자료를 찾을 수 없습니다.',
           });
         }
 
@@ -213,9 +213,9 @@ export default async function handler(request, response) {
       }
 
       if (existing.owner_id !== ownerId) {
-        return response.status(403).json({
-          error: 'FORBIDDEN_ZONE_ACCESS',
-          message: '다른 구역의 자료입니다.',
+        return response.status(404).json({
+          error: 'NOTE_NOT_FOUND',
+          message: '수정할 자료가 존재하지 않습니다.',
         });
       }
 
@@ -287,9 +287,9 @@ export default async function handler(request, response) {
       }
 
       if (existing.owner_id !== ownerId) {
-        return response.status(403).json({
-          error: 'FORBIDDEN_ZONE_ACCESS',
-          message: '다른 구역의 자료입니다.',
+        return response.status(404).json({
+          error: 'NOTE_NOT_FOUND',
+          message: '삭제할 자료가 존재하지 않습니다.',
         });
       }
 
