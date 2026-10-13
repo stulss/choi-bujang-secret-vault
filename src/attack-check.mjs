@@ -1119,5 +1119,41 @@ export async function runAttackChecks(config) {
     return checks;
   }
 
+  if (config.step === 12) {
+    // 격리 환경 규칙: 공개 HTTPS 주소로 GET·HEAD만 보내고, 쓰기 요청과 토큰이 필요한 요청은 not_run 으로 둡니다.
+    const { collectEvidence } = await import('./evidence.mjs');
+    const evidence = await collectEvidence(config, { allowWrites: false });
+    const checks = [];
+    const label = { pass: '기대와 같음', fail: '기대와 다름', not_run: 'not_run' };
+    for (let stage = 1; stage <= 12; stage += 1) {
+      const rows = evidence.rows.filter(item => item.stage === stage);
+      if (!rows.length) continue;
+      const measured = rows.filter(item => item.result !== 'not_run');
+      const text = rows.map(item => `${item.id} ${item.actual}${item.result === 'not_run' ? '' : ` [${label[item.result]}]`}`).join('; ');
+      checks.push({
+        attackId: `stage${String(stage).padStart(2, '0')}_measured_requests`,
+        expected: `${stage}단계 정상 요청 허용·금지 요청 거부를 실제 응답으로 확인 (${rows.map(item => item.id).join(', ')})`,
+        observed: measured.length ? text.slice(0, 300) : 'not_run',
+      });
+    }
+    const s = evidence.summary;
+    checks.push({
+      attackId: 'evidence_summary_measured',
+      expected: '금지 요청 거부와 정상 요청 허용을 실측 결과로만 세고, 미실행은 따로 셈',
+      observed: `금지 거부 ${s.forbiddenRejected}·다름 ${s.forbiddenFailed}·미실행 ${s.forbiddenNotRun} / 정상 허용 ${s.normalAllowed}·다름 ${s.normalFailed}·미실행 ${s.normalNotRun} (검사한 배포 커밋 ${evidence.deployedCommit ? evidence.deployedCommit.slice(0, 7) : '확인 못 함'})`,
+    });
+    checks.push({
+      attackId: 'attack41_run_status',
+      expected: '41종 공격은 같은 종류의 요청을 실제로 보내 막힌 것만 막음으로 세고 나머지는 미실행',
+      observed: `실측 막음 ${s.attacksBlocked} · 실측 못 막음 ${s.attacksNotBlocked} · 미실행 ${s.attacksNotRun} / 전체 ${s.attacksTotal}`,
+    });
+    checks.push({
+      attackId: 'combined_attacks_live',
+      expected: '12단계 복합 공격 3종(무인증+타인 메모, 미등록 기기+회수 신원, 복구 뒤 무서명 변경+구역 밖 조회)',
+      observed: 'not_run',
+    });
+    return checks;
+  }
+
   throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
 }

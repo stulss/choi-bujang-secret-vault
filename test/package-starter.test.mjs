@@ -4,8 +4,8 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 
 const baseline = JSON.parse(await readFile(new URL('../package/baseline-functions.json', import.meta.url)));
-// 방어전 2~5단계에서 학생이 직접 만든 서버 함수 (로그인 대리, 메모, 공지, 10단계 복구, 11단계 기기 승인)
-const DEFENSE_FUNCTIONS = ['api/auth.js', 'api/notes.js', 'api/notices.js', 'api/restore.js', 'api/device.js'];
+// 방어전 2~5단계에서 학생이 직접 만든 서버 함수 (로그인 대리, 메모, 공지, 10단계 복구, 11단계 기기 승인, 12단계 작전실)
+const DEFENSE_FUNCTIONS = ['api/auth.js', 'api/notes.js', 'api/notices.js', 'api/restore.js', 'api/device.js', 'api/ops.js'];
 
 test('패키징 함수 기준표는 시작 틀의 실제 API와 일치한다', async () => {
   const actual = (await readdir(new URL('../api/', import.meta.url)))

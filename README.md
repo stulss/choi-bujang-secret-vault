@@ -237,6 +237,49 @@
 | 4 | 화면: 로그인 → 승인 전 메모 없음 → 승인 요청 → 「서버 확인 완료」 뒤 메모 목록 | 승인 뒤 기존 자료실 열림 | 승인 전 메모 없음 | **미실행** (실제 계정으로 화면을 직접 조작하지 않음) |
 | 5 | 승인한 계정 토큰으로 서명 없이 `GET /api/notes` | — | HTTP 401 | **미실행** (배포 환경) |
 
+## 12단계: 탈환 작전실을 완성합니다
+
+### 탈환 작전실 화면 (`public/index.html` 작전실 칸, `api/ops.js`)
+- 기기 승인 뒤에만 열립니다. 서명한 `GET /api/ops`가 내 계정의 서버 기록을 앞 4자리만 남겨 돌려줍니다. 메모 제목·본문, 토큰, 기기 공개키는 읽지도 돌려주지도 않습니다.
+  - **판정기 규칙**: `src/decider.mjs`의 `RULE_IDS`
+  - **탐지 사건**: 이 자료실 서버에는 사건 저장소가 없어 「ALEPH SDP 엔진 연결 미실행」으로 표시합니다. 탐지 규칙의 실행 결과는 아래 증거 표의 로컬 실측(L09~L11)입니다.
+  - **회수 상태**: `devices` 기록(승인·회수) · **복구 버전**: 정책 사본 버전, 메모 사본 수·최근 시각, `restore_audit` 결과별 건수
+- 화면은 받은 기록 행을 직접 다시 세어 서버가 보낸 수치와 비교하고 「일치/불일치」를 표시합니다. 읽지 못한 항목은 0으로 채우지 않고 「읽지 못함」으로 둡니다.
+- 증거 표(`public/ops-evidence.json`)도 화면이 행을 다시 세어 표 머리의 수치와 대조합니다. 성공 문구는 통과 근거가 아닙니다.
+
+### 1~11단계 실측 증거 표 (`npm run evidence` → `docs/EVIDENCE.md`, `public/ops-evidence.json`)
+- 배포 주소로 정상·금지 요청을 실제로 보내고 **요청 / 기대 결과 / 실제 결과 / 판단 / 요청 ID / 확인 시각**을 한 표로 씁니다. 요청 ID는 응답 헤더 `x-vercel-id`(원본 API는 `sb-request-id`), 판정기·탐지기 행은 그 실행의 판정 요청 UUID입니다.
+- 시험 계정 토큰·기기 서명이 필요한 요청(T01~T05)은 보내지 않고 **미실행**으로 둡니다.
+- 41종 공격은 같은 종류의 요청을 실제로 보내 막힌 경우만 「실측 막음」으로 세고, 나머지는 「미실행」입니다. 41종을 모두 막았다고 적지 않습니다.
+- `npm run bundle`(심판 격리 환경)은 같은 모듈을 **GET·HEAD만** 보내는 방식으로 다시 실행하고, 쓰기 요청 행(W01~W03)은 `not_run`으로 둡니다.
+- 이번 저장점의 표: 검사한 배포 커밋 `25f906c` · 금지 요청 거부 22 / 다름 1 / 미실행 3 · 정상 요청 허용 10 / 미실행 2 · 41종 중 실측 막음 10, 미실행 31. 「다름 1」은 F12(`GET /api/ops`)로, 검사 시점 배포(`25f906c`)에 작전실 API가 아직 없어 HTTP 404였습니다.
+
+### 출처: 제공 엔진과 학생 작업
+| 구분 | 출처 | 내용 |
+|---|---|---|
+| 제공 엔진 | **ALEPH SDP 엔진** (운영 측, 이 저장소 밖) | 반 엔진·릴레이·심판: 신원·기기(mTLS·기기 등록)·경로를 먼저 확인한 뒤 `decide()` 호출, 탐지 사건 전달과 회수 집행, 41종 공격 실행과 판정 |
+| 제공 시작 틀 | 운영 측 커밋 `0f9a3c9`(시작 틀), `de3cf4f`(XDR 보너스), `8fb5b6d`·`16b2535`(포장 양식) | `src/verify-login.mjs`, `scripts/bundle.mjs`·`decider-test.mjs`·`detect-test.mjs`·`fixture-7.mjs`·`xdr-run.mjs`·`build-public.mjs`·`deployment-identity.mjs`, `docs/`, `package/`, `xdr/` 기본 자료, `test/r5.test.mjs` 등. 이 중 `build-public.mjs`·`decider-test.mjs`·`deployment-identity.mjs`는 학생이 이후 커밋에서 고쳤습니다 |
+| 학생 작업 | 학생 커밋(작성자 stuls·stulss) | 판정기 `src/decider.mjs`, 탐지 규칙 `src/detect.mjs`, 접속 앱 `public/index.html`·`manifest.webmanifest`·`sw.js`·`offline.html`·`icon.svg`·`api/device.js`·`src/device-auth.mjs`, 자료실 `api/auth.js`·`notes.js`·`notices.js`·`restore.js`·`ops.js`·`src/note-owner.mjs`·`schema.sql`·`policy/`·`scripts/policy-restore.mjs`, 증거 `src/evidence.mjs`·`scripts/evidence.mjs`, 자기 점검 `src/attack-check.mjs` |
+
+비밀값(서버 전용 키, 토큰, 기기 개인키)은 이 안내와 제출 묶음에 넣지 않습니다. 값이 필요하면 Vercel·Supabase 설정 화면의 비밀 입력란에 직접 넣습니다.
+
+### 설치·실행·중지·복구 (검사한 커밋 `25f906c` 기준, 12단계 저장점에서 작전실·증거 표 추가)
+| 대상 | 설치 | 실행 | 중지 | 복구 |
+|---|---|---|---|---|
+| 자료실 (`api/*`, Supabase) | Supabase SQL Editor에서 `schema.sql`을 단계 순서(1~6, 7~10, 11~12번)대로 실행 → Vercel 환경변수 `SUPABASE_URL`, `SUPABASE_SECRET_KEY`를 설정 화면에 직접 입력 → GitHub `main` 푸시로 배포 | 배포 주소 접속, `curl -i <배포 주소>/api/notes` → 401이면 보호 동작 | Vercel 프로젝트에서 배포 일시 중지 또는 이전 배포 지정 | 메모 한 건: `POST /api/restore` (10단계), 코드: 검사한 커밋으로 `git revert` 후 푸시 또는 Vercel에서 이전 배포 Promote |
+| 접속 앱 (`public/*`, `api/device.js`) | 자료실 배포에 함께 포함. 브라우저의 「앱 설치」는 선택(설치 표시는 기기 확인이 아님) | 열기 → 로그인 → 「이 기기 승인 요청」 → 「서버 확인 완료」 뒤 자료실·작전실 | 로그아웃 또는 탭 닫기(토큰·기기 키는 메모리라 사라짐). 서비스 워커는 브라우저 사이트 설정에서 해제 | 기기 회수: 운영자가 `devices.status`를 `revoked`로 변경. 새로고침 뒤 다시 승인 |
+| 학생 판정기 (`src/decider.mjs`) | 설치 없음 (Node 22) | 운영 중에는 ALEPH SDP 엔진이 `decide()`를 호출. 로컬: `npm run decider:test`, `npm run fixture:7` | 엔진 쪽에서 판정기 호출 중지(운영 측) | `git checkout <커밋> -- src/decider.mjs` 후 커밋·푸시 |
+| 탐지 규칙 (`src/detect.mjs`) | 설치 없음 | 운영 사건 전달은 ALEPH SDP 엔진. 로컬: `npm run detect:test` | 엔진 쪽 사건 전달 중지(운영 측) | `git checkout <커밋> -- src/detect.mjs` 후 커밋·푸시 |
+| 시험 정책 (`policy/`) | 설치 없음 | `npm run policy:diff` | — | `npm run policy:restore -- --service notes --version v9-9f13368 --yes` |
+
+### 재현 순서
+1. `git checkout <검사한 커밋>` → `npm ci`
+2. `node --test test/package-starter.test.mjs test/r5.test.mjs test/xdr-brute-force.test.mjs test/xdr-run.test.mjs`
+3. `npm run decider:test`, `npm run fixture:7`, `npm run detect:test`, `npm run policy:diff`
+4. `npm run evidence` → `docs/EVIDENCE.md`에서 금지 거부·정상 허용·미실행 건수와 요청 ID 확인
+5. 화면에서 로그인 → 기기 승인 → 작전실의 「일치/불일치」와 증거 표 확인
+6. `npm run bundle` → `artifacts/submission.json` (GET·HEAD만, 쓰기 요청은 `not_run`)
+
 ## 다음 단계의 코딩 도구에 전달할 규칙
 
 [AGENTS.md](AGENTS.md)를 먼저 읽히고 한 번에 한 제작 단위만 요청하세요. 2단계부터는 자료 보호를 구현할 때 `public/data.json`을 복사하는 1단계 빌드 흐름도 함께 바꿔야 합니다. 3단계 이후의 로그인, 허용 경로, 5단계의 원본 API 주소, 6단계 이후 정책 규칙은 해당 단계 원고와 계약에 맞춰 추가합니다. 비밀번호·토큰·서버 전용 키·실제 학생 기록을 코드, Git, 제출 묶음에 넣지 않습니다.
