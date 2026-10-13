@@ -1,0 +1,56 @@
+{
+  "schema": "aleph.xdr.patterns.v1",
+  "moduleKey": "known-cve",
+  "source": "CVE-2021-44228 (Apache Log4j 2, NVD) · MITRE ATT&CK T1190 Exploit Public-Facing Application (https://attack.mitre.org/techniques/T1190/)",
+  "note": "confidence 숫자·count 기준은 이 과제의 시험 경보에 맞춘 값이며 CVE나 ATT&CK 가 정한 값이 아닙니다. 문서용 표기만 다루며 조회 구문을 만들거나 변형하지 않습니다.",
+  "patterns": [
+    {
+      "id": "lookup-in-header-and-url",
+      "name": "머리글과 주소 인자에 같은 원격 조회 구문",
+      "tier": "clear",
+      "baseConfidence": 0.97,
+      "condition": { "signal": "완전한 원격 조회 구문(jndi 와 접속 방식과 ://)", "where": "요청 머리글 값과 주소 인자 둘 다" },
+      "evidence": "CVE-2021-44228: 공격자가 통제하는 로그 입력의 조회 구문이 실행되며, 한 요청의 여러 칸에 같은 구문을 넣는 것은 우연이 아니라 의도된 악용 형태."
+    },
+    {
+      "id": "lookup-in-header",
+      "name": "요청 머리글 안의 원격 조회 구문",
+      "tier": "clear",
+      "baseConfidence": 0.9,
+      "condition": { "signal": "완전한 원격 조회 구문(jndi 와 접속 방식과 ://)", "where": "요청 머리글 값" },
+      "evidence": "CVE-2021-44228: 로그에 남는 요청 머리글(예: 사용자 에이전트)의 조회 구문이 치환되어 외부 LDAP 등에서 코드를 받아 실행하며, ATT&CK T1190 외부 공개 앱 악용에 해당."
+    },
+    {
+      "id": "lookup-in-url-argument",
+      "name": "주소 인자 안의 원격 조회 구문",
+      "tier": "clear",
+      "baseConfidence": 0.9,
+      "condition": { "signal": "완전한 원격 조회 구문(jndi 와 접속 방식과 ://)", "where": "요청 주소의 경로·인자(퍼센트 인코딩 해제 뒤)" },
+      "evidence": "CVE-2021-44228: 로그에 기록되는 주소 인자의 조회 구문도 같은 방식으로 치환되며, ATT&CK T1190 외부 공개 앱 악용에 해당."
+    },
+    {
+      "id": "cve-or-lookup-word-only",
+      "name": "취약점 번호나 조회 단어만 있고 완전한 구문은 없음",
+      "tier": "suspect",
+      "baseConfidence": 0.65,
+      "condition": { "context": "T1190 표시와 규칙 수준 5 이상", "signal": "CVE-2021-44228 번호, jndi 단어, lookup 단어, 구문 조각", "absent": "완전한 원격 조회 구문" },
+      "evidence": "CVE-2021-44228 는 완전한 조회 구문이 로그에 들어가야 악용되므로 번호나 단어만으로는 차단하지 않고, 공격 준비일 수 있어 알림으로 확인."
+    },
+    {
+      "id": "vulnerability-scanner-trace",
+      "name": "알려진 취약점 점검 도구의 흔적",
+      "tier": "suspect",
+      "baseConfidence": 0.55,
+      "condition": { "context": "T1190 표시와 규칙 수준 5 이상", "signal": "점검 도구·scanner·scan·probe 표기", "absent": "완전한 원격 조회 구문" },
+      "evidence": "ATT&CK T1595.002 취약점 스캔은 T1190 악용에 앞서 쓰이지만 정상 점검과 구분되지 않으므로 이름만으로는 차단하지 않고 알림으로 확인."
+    },
+    {
+      "id": "t1190-tagged-low-signal",
+      "name": "T1190 표시만 있는 약한 신호",
+      "tier": "suspect",
+      "baseConfidence": 0.5,
+      "condition": { "context": "T1190 표시와 규칙 수준 5 이상", "absent": "완전한 원격 조회 구문, 번호·단어, 점검 도구 표기" },
+      "evidence": "ATT&CK T1190 으로 분류된 경보지만 CVE-2021-44228 의 악용 구문이 없으므로 자동 차단 없이 알림으로만 남김."
+    }
+  ]
+}
