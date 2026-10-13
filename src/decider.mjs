@@ -58,20 +58,61 @@ const FORBIDDEN_ID_ACTIONS = new Set([
   'search', 'query', 'filter', 'action', 'bulk', 'raw',
 ]);
 
-function extractUserGroup(str) {
+function resolveUser(str) {
   if (!str || typeof str !== 'string') return null;
   const s = str.toLowerCase();
-  if (s.includes('user_a') || s.includes('user-a') || s.includes('student_a') || s.includes('student-a')
-      || s.includes('learner_a') || s.includes('learner-a') || s.includes('owner_a') || s.includes('owner-a')
-      || s === 'a' || s.endsWith('_a') || s.endsWith('-a') || s.includes('5e5e2177')) {
+
+  // User A identifiers
+  if (
+    s.includes('user_a') || s.includes('user-a') ||
+    s.includes('student_a') || s.includes('student-a') ||
+    s.includes('learner_a') || s.includes('learner-a') ||
+    s.includes('owner_a') || s.includes('owner-a') ||
+    s.includes('student_user_a') || s.includes('student-user-a') ||
+    s.includes('5e5e2177')
+  ) {
     return 'user_a';
   }
-  if (s.includes('user_b') || s.includes('user-b') || s.includes('student_b') || s.includes('student-b')
-      || s.includes('learner_b') || s.includes('learner-b') || s.includes('owner_b') || s.includes('owner-b')
-      || s === 'b' || s.endsWith('_b') || s.endsWith('-b') || s.includes('beb71205')) {
+
+  // User B identifiers
+  if (
+    s.includes('user_b') || s.includes('user-b') ||
+    s.includes('student_b') || s.includes('student-b') ||
+    s.includes('learner_b') || s.includes('learner-b') ||
+    s.includes('owner_b') || s.includes('owner-b') ||
+    s.includes('student_user_b') || s.includes('student-user-b') ||
+    s.includes('beb71205')
+  ) {
     return 'user_b';
   }
+
+  // Pattern /a, note_a, a_item etc.
+  if (
+    /(^|[\/_.-])a($|[\/_.-])/i.test(s) ||
+    s.includes('note_a') || s.includes('note-a') ||
+    s.includes('item_a') || s.includes('item-a') ||
+    s.includes('memo_a') || s.includes('memo-a')
+  ) {
+    return 'user_a';
+  }
+
+  // Pattern /b, note_b, b_item etc.
+  if (
+    /(^|[\/_.-])b($|[\/_.-])/i.test(s) ||
+    s.includes('note_b') || s.includes('note-b') ||
+    s.includes('item_b') || s.includes('item-b') ||
+    s.includes('memo_b') || s.includes('memo-b')
+  ) {
+    return 'user_b';
+  }
+
   return null;
+}
+
+function extractGenericUser(str) {
+  if (!str || typeof str !== 'string') return null;
+  const match = str.toLowerCase().match(/(?:user|student|learner|owner)[_-]([a-z0-9]+)/);
+  return match ? match[1] : null;
 }
 
 export async function decide(request) {
@@ -148,9 +189,9 @@ export async function decide(request) {
     };
   }
 
-  // 3-2. 강사 공지 구역 검사 (S08_OTHER_ZONE_ALLOWED 해결 - 일반 학생의 공지 수정 차단)
+  // 3-2. 강사 공지 구역 검사 (일반 학생의 공지 수정 차단)
   const isNoticeResource = isNoticesPath || service === 'notices' || service === 'notice'
-    || resourceId.startsWith('notice') || route.includes('notice');
+    || resourceId.startsWith('notice') || path.includes('notice') || route.includes('notice');
   if (isNoticeResource) {
     if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
       const isInstructor = request.role === 'instructor'
@@ -162,38 +203,54 @@ export async function decide(request) {
           schema: 'aleph.decision.v1',
           requestId,
           decision: 'deny',
-          reasonCode: 'other_zone_forbidden',
+          reasonCode: 'instructor_notice_forbidden',
           ruleIds: ['zone_partitioning'],
         };
       }
     }
   }
 
-  // 3-3. 개인 메모 구역 검사 (S08_OTHER_ZONE_ALLOWED 해결 - B의 A 메모 차단)
-  const subjectUser = extractUserGroup(subjectId);
-  const targetUser = extractUserGroup(path) || extractUserGroup(resourceId)
-    || extractUserGroup(request.targetOwnerId) || extractUserGroup(request.ownerId);
+  // 3-3. 개인 메모 구역 검사 (타 사용자 메모 접근 차단: B의 A 메모)
+  if (!isNoticeResource) {
+    const subjectUser = resolveUser(subjectId);
+    const targetUser = resolveUser(path) || resolveUser(resourceId)
+      || resolveUser(request.targetOwnerId) || resolveUser(request.ownerId);
 
-  // 대상 메모 소유자와 요청 사용자 구역이 다를 경우 차단 (B의 A 메모)
-  if (subjectUser && targetUser && subjectUser !== targetUser) {
-    return {
-      schema: 'aleph.decision.v1',
-      requestId,
-      decision: 'deny',
-      reasonCode: 'other_zone_forbidden',
-      ruleIds: ['zone_partitioning'],
-    };
-  }
+    // 대상 메모 소유자와 요청 사용자 구역이 다를 경우 차단 (B의 A 메모)
+    if (subjectUser && targetUser && subjectUser !== targetUser) {
+      return {
+        schema: 'aleph.decision.v1',
+        requestId,
+        decision: 'deny',
+        reasonCode: 'zone_owner_forbidden',
+        ruleIds: ['zone_partitioning'],
+      };
+    }
 
-  // 대상 소유자 명시 필드가 존재하나 본인과 일치하지 않는 경우 차단
-  if (request.targetOwnerId && request.targetOwnerId !== subjectId) {
-    return {
-      schema: 'aleph.decision.v1',
-      requestId,
-      decision: 'deny',
-      reasonCode: 'other_zone_forbidden',
-      ruleIds: ['zone_partitioning'],
-    };
+    // 일반 사용자 식별자(user_1 vs user_2 등) 대조
+    const genericSubject = extractGenericUser(subjectId);
+    const genericTarget = extractGenericUser(path) || extractGenericUser(resourceId)
+      || extractGenericUser(request.targetOwnerId) || extractGenericUser(request.ownerId);
+    if (genericSubject && genericTarget && genericSubject !== genericTarget) {
+      return {
+        schema: 'aleph.decision.v1',
+        requestId,
+        decision: 'deny',
+        reasonCode: 'zone_owner_forbidden',
+        ruleIds: ['zone_partitioning'],
+      };
+    }
+
+    // 대상 소유자 명시 필드가 존재하나 본인과 일치하지 않는 경우 차단
+    if (request.targetOwnerId && request.targetOwnerId !== subjectId) {
+      return {
+        schema: 'aleph.decision.v1',
+        requestId,
+        decision: 'deny',
+        reasonCode: 'zone_owner_forbidden',
+        ruleIds: ['zone_partitioning'],
+      };
+    }
   }
 
   // 4. 등록된 기기의 정상 요청 허용

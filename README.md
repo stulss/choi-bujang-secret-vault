@@ -156,7 +156,7 @@
 - **자원 ID 분리 및 구역 정책 (`src/decider.mjs`, `api/notes.js`)**:
   - 내 자료실 메모(기존 UUID / `note-`)와 강사 공지(`notice-` / `/notices`)를 서로 다른 자원 ID로 구분하여 서버가 명확히 판정하도록 구현했습니다. 기존 자료와 API 주소는 그대로 보존됩니다.
   - **판정기 구역 규칙 (`zone_partitioning`)**:
-    - 자원 ID 깊이에 `export` 등 기능 경로를 두거나 알 수 없는 경로 요청 시 `deny`(`invalid_route`)로 거부합니다.
+    - 자원 ID 깊이에 `export` 등 기능 경로를 두거나 알 수 없는 경로 요청 시 `deny`(`unknown_path`)로 거부합니다.
     - 강사 공지 구역에 대한 수정(`PUT`, `POST` 등) 요청은 일반 학생일 경우 `deny`(`instructor_notice_forbidden`)로 차단합니다.
     - 타 사용자 메모(B의 A 메모) 접근 시 `deny`(`zone_owner_forbidden`)로 차단합니다.
     - 본인 메모 접근 및 등록 기기 정상 요청은 `allow`로 승인합니다.

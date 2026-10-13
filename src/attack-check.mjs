@@ -617,15 +617,15 @@ export async function runAttackChecks(config) {
       });
       checks.push({
         attackId: 'cross_zone_note_denied',
-        expected: '타인 소유 메모 구역 접근 시 판정기에서 거부됨 (deny, other_zone_forbidden)',
-        observed: crossZoneRes.decision === 'deny' && (crossZoneRes.reasonCode === 'other_zone_forbidden' || crossZoneRes.reasonCode === 'zone_owner_forbidden')
-          ? '타 사용자 메모 구역 접근 판정기 차단 확인 (deny, other_zone_forbidden)'
+        expected: '타인 소유 메모 구역 접근 시 판정기에서 거부됨 (deny, zone_owner_forbidden)',
+        observed: crossZoneRes.decision === 'deny' && (crossZoneRes.reasonCode === 'zone_owner_forbidden' || crossZoneRes.reasonCode === 'other_zone_forbidden')
+          ? '타 사용자 메모 구역 접근 판정기 차단 확인 (deny, zone_owner_forbidden)'
           : `판정 결과 상이 (${crossZoneRes.decision}, ${crossZoneRes.reasonCode})`,
       });
     } catch (err) {
       checks.push({
         attackId: 'cross_zone_note_denied',
-        expected: '타인 소유 메모 구역 접근 시 판정기에서 거부됨 (deny, other_zone_forbidden)',
+        expected: '타인 소유 메모 구역 접근 시 판정기에서 거부됨 (deny, zone_owner_forbidden)',
         observed: `구역 판정 점검 실패 (${err.message})`,
       });
     }
@@ -644,9 +644,9 @@ export async function runAttackChecks(config) {
       });
       checks.push({
         attackId: 'student_notice_mod_denied',
-        expected: '일반 학생의 강사 공지 수정 시 판정기에서 거부됨 (deny, other_zone_forbidden)',
-        observed: noticeModRes.decision === 'deny' && (noticeModRes.reasonCode === 'other_zone_forbidden' || noticeModRes.reasonCode === 'instructor_notice_forbidden')
-          ? '일반 학생 강사 공지 수정 판정기 차단 확인 (deny, other_zone_forbidden)'
+        expected: '일반 학생의 강사 공지 수정 시 판정기에서 거부됨 (deny, instructor_notice_forbidden)',
+        observed: noticeModRes.decision === 'deny' && (noticeModRes.reasonCode === 'instructor_notice_forbidden' || noticeModRes.reasonCode === 'other_zone_forbidden')
+          ? '일반 학생 강사 공지 수정 판정기 차단 확인 (deny, instructor_notice_forbidden)'
           : `판정 결과 상이 (${noticeModRes.decision}, ${noticeModRes.reasonCode})`,
       });
     } catch (err) {
