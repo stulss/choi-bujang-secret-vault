@@ -122,7 +122,13 @@
     <!-- 12단계 탈환 작전실 -->
     <div class="card-box" id="ops-box">
       <h3 style="margin-top:0; margin-bottom:6px; font-size:16px;">탈환 작전실</h3>
-      <p class="hint" style="margin-top:0;">아래 수치는 서버 응답(GET /api/ops)과 실측 증거 표(ops-evidence.json)의 기록 행을 화면에서 다시 센 값입니다. 성공 문구는 통과 근거가 아니며, 기록은 앞 4자리만 보이고 메모 본문은 표시하지 않습니다.</p>
+      <div style="margin:8px 0; padding:8px 12px; background:#111a26; border-radius:6px; border:1px solid #22344a;">
+        <h4 style="margin:0 0 6px 0; font-size:13px; color:#8ad8df;">출처</h4>
+        <dl id="ops-sources" style="margin:0; font-size:12px; line-height:1.6;">
+          <dt>학생이 만든 것</dt><dd>판정기(src/decider.mjs), 탐지 규칙(src/detect.mjs), 접속 앱(이 화면, public/), 자료실(api/, supabase/), 점검 코드(src/attack-check.mjs, src/rule-check.mjs)</dd>
+          <dt>제공 엔진</dt><dd>ALEPH SDP 엔진. 요청마다 학생 판정기를 불러 결과를 집행하고, 학생 탐지 규칙의 회수 제안을 집행하며, 요청 서명을 확인합니다. 이 화면은 엔진의 집행 결과를 받지 않으므로 엔진 집행은 미실행으로 둡니다.</dd>
+        </dl>
+      </div>
       <dl id="ops-stats" style="display:flex; flex-wrap:wrap; gap:16px; margin:12px 0; font-size:13px;">
         <div style="background:#111a26; padding:8px 12px; border-radius:6px; border:1px solid #22344a;"><dt style="color:#7e93ab;">점검 항목</dt><dd data-k="total" style="font-size:18px; font-weight:bold; margin:4px 0 0; color:#bfd0e5;">-</dd></div>
         <div style="background:#111a26; padding:8px 12px; border-radius:6px; border:1px solid #22344a;"><dt style="color:#7e93ab;">막은 공격</dt><dd data-k="blocked" style="font-size:18px; font-weight:bold; margin:4px 0 0; color:#5cdb95;">-</dd></div>

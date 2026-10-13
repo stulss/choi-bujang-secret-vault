@@ -1,24 +1,24 @@
 {
   "schema": "aleph.ops-evidence.v1",
-  "generatedAt": "2026-10-13T07:26:07.362Z",
-  "deployedCommit": "dab2ba73290a80a249f9facb02d2d43c48340d22",
+  "generatedAt": "2026-10-13T07:39:48.263Z",
+  "deployedCommit": "c018bd7b0cf742143f2fb02b5d6d6caa1fe8cbb3",
   "writesSent": false,
   "rows": [
     {
-      "requestId": "icn1::qw6j7-1791876344039-d975f9978f0b",
-      "checkedAt": "2026-10-13T07:26:04.652Z",
+      "requestId": "icn1::xpg22-1791877161305-9911aad99174",
+      "checkedAt": "2026-10-13T07:39:41.926Z",
       "id": "N01",
       "stage": 1,
       "kind": "normal",
       "request": "GET /aleph.json",
       "expected": "HTTP 200, 배포 커밋 확인",
-      "actual": "HTTP 200, 커밋 dab2ba7",
+      "actual": "HTTP 200, 커밋 c018bd7",
       "result": "pass",
       "source": "live_http"
     },
     {
-      "requestId": "icn1::qw6j7-1791876344088-0ab0075acf45",
-      "checkedAt": "2026-10-13T07:26:04.686Z",
+      "requestId": "icn1::xpg22-1791877161340-f3e2195e9a69",
+      "checkedAt": "2026-10-13T07:39:41.946Z",
       "id": "N02",
       "stage": 11,
       "kind": "normal",
@@ -29,8 +29,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::4stk2-1791876344109-bca0cd15d702",
-      "checkedAt": "2026-10-13T07:26:04.719Z",
+      "requestId": "icn1::xpg22-1791877161361-06c23dcc1d4e",
+      "checkedAt": "2026-10-13T07:39:41.966Z",
       "id": "N03",
       "stage": 11,
       "kind": "normal",
@@ -41,8 +41,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::gfmdp-1791876344168-0fdfc3461228",
-      "checkedAt": "2026-10-13T07:26:04.778Z",
+      "requestId": "icn1::wggxm-1791877161404-24d930ba8fe0",
+      "checkedAt": "2026-10-13T07:39:42.015Z",
       "id": "N04",
       "stage": 11,
       "kind": "normal",
@@ -53,8 +53,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::iad1::qw6j7-1791876344209-8cf8df89dfab",
-      "checkedAt": "2026-10-13T07:26:05.011Z",
+      "requestId": "icn1::iad1::288dj-1791877161432-482f72b93177",
+      "checkedAt": "2026-10-13T07:39:42.908Z",
       "id": "F01",
       "stage": 1,
       "kind": "forbidden",
@@ -65,8 +65,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::iad1::b6j2x-1791876344440-5ed6f2310308",
-      "checkedAt": "2026-10-13T07:26:05.247Z",
+      "requestId": "icn1::iad1::fsr5l-1791877162335-0435a61d6a53",
+      "checkedAt": "2026-10-13T07:39:43.151Z",
       "id": "F02",
       "stage": 1,
       "kind": "forbidden",
@@ -77,8 +77,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::iad1::9td6p-1791876344673-4198a1a8a1da",
-      "checkedAt": "2026-10-13T07:26:05.507Z",
+      "requestId": "icn1::iad1::288dj-1791877162563-d6706bc33510",
+      "checkedAt": "2026-10-13T07:39:43.368Z",
       "id": "F03",
       "stage": 3,
       "kind": "forbidden",
@@ -89,8 +89,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::dhgnr-1791876344926-9474f2efe4f7",
-      "checkedAt": "2026-10-13T07:26:05.544Z",
+      "requestId": "icn1::qs77v-1791877162783-3fedd3072bb0",
+      "checkedAt": "2026-10-13T07:39:43.397Z",
       "id": "F04",
       "stage": 2,
       "kind": "forbidden",
@@ -101,8 +101,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::bmnkc-1791876344967-4a8782ce1e0e",
-      "checkedAt": "2026-10-13T07:26:05.585Z",
+      "requestId": "icn1::7k7s5-1791877162807-be9aabe505cf",
+      "checkedAt": "2026-10-13T07:39:43.416Z",
       "id": "F05",
       "stage": 2,
       "kind": "forbidden",
@@ -113,8 +113,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::bmnkc-1791876345015-33a238bf3c4d",
-      "checkedAt": "2026-10-13T07:26:05.955Z",
+      "requestId": "icn1::7k7s5-1791877162844-335efc1b8ba8",
+      "checkedAt": "2026-10-13T07:39:43.450Z",
       "id": "F06",
       "stage": 5,
       "kind": "forbidden",
@@ -125,8 +125,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "01a13427-2e59-7727-a725-ab190c9c7c8f",
-      "checkedAt": "2026-10-13T07:26:06.355Z",
+      "requestId": "01a13433-a79f-73f9-83e8-bb001a6171df",
+      "checkedAt": "2026-10-13T07:39:44.320Z",
       "id": "F07",
       "stage": 5,
       "kind": "forbidden",
@@ -137,8 +137,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::iad1::5qdvj-1791876345788-7c72d00a5b81",
-      "checkedAt": "2026-10-13T07:26:06.591Z",
+      "requestId": "icn1::iad1::lkwtz-1791877163741-add50b107beb",
+      "checkedAt": "2026-10-13T07:39:44.579Z",
       "id": "F08",
       "stage": 8,
       "kind": "forbidden",
@@ -149,8 +149,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::iad1::tnqng-1791876346021-2fd299852379",
-      "checkedAt": "2026-10-13T07:26:06.839Z",
+      "requestId": "icn1::iad1::wdn2p-1791877163992-0af7e3c51cbe",
+      "checkedAt": "2026-10-13T07:39:45.433Z",
       "id": "F09",
       "stage": 8,
       "kind": "forbidden",
@@ -161,8 +161,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::iad1::4vrpc-1791876346270-4b1a8730594c",
-      "checkedAt": "2026-10-13T07:26:07.082Z",
+      "requestId": "icn1::iad1::dk7dc-1791877164846-cb3a0a0aad6e",
+      "checkedAt": "2026-10-13T07:39:46.223Z",
       "id": "F10",
       "stage": 11,
       "kind": "forbidden",
@@ -173,8 +173,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::iad1::5xgr4-1791876346503-48c8f0d49247",
-      "checkedAt": "2026-10-13T07:26:07.322Z",
+      "requestId": "icn1::iad1::z57cc-1791877165649-cdcb162f0157",
+      "checkedAt": "2026-10-13T07:39:47.168Z",
       "id": "F11",
       "stage": 10,
       "kind": "forbidden",
@@ -185,15 +185,15 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::qfqt8-1791876346755-8c6881e7216d",
-      "checkedAt": "2026-10-13T07:26:07.356Z",
+      "requestId": "icn1::iad1::4vrpc-1791877166584-18ea39417c4c",
+      "checkedAt": "2026-10-13T07:39:48.257Z",
       "id": "F12",
       "stage": 12,
       "kind": "forbidden",
       "request": "GET /api/ops (토큰 없음)",
       "expected": "HTTP 401, 작전실 기록 없음",
-      "actual": "HTTP 404",
-      "result": "fail",
+      "actual": "HTTP 401",
+      "result": "pass",
       "source": "live_http"
     },
     {
@@ -233,8 +233,8 @@
       "source": "not_run"
     },
     {
-      "requestId": "e4174b8d-f6e2-40dd-973f-181d016192f0",
-      "checkedAt": "2026-10-13T07:26:07.359Z",
+      "requestId": "91e4a36f-6dde-44d9-bf9d-00d68454cb5e",
+      "checkedAt": "2026-10-13T07:39:48.260Z",
       "id": "L01",
       "stage": 6,
       "kind": "normal",
@@ -245,8 +245,8 @@
       "source": "local_function"
     },
     {
-      "requestId": "f15c8fdb-81df-4228-ab20-8f409df10f89",
-      "checkedAt": "2026-10-13T07:26:07.359Z",
+      "requestId": "5ea517ba-28b7-4037-9bd7-068a2de5cae9",
+      "checkedAt": "2026-10-13T07:39:48.260Z",
       "id": "L02",
       "stage": 6,
       "kind": "forbidden",
@@ -257,8 +257,8 @@
       "source": "local_function"
     },
     {
-      "requestId": "d3488d9e-af11-422f-aab4-b8519a67b73b",
-      "checkedAt": "2026-10-13T07:26:07.359Z",
+      "requestId": "292eef7a-3e3a-411d-875e-adf7dd7a408b",
+      "checkedAt": "2026-10-13T07:39:48.260Z",
       "id": "L03",
       "stage": 7,
       "kind": "forbidden",
@@ -269,8 +269,8 @@
       "source": "local_function"
     },
     {
-      "requestId": "c9b06200-698d-42b5-8428-ea9ac7523a11",
-      "checkedAt": "2026-10-13T07:26:07.359Z",
+      "requestId": "60dfa5bb-71ff-4419-a987-24c1de14a015",
+      "checkedAt": "2026-10-13T07:39:48.260Z",
       "id": "L04",
       "stage": 7,
       "kind": "normal",
@@ -281,8 +281,8 @@
       "source": "local_function"
     },
     {
-      "requestId": "dfaac1b7-311d-4047-be65-c96b65d8d070",
-      "checkedAt": "2026-10-13T07:26:07.359Z",
+      "requestId": "54b955eb-719d-423e-a232-7328eb113ab8",
+      "checkedAt": "2026-10-13T07:39:48.260Z",
       "id": "L05",
       "stage": 8,
       "kind": "forbidden",
@@ -293,8 +293,8 @@
       "source": "local_function"
     },
     {
-      "requestId": "b033dcca-af3d-4f9e-a1a1-1bd311325a55",
-      "checkedAt": "2026-10-13T07:26:07.359Z",
+      "requestId": "70d118d6-0f44-4145-b3ed-ffe34f32830f",
+      "checkedAt": "2026-10-13T07:39:48.260Z",
       "id": "L06",
       "stage": 8,
       "kind": "normal",
@@ -305,8 +305,8 @@
       "source": "local_function"
     },
     {
-      "requestId": "4fa957c0-5721-4a20-9500-55b20ea73ef9",
-      "checkedAt": "2026-10-13T07:26:07.359Z",
+      "requestId": "42a129a5-ff06-4372-9bf8-548330df2c66",
+      "checkedAt": "2026-10-13T07:39:48.260Z",
       "id": "L07",
       "stage": 8,
       "kind": "forbidden",
@@ -317,8 +317,8 @@
       "source": "local_function"
     },
     {
-      "requestId": "ff3684eb-943a-4e56-bbdd-c1e5325d673e",
-      "checkedAt": "2026-10-13T07:26:07.359Z",
+      "requestId": "2b86eea0-9da2-4216-9d5f-225ba5251d9f",
+      "checkedAt": "2026-10-13T07:39:48.260Z",
       "id": "L08",
       "stage": 8,
       "kind": "forbidden",
@@ -329,8 +329,8 @@
       "source": "local_function"
     },
     {
-      "requestId": "340190a0-1f9f-4a10-9956-f1252bae73b9",
-      "checkedAt": "2026-10-13T07:26:07.360Z",
+      "requestId": "900f38fd-b596-4c3b-b476-0af7639b85b2",
+      "checkedAt": "2026-10-13T07:39:48.261Z",
       "id": "L09",
       "stage": 9,
       "kind": "forbidden",
@@ -341,8 +341,8 @@
       "source": "local_function"
     },
     {
-      "requestId": "51bf7d7a-ec49-45ef-9580-dd5bdfd2a3ed",
-      "checkedAt": "2026-10-13T07:26:07.360Z",
+      "requestId": "48a21f0c-e13a-4138-a547-4f908c9f2085",
+      "checkedAt": "2026-10-13T07:39:48.261Z",
       "id": "L10",
       "stage": 9,
       "kind": "normal",
@@ -353,8 +353,8 @@
       "source": "local_function"
     },
     {
-      "requestId": "56fb079f-4217-4f3a-ab68-6fc558e9c12b",
-      "checkedAt": "2026-10-13T07:26:07.360Z",
+      "requestId": "70164302-94e8-4945-85c4-bfa8dfe37f8f",
+      "checkedAt": "2026-10-13T07:39:48.261Z",
       "id": "L11",
       "stage": 9,
       "kind": "normal",
@@ -365,8 +365,8 @@
       "source": "local_function"
     },
     {
-      "requestId": "79f323d6-648e-499f-bd67-395262abe905",
-      "checkedAt": "2026-10-13T07:26:07.362Z",
+      "requestId": "89ebfc7c-e5bf-4fba-a330-6025d80ab68a",
+      "checkedAt": "2026-10-13T07:39:48.263Z",
       "id": "L12",
       "stage": 10,
       "kind": "normal",
@@ -377,8 +377,8 @@
       "source": "local_function"
     },
     {
-      "requestId": "e7173917-4c96-4950-bb0b-77483d8d9b58",
-      "checkedAt": "2026-10-13T07:26:07.362Z",
+      "requestId": "b09e3980-ef48-4efc-ae72-c7646cd64359",
+      "checkedAt": "2026-10-13T07:39:48.263Z",
       "id": "L13",
       "stage": 10,
       "kind": "forbidden",
@@ -533,7 +533,7 @@
         "F10",
         "F12"
       ],
-      "status": "not_blocked"
+      "status": "blocked"
     },
     {
       "stage": 3,
@@ -762,18 +762,18 @@
   ],
   "summary": {
     "rows": 38,
-    "forbiddenRejected": 11,
-    "forbiddenFailed": 1,
+    "forbiddenRejected": 12,
+    "forbiddenFailed": 0,
     "forbiddenNotRun": 7,
     "normalAllowed": 4,
     "normalFailed": 0,
     "normalNotRun": 2,
     "localMatched": 13,
     "localDiffered": 0,
-    "attacksBlocked": 3,
-    "attacksNotBlocked": 1,
+    "attacksBlocked": 4,
+    "attacksNotBlocked": 0,
     "attacksNotRun": 37,
     "attacksTotal": 41
   },
-  "digest": "4d3f91003977c4d01294bd44543948b5738f5b1c312a41e2aa7328e9cf256b5b"
+  "digest": "a6edeeb8a5b533efc78fc9366a7ecb10ca3d5b2e0795e1e3eaadec28b70c81ff"
 }

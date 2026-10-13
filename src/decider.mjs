@@ -19,14 +19,15 @@ function isSuspiciousAccess(request) {
   const isForeign = signals.region === 'foreign';
   const hasSpikeEvents = events.some(e => e.kind === 'risk_signal' || (typeof e.count === 'number' && e.count >= 10));
 
-  // 평소와 다른 시각과 처음 보는 네트워크에서 갑자기 많은 자료를 읽는 복합 사건 감지
+  // 평소와 다른 시각과 처음 보는 네트워크의 복합 이상 사건 감지 (이벤트가 없거나 폭주 이벤트가 있을 때)
   // (단일 지역 하나만으로 영구 차단하지 않음)
-  return isUnusualNetwork && (isOffHours || isForeign) && hasSpikeEvents;
+  return isUnusualNetwork && (isOffHours || isForeign) && (events.length === 0 || hasSpikeEvents);
 }
 
 // aleph.config.json allowedRoutes와 같은 경로 모양만 허용합니다. (엔진은 /api 없이 보낼 수 있음)
 const ALLOWED_ROUTES = new Set([
   'GET /notes', 'POST /notes', 'GET /notes/:id', 'PUT /notes/:id', 'DELETE /notes/:id',
+  'GET /my/notes',
   'GET /notices', 'GET /notices/:id', 'POST /notices', 'PUT /notices/:id', 'DELETE /notices/:id',
   // 10단계 복구 경로: 한 건 복원만 허용합니다. 주인·사본 대조는 api/restore.js가 합니다.
   'POST /restore',
@@ -129,7 +130,14 @@ export async function decide(request) {
   const pathname = String(path).split('?')[0].replace(/\/+$/u, '');
   const parts = pathname.split('/').filter(Boolean);
   if (parts[0] === 'api') parts.shift();
-  const [zone, resourceId, ...rest] = parts;
+  let zone, resourceId, rest;
+  if (parts[0] === 'my' && parts[1] === 'notes') {
+    zone = 'my/notes';
+    resourceId = parts[2];
+    rest = parts.slice(3);
+  } else {
+    [zone, resourceId, ...rest] = parts;
+  }
   const shape = `${method} /${zone ?? ''}${resourceId ? '/:id' : ''}`;
   const normalizedRoute = String(route).replace(/^([A-Z]+ )\/api\//u, '$1/');
   if (rest.length > 0 || !ALLOWED_ROUTES.has(shape) || (route && normalizedRoute !== shape)
