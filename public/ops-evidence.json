@@ -1,24 +1,24 @@
 {
   "schema": "aleph.ops-evidence.v1",
-  "generatedAt": "2026-10-13T06:41:34.173Z",
-  "deployedCommit": "e73986ebda8ed26a9d4bb80c18d79589813ffae5",
+  "generatedAt": "2026-10-13T06:43:21.101Z",
+  "deployedCommit": "8b2c59ffd4ac6b44148918a98ca4149a0bc9e97a",
   "writesSent": false,
   "rows": [
     {
-      "requestId": "icn1::9mgmq-1791873669131-5a2c6b95409d",
-      "checkedAt": "2026-10-13T06:41:30.030Z",
+      "requestId": "icn1::dk7dc-1791873775553-2a2199191658",
+      "checkedAt": "2026-10-13T06:43:16.365Z",
       "id": "N01",
       "stage": 1,
       "kind": "normal",
       "request": "GET /aleph.json",
       "expected": "HTTP 200, 배포 커밋 확인",
-      "actual": "HTTP 200, 커밋 e73986e",
+      "actual": "HTTP 200, 커밋 8b2c59f",
       "result": "pass",
       "source": "live_http"
     },
     {
-      "requestId": "icn1::slqc9-1791873669476-ffcad50be3c5",
-      "checkedAt": "2026-10-13T06:41:30.256Z",
+      "requestId": "icn1::6mv52-1791873775821-d6be48ee0cee",
+      "checkedAt": "2026-10-13T06:43:16.839Z",
       "id": "N02",
       "stage": 11,
       "kind": "normal",
@@ -29,8 +29,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::slqc9-1791873669700-af9ce11ab60a",
-      "checkedAt": "2026-10-13T06:41:30.288Z",
+      "requestId": "icn1::6mv52-1791873776282-e95637acc51a",
+      "checkedAt": "2026-10-13T06:43:17.070Z",
       "id": "N03",
       "stage": 11,
       "kind": "normal",
@@ -41,8 +41,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::dqdcs-1791873669786-245592ff3b20",
-      "checkedAt": "2026-10-13T06:41:30.373Z",
+      "requestId": "icn1::4stk2-1791873776850-225e521d7233",
+      "checkedAt": "2026-10-13T06:43:17.889Z",
       "id": "N04",
       "stage": 11,
       "kind": "normal",
@@ -53,8 +53,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::iad1::kp7wc-1791873669824-c22253d77732",
-      "checkedAt": "2026-10-13T06:41:30.907Z",
+      "requestId": "icn1::iad1::2xzgt-1791873777345-ca20b32d8f27",
+      "checkedAt": "2026-10-13T06:43:18.207Z",
       "id": "F01",
       "stage": 1,
       "kind": "forbidden",
@@ -65,8 +65,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::iad1::wqqsj-1791873670366-64ed445c598c",
-      "checkedAt": "2026-10-13T06:41:31.162Z",
+      "requestId": "icn1::iad1::flxdk-1791873777666-860d5d98af82",
+      "checkedAt": "2026-10-13T06:43:18.662Z",
       "id": "F02",
       "stage": 1,
       "kind": "forbidden",
@@ -77,8 +77,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::iad1::lkwtz-1791873670618-e99a451c8c7a",
-      "checkedAt": "2026-10-13T06:41:31.922Z",
+      "requestId": "icn1::iad1::wqqsj-1791873778118-7d08a5562c58",
+      "checkedAt": "2026-10-13T06:43:18.910Z",
       "id": "F03",
       "stage": 3,
       "kind": "forbidden",
@@ -89,8 +89,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::bmnkc-1791873671378-7faa0e7ca6ad",
-      "checkedAt": "2026-10-13T06:41:31.969Z",
+      "requestId": "icn1::67tlz-1791873778359-c9e363db4fb6",
+      "checkedAt": "2026-10-13T06:43:19.150Z",
       "id": "F04",
       "stage": 2,
       "kind": "forbidden",
@@ -101,8 +101,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::2jtkw-1791873671426-42bea6b60395",
-      "checkedAt": "2026-10-13T06:41:32.097Z",
+      "requestId": "icn1::dqdcs-1791873778605-f85137e86ef7",
+      "checkedAt": "2026-10-13T06:43:19.197Z",
       "id": "F05",
       "stage": 2,
       "kind": "forbidden",
@@ -113,8 +113,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::b6j2x-1791873671550-0fabbbe397ec",
-      "checkedAt": "2026-10-13T06:41:32.138Z",
+      "requestId": "icn1::bmnkc-1791873778650-84840dc56e10",
+      "checkedAt": "2026-10-13T06:43:19.441Z",
       "id": "F06",
       "stage": 5,
       "kind": "forbidden",
@@ -125,8 +125,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "01a133fe-6204-79d7-a68d-aea07afae98b",
-      "checkedAt": "2026-10-13T06:41:32.876Z",
+      "requestId": "01a13400-0505-76bc-b645-ccb5c5a8fc11",
+      "checkedAt": "2026-10-13T06:43:19.672Z",
       "id": "F07",
       "stage": 5,
       "kind": "forbidden",
@@ -137,8 +137,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::iad1::dhgnr-1791873672331-79b93c2bac6f",
-      "checkedAt": "2026-10-13T06:41:33.135Z",
+      "requestId": "icn1::iad1::fz4mf-1791873779126-52ba008f05c4",
+      "checkedAt": "2026-10-13T06:43:19.927Z",
       "id": "F08",
       "stage": 8,
       "kind": "forbidden",
@@ -149,8 +149,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::iad1::gcrr4-1791873672594-6605580d81e5",
-      "checkedAt": "2026-10-13T06:41:33.372Z",
+      "requestId": "icn1::iad1::288dj-1791873779372-ff9a4bc4727b",
+      "checkedAt": "2026-10-13T06:43:20.234Z",
       "id": "F09",
       "stage": 8,
       "kind": "forbidden",
@@ -161,8 +161,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::iad1::zrd4b-1791873672826-f194a8685635",
-      "checkedAt": "2026-10-13T06:41:33.616Z",
+      "requestId": "icn1::iad1::zptv9-1791873779680-bf6d88145865",
+      "checkedAt": "2026-10-13T06:43:20.534Z",
       "id": "F10",
       "stage": 11,
       "kind": "forbidden",
@@ -173,8 +173,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::iad1::j8n8z-1791873673074-89060d115fc4",
-      "checkedAt": "2026-10-13T06:41:33.877Z",
+      "requestId": "icn1::iad1::dk7dc-1791873779978-30b935d03947",
+      "checkedAt": "2026-10-13T06:43:20.769Z",
       "id": "F11",
       "stage": 10,
       "kind": "forbidden",
@@ -185,8 +185,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::iad1::5xgr4-1791873673321-4d27c35588a7",
-      "checkedAt": "2026-10-13T06:41:34.166Z",
+      "requestId": "icn1::iad1::fz4mf-1791873780217-f5180efbbc90",
+      "checkedAt": "2026-10-13T06:43:21.088Z",
       "id": "F12",
       "stage": 12,
       "kind": "forbidden",
@@ -233,8 +233,8 @@
       "source": "not_run"
     },
     {
-      "requestId": "7011d76d-5d04-42c7-8d16-1d6160e23124",
-      "checkedAt": "2026-10-13T06:41:34.169Z",
+      "requestId": "82f385cf-89b3-4bd8-a2a9-c89d64b6afdf",
+      "checkedAt": "2026-10-13T06:43:21.094Z",
       "id": "L01",
       "stage": 6,
       "kind": "normal",
@@ -245,8 +245,8 @@
       "source": "local_function"
     },
     {
-      "requestId": "58e11e3b-b328-4e7c-ad99-6ee214fdc659",
-      "checkedAt": "2026-10-13T06:41:34.169Z",
+      "requestId": "187be5d1-ac1b-43e3-be6e-fb4112356a7f",
+      "checkedAt": "2026-10-13T06:43:21.094Z",
       "id": "L02",
       "stage": 6,
       "kind": "forbidden",
@@ -257,8 +257,8 @@
       "source": "local_function"
     },
     {
-      "requestId": "4a5b6b94-24db-4f45-827a-cce5f9b196eb",
-      "checkedAt": "2026-10-13T06:41:34.169Z",
+      "requestId": "c93f5814-6c9c-4625-aa1e-95d3ca692ce4",
+      "checkedAt": "2026-10-13T06:43:21.094Z",
       "id": "L03",
       "stage": 7,
       "kind": "forbidden",
@@ -269,8 +269,8 @@
       "source": "local_function"
     },
     {
-      "requestId": "0484bb9a-a849-42c7-840d-a89944112d4f",
-      "checkedAt": "2026-10-13T06:41:34.169Z",
+      "requestId": "49b254d6-2e59-409b-8f1f-9e6aa215ff3d",
+      "checkedAt": "2026-10-13T06:43:21.094Z",
       "id": "L04",
       "stage": 7,
       "kind": "normal",
@@ -281,8 +281,8 @@
       "source": "local_function"
     },
     {
-      "requestId": "a1a83509-1bde-469c-9c70-987a6ffad25e",
-      "checkedAt": "2026-10-13T06:41:34.170Z",
+      "requestId": "93b4967f-7b13-4fc7-9321-62093b6c018a",
+      "checkedAt": "2026-10-13T06:43:21.095Z",
       "id": "L05",
       "stage": 8,
       "kind": "forbidden",
@@ -293,8 +293,8 @@
       "source": "local_function"
     },
     {
-      "requestId": "de85118a-ccc0-45df-ae62-8e3d44edc1cc",
-      "checkedAt": "2026-10-13T06:41:34.170Z",
+      "requestId": "fd8651ba-e969-4141-92c9-1a8a0458c6a8",
+      "checkedAt": "2026-10-13T06:43:21.095Z",
       "id": "L06",
       "stage": 8,
       "kind": "normal",
@@ -305,8 +305,8 @@
       "source": "local_function"
     },
     {
-      "requestId": "ecf762d7-7ade-4cda-a8af-ecaf452c6636",
-      "checkedAt": "2026-10-13T06:41:34.170Z",
+      "requestId": "aedf0267-2236-4f8f-a7d9-ad185da895b5",
+      "checkedAt": "2026-10-13T06:43:21.095Z",
       "id": "L07",
       "stage": 8,
       "kind": "forbidden",
@@ -317,8 +317,8 @@
       "source": "local_function"
     },
     {
-      "requestId": "0919e39e-c232-469c-998c-4b6e8f7c5ea8",
-      "checkedAt": "2026-10-13T06:41:34.170Z",
+      "requestId": "531b4b79-ae38-45c9-b872-05513a707a1d",
+      "checkedAt": "2026-10-13T06:43:21.095Z",
       "id": "L08",
       "stage": 8,
       "kind": "forbidden",
@@ -329,8 +329,8 @@
       "source": "local_function"
     },
     {
-      "requestId": "f6bee98b-0e3e-4f3f-8b8f-5ec6d2d0ef5a",
-      "checkedAt": "2026-10-13T06:41:34.171Z",
+      "requestId": "943b7f79-5a0b-45a5-b2a1-cb188a9ac342",
+      "checkedAt": "2026-10-13T06:43:21.096Z",
       "id": "L09",
       "stage": 9,
       "kind": "forbidden",
@@ -341,8 +341,8 @@
       "source": "local_function"
     },
     {
-      "requestId": "172eec76-4bfc-4d7d-b2f6-f669c294b1fe",
-      "checkedAt": "2026-10-13T06:41:34.171Z",
+      "requestId": "5da6953d-4aec-4c59-93dd-4405ac2c1f16",
+      "checkedAt": "2026-10-13T06:43:21.096Z",
       "id": "L10",
       "stage": 9,
       "kind": "normal",
@@ -353,8 +353,8 @@
       "source": "local_function"
     },
     {
-      "requestId": "73c06c7b-245d-42ea-ba7d-d9a225c7497e",
-      "checkedAt": "2026-10-13T06:41:34.171Z",
+      "requestId": "10c1e47b-8c83-4e0a-96b8-35e0ae903143",
+      "checkedAt": "2026-10-13T06:43:21.097Z",
       "id": "L11",
       "stage": 9,
       "kind": "normal",
@@ -365,8 +365,8 @@
       "source": "local_function"
     },
     {
-      "requestId": "8201e508-255c-4139-a169-be84692a5967",
-      "checkedAt": "2026-10-13T06:41:34.172Z",
+      "requestId": "ebfa78dc-cf06-4fd8-8440-f899df39aeca",
+      "checkedAt": "2026-10-13T06:43:21.099Z",
       "id": "L12",
       "stage": 10,
       "kind": "normal",
@@ -377,8 +377,8 @@
       "source": "local_function"
     },
     {
-      "requestId": "00488aba-3012-4dff-9f66-8dab6592dc76",
-      "checkedAt": "2026-10-13T06:41:34.173Z",
+      "requestId": "ac8cc8b8-3cc0-4b66-94ef-5f8227ae1a6a",
+      "checkedAt": "2026-10-13T06:43:21.101Z",
       "id": "L13",
       "stage": 10,
       "kind": "forbidden",
@@ -775,5 +775,5 @@
     "attacksNotRun": 37,
     "attacksTotal": 41
   },
-  "digest": "9e4622dfe94663973ea18a763a7299ba03cf55b738b7c2d012ecd629bd2c3c9d"
+  "digest": "517d0acf06c505fd9603ac449c9d661c53fd9ae303ecc1619f0eee1a2d218288"
 }
