@@ -31,26 +31,28 @@ test('build identity uses Vercel Git and deployment metadata', () => {
   assert.throws(() => deploymentIdentity({ ...env, VERCEL_GIT_COMMIT_SHA: 'short' }, config));
 });
 
+// 12단계 점검 코드는 단계와 상관없이 같은 목록을 보내고, 첫 점검이 /data.json 공개 여부입니다.
 test('first attack check reads public data.json without credentials', async () => {
   const originalFetch = globalThis.fetch;
-  let requestUrl;
-  let options;
+  const calls = [];
   try {
     globalThis.fetch = async (url, init) => {
-      requestUrl = String(url);
-      options = init;
+      calls.push({ url: String(url), init });
+      if (new URL(String(url)).pathname !== '/data.json') return new Response('{"error":"UNAUTHORIZED"}', { status: 401 });
       return new Response(JSON.stringify({ sampleMarker: 'SAMPLE_NOTE_1', notes: [{ title: '가상' }] }), {
         status: 200,
         headers: { 'content-type': 'application/json' },
       });
     };
-    const [result] = await runAttackChecks(config);
-    assert.equal(requestUrl, 'https://student-defense.vercel.app/data.json');
-    assert.equal(options.redirect, 'error');
-    assert.match(result.observed, /확인 표시가 보임/u);
-    globalThis.fetch = async () => new Response('<html>not the data</html>', { status: 200 });
-    const [failed] = await runAttackChecks(config);
-    assert.match(failed.observed, /보이지 않음/u);
+    const [visible] = await runAttackChecks(config.publicAppUrl);
+    const dataCall = calls.find(c => c.url === 'https://student-defense.vercel.app/data.json');
+    assert.equal(dataCall.init.method, 'GET');
+    assert.deepEqual(dataCall.init.headers, {});
+    assert.equal(visible.attackId, 'data_json_notes_cleared');
+    assert.deepEqual([visible.observed, visible.result], ['HTTP 200', 'breached']);
+    globalThis.fetch = async () => new Response('{"notes":[]}', { status: 200 });
+    const [cleared] = await runAttackChecks(config);
+    assert.deepEqual([cleared.observed, cleared.result], ['HTTP 200', 'blocked']);
   } finally {
     globalThis.fetch = originalFetch;
   }

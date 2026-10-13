@@ -1,8 +1,27 @@
-# BYTE BACK 방어전 시작 틀 R5
+# 최부장의 비밀 금고 (BYTE BACK 방어전)
 
-이 저장소는 1단계에서 학생 본인이 GitHub 저장소와 Vercel 배포를 만드는 출발점입니다. 포함된 메모 네 건은 가상 자료입니다. 실제 학생 자료, 토큰, 비밀키를 넣지 마세요.
+학생이 방어전 시작 틀(`ChoiTimo/aleph-defense-starter`)에서 출발해 1~12단계를 직접 만든 가상 자료실입니다. 메모는 모두 가상 자료이고, 실제 학생 자료·토큰·비밀키는 넣지 않습니다. 누가 무엇을 만들었는지는 바로 아래 표에 나눠 적었습니다.
 
-## 학생이 하는 일: 세 걸음
+## 누가 만든 것인가
+
+| 구분 | 내용 | 위치 |
+|---|---|---|
+| **학생 몫** | 판정기 규칙 3개 (`device_registered`, `step_up_required`, `zone_partitioning`) | `src/decider.mjs` |
+| **학생 몫** | 탐지 규칙 (10분 안 같은 사용자·기기의 GET 120건 초과 + 낯선 네트워크 → 회수 **제안**) | `src/detect.mjs` |
+| **학생 몫** | 접속 앱 (설치형 웹앱 화면, 기기 승인·서명, 탈환 작전실 화면) | `public/index.html`, `public/sw.js`, `public/manifest.webmanifest`, `public/offline.html` |
+| **학생 몫** | 자료실 서버 함수와 DB (로그인 중계, 메모, 공지, 복구, 기기 승인, 작전실 요약) | `api/*.js`, `src/verify-login.mjs`, `src/device-auth.mjs`, `src/note-owner.mjs`, `schema.sql` |
+| **학생 몫** | 자기 점검 (제출 묶음·심판 runner·서버 점검 기록이 함께 쓰는 점검 목록과 그 서버 쪽 가상 입력) | `src/attack-check.mjs`, `src/checks.mjs`, `api/checks.js` |
+| **학생 몫** | 정책 사본과 되돌리기 | `policy/`, `scripts/policy-restore.mjs` |
+| **제공: ALEPH SDP 엔진** | 신원·기기·경로를 확인해 `aleph.decision.v1` 요청을 판정기에 전달하고 응답을 받는 엔진, 사건 전달, 접속 회수 집행과 경과 시간 측정, 심판 접수 | **이 저장소에 엔진 코드는 없습니다.** 계약만 `docs/DECIDER_REQUEST.md`(`student-kit/sdp-core/decision-contract.mjs` 설명)에 있고, 심판 접수 주소는 운영 측이 채운 `aleph.config.json`의 `judgeIssuer`입니다. |
+| **제공: 시작 틀** (`ChoiTimo/aleph-defense-starter`) | 1단계 틀과 빌드, `src/decider.mjs`·`src/detect.mjs`의 출발 템플릿, 판정기 연습 도구 `scripts/decider-test.mjs`, 묶음 스크립트 `scripts/bundle.mjs`(12단계 runner 형식에 맞춰 학생이 고침), 보너스 연습 경보(`xdr/`), 배포 양식(`package/`) | 커밋 기록상 작성자 ChoiTimo (`0f9a3c9`, `de3cf4f`, `8fb5b6d`) |
+| **제공 자료 (원 출처 미확인)** | 계약 문서 `docs/DECIDER_REQUEST.md`·`docs/DETECT_EVENTS.md`, 연습 도구 `scripts/detect-test.mjs`·`scripts/fixture-7.mjs` | 이 저장소에는 `chacha1650a`의 첫 커밋(`f14b7f7`, 2026-10-07)으로 들어왔습니다. 문서 본문은 ALEPH SDP 엔진의 계약(`student-kit/sdp-core`)을 설명하지만, 시작 틀에서 왔는지는 기록으로 확인하지 못했습니다. |
+| **외부 서비스** | Supabase(로그인·DB), Vercel(배포) | 계정과 환경변수는 본인 것 |
+
+`npm run decider:test`·`detect:test`·`fixture:7`과 이 저장소의 모든 로컬 시험은 **가상 요청 연습**입니다. ALEPH SDP 엔진이나 심판의 판정·회수 결과가 아닙니다. 접속 회수 API는 만들지 않았고, 탐지 규칙은 제안만 냅니다.
+
+## 참고: 시작 틀 원문 — 학생이 하는 일: 세 걸음
+
+이 절과 다음 절은 1단계 시작 틀의 안내 원문입니다. 지금 구현과 다를 수 있으며, 지금 동작은 아래 단계별 절과 「12단계」 절에 적었습니다.
 
 1. GitHub 계정을 만듭니다.
 2. 방어전 1단계 카드의 **Deploy** 버튼을 누릅니다. Vercel에 GitHub로 로그인하고, 새 저장소가 **본인 계정의 Public 저장소**인지 확인한 뒤 Deploy를 누릅니다.
@@ -10,7 +29,7 @@
 
 배포가 끝나면 `/`에서 점령된 가상 자료실을 볼 수 있습니다. `/data.json`에는 같은 가상 메모가 공개됩니다. 이 공개 상태를 확인하는 것이 1단계의 출발점입니다. 1단계 접수와 심판 판정은 포털에서 확인합니다.
 
-## 시작 틀의 자동 처리
+## 참고: 시작 틀 원문 — 자동 처리
 
 `vercel.json`은 정적 결과물 `public`을 배포합니다. 빌드 명령 `npm run build`는 Vercel이 제공하는 GitHub 저장소 소유자·이름, 커밋 SHA, 배포 URL을 검증하고 `public/aleph.json`을 생성합니다. 이 값이 없으면 빌드가 실패하므로, 성공한 것처럼 빈 주소를 내보내지 않습니다. `aleph.json`의 내용만으로 저장소 소유권이나 방어 성공을 인정하지 않습니다. 심판이 공개 저장소의 실제 커밋과 배포된 자료를 따로 대조해야 합니다.
 
@@ -241,23 +260,8 @@
 
 ### 기준 커밋과 범위
 - **검사한 커밋**: `3b5bb78` (12단계 저장점, 배포 커밋 `3b5bb784f69d…`). 2026-10-13 `npm run evidence`가 배포 주소의 `GET /aleph.json`에서 읽은 값입니다. `docs/EVIDENCE.md`와 아래 「재현 순서」의 배포 실측은 이 배포를 대상으로 했습니다.
-- 그 뒤의 보완(이 안내가 들어 있는 커밋): 12단계 점검을 한 목록(`src/checks.mjs`)으로 모아 제출 묶음·`GET /api/checks`·작전실 화면이 같은 값을 쓰게 함, 제출 묶음은 GET·HEAD만 최대 24건(코드로 강제), `observed`는 사실 값만, 41종은 한 줄 문장으로 정리. 이 보완이 배포되기 전에는 배포 주소에서 `/api/checks`를 확인할 수 없습니다.
-
-### 누가 만든 것인가
-
-| 구분 | 내용 | 위치 |
-|---|---|---|
-| **학생 몫** | 판정기 규칙 3개 (`device_registered`, `step_up_required`, `zone_partitioning`) | `src/decider.mjs` |
-| **학생 몫** | 탐지 규칙 (10분 안 같은 사용자·기기의 GET 120건 초과 + 낯선 네트워크 → 회수 **제안**) | `src/detect.mjs` |
-| **학생 몫** | 접속 앱 (설치형 웹앱 화면, 기기 승인·서명, 작전실 화면) | `public/index.html`, `public/sw.js`, `public/manifest.webmanifest`, `public/offline.html` |
-| **학생 몫** | 자료실 서버 함수와 DB (로그인 중계, 메모, 공지, 복구, 기기 승인, 작전실 요약, 점검 기록) | `api/*.js`, `src/verify-login.mjs`, `src/device-auth.mjs`, `src/note-owner.mjs`, `src/checks.mjs`, `schema.sql` |
-| **학생 몫** | 정책 사본과 되돌리기 | `policy/`, `scripts/policy-restore.mjs` |
-| **제공: ALEPH SDP 엔진** | 신원·기기·경로를 확인해 `aleph.decision.v1` 요청을 판정기에 전달하고 응답을 받는 엔진, 사건 전달, 접속 회수 집행과 경과 시간 측정, 심판 접수 | **이 저장소에 엔진 코드는 없습니다.** 계약만 `docs/DECIDER_REQUEST.md`(`student-kit/sdp-core/decision-contract.mjs` 설명)에 있고, 심판 접수 주소는 운영 측이 채운 `aleph.config.json`의 `judgeIssuer`입니다. |
-| **제공: 시작 틀** (`ChoiTimo/aleph-defense-starter`) | 1단계 틀과 빌드, `src/decider.mjs`·`src/detect.mjs`의 출발 템플릿, 판정기 연습 도구 `scripts/decider-test.mjs`, 보너스 연습 경보(`xdr/`), 배포 양식(`package/`) | 커밋 기록상 작성자 ChoiTimo (`0f9a3c9`, `de3cf4f`, `8fb5b6d`) |
-| **제공 자료 (원 출처 미확인)** | 계약 문서 `docs/DECIDER_REQUEST.md`·`docs/DETECT_EVENTS.md`, 연습 도구 `scripts/detect-test.mjs`·`scripts/fixture-7.mjs` | 이 저장소에는 `chacha1650a`의 첫 커밋(`f14b7f7`, 2026-10-07)으로 들어왔습니다. 문서 본문은 ALEPH SDP 엔진의 계약(`student-kit/sdp-core`)을 설명하지만, 시작 틀에서 왔는지는 기록으로 확인하지 못했습니다. |
-| **외부 서비스** | Supabase(로그인·DB), Vercel(배포) | 계정과 환경변수는 본인 것 |
-
-`npm run decider:test`·`detect:test`·`fixture:7`과 이 저장소의 모든 로컬 시험은 **가상 요청 연습**입니다. ALEPH SDP 엔진이나 심판의 판정·회수 결과가 아닙니다. 접속 회수 API는 만들지 않았고, 탐지 규칙은 제안만 냅니다.
+- 그 뒤의 보완(이 안내가 들어 있는 커밋): `ffbb4d1` 제출(45점)에서 심판 runner가 점검 코드를 불러오지 못해(`runner_import_failed`) 실제 API 결과가 없었고, 그래서 화면 수치와 대조할 수 없었습니다(`S12_SCREEN_MISMATCH`). 원인은 `src/attack-check.mjs`가 12단계에서 `src/checks.mjs`를 불러오고, 그 파일이 다시 `scripts/`와 내장 모듈을 불러온 것입니다. 그래서 점검 목록을 다른 파일을 하나도 불러오지 않는 `src/attack-check.mjs` 한 파일로 옮기고(인자는 배포 주소 문자열, 결과 항목 `attackId·stage·expected·observed·result`), 판정기·탐지·정책 점검은 배포의 `GET /api/checks?case=…` 응답(`ready`)으로 확인하게 했으며, 「서버 점검 기록」을 로그인 없이 첫 화면에서 `/api/checks` 수치 그대로 보이게 했습니다. 이 보완이 배포되기 전에는 배포 주소에서 바뀐 `/api/checks`를 확인할 수 없습니다.
+- 출처(학생 몫과 제공 엔진)는 README 맨 위 「누가 만든 것인가」 표에 있습니다.
 
 ### 설치 (처음 한 번)
 1. 준비: Node 22 이상, Git, GitHub·Vercel·Supabase 계정.
@@ -268,9 +272,9 @@
 
 ### 실행
 - 로컬 연습 (엔진·배포 없이): `npm run decider:test` · `npm run fixture:7` · `npm run detect:test` · `npm run policy:diff` · `node --test test/checks.test.mjs test/screen.test.mjs test/ops-summary.test.mjs test/evidence.test.mjs test/package-starter.test.mjs test/r5.test.mjs test/xdr-brute-force.test.mjs test/xdr-run.test.mjs`
-- 배포 화면: 주소를 열고 시험 계정으로 로그인 → 「이 기기 승인 요청」 → 「서버 확인 완료」 뒤 자료실과 「탈환 작전실」이 열립니다. 승인 전에는 메모를 불러오지 않습니다.
+- 배포 화면: 주소를 열면 로그인 없이 맨 아래 「탈환 작전실 · 서버 점검 기록」이 보입니다. 시험 계정으로 로그인 → 「이 기기 승인 요청」 → 「서버 확인 완료」 뒤 자료실과 「탈환 작전실」(내 계정 요약)이 열립니다. 승인 전에는 메모를 불러오지 않습니다.
 - 실측 표 (1~11단계 정상·금지 요청 한 장): `npm run evidence` → `docs/EVIDENCE.md`. 로그인 없는 요청만 보냅니다. 시험 계정 요청까지 보내려면 본인 터미널에서 환경변수 `EVIDENCE_EMAIL`·`EVIDENCE_PASSWORD`(A 계정), `EVIDENCE_B_EMAIL`·`EVIDENCE_B_PASSWORD`(B 계정, 남의 메모 접근 거부 확인용)를 직접 넣고 `npm run evidence -- --with-account`를 실행합니다. 이 명령은 계정마다 승인 기기 1개를 남기고 A 계정에 가상 메모 1건을 만들었다 지웁니다(복구용 비공개 사본은 추가 전용이라 남습니다). 계정 값은 화면·표·기록·Git에 남지 않으며, 실행 기록 `artifacts/evidence.json`은 커밋하지 않습니다.
-- 12단계 점검 기록: `GET /api/checks` (로그인 불필요, 공개 경로의 응답 상태만). 제출 묶음(`npm run bundle`)과 같은 목록·같은 함수(`src/checks.mjs`)로 지금 점검을 실행해 `total`·`blocked`·`allowed`·`failed`·`notRun`과 점검 목록 `attempts`를 돌려줍니다. 배포 주소에는 GET·HEAD만 최대 24건 보내고, 쓰기 요청이 필요한 점검(로그인 없는 복구 `POST`)은 보내지 않고 `not_run`으로 둡니다. 판정기·탐지·정책 점검은 학생 코드를 직접 실행한 결과이며, ALEPH SDP 엔진이 실제로 집행했는지는 `engineEnforced: not_run`입니다. 작전실 화면의 「점검 기록」은 이 응답의 수치를 그대로 보여 주고, 같은 목록에서 다시 세어 일치 여부를 표시합니다.
+- 12단계 서버 점검 기록: `GET /api/checks` (로그인 불필요). 제출 묶음(`npm run bundle`)·심판 runner와 같은 함수(`src/attack-check.mjs`의 `runAttackChecks`)를 이 배포에 실제로 보내 받은 결과 `attempts`와 수치 `total`(점검 항목)·`blocked`(막은 공격)·`failed`(뚫린 공격)·`notRun`(실행하지 않은 점검)을 돌려줍니다. 점검 19개 가운데 16개가 배포 주소 한 곳에 보내는 GET 요청이고(코드 상한 24건), 쓰기 요청(로그인 없는 복구 `POST`)·로그인과 기기 서명이 필요한 정상 요청·배포 주소가 아닌 원본 API 직접 조회 3개는 보내지 않고 `not_run`입니다. `observed`에는 `HTTP 401`, `HTTP 200; jsonReady=true`처럼 같은 요청 기록과 대조할 수 있는 값만 적습니다. 판정기·탐지·정책 점검 7개는 `GET /api/checks?case=<점검 이름>`이 고정된 가상 입력을 학생 코드로 실행한 응답(`ready`)이며, ALEPH SDP 엔진이 실제로 집행했는지는 `engineEnforced: not_run`입니다. 화면의 「탈환 작전실 · 서버 점검 기록」은 이 수치를 계산하지 않고 그대로 보여 주고, 같은 `attempts`에서 다시 센 값과 다를 때만 「불일치」를 표시합니다.
 - 41종 공격 전체는 심판이 보내며 이 저장소에서는 실행하지 않았습니다. 표에 없는 공격을 통과로 적지 않습니다.
 
 ### 중지
@@ -292,15 +296,15 @@
 
 | 순서 | 명령·화면 | 정상 기대 | 거부 기대 | 이번 결과 |
 |---|---|---|---|---|
-| 1 | `node --test` 8개 파일 | 48건 통과 | — | 실행함 (로컬, 작업 트리 기준): 48건 통과. 화면 스크립트를 가짜 DOM에서 실행해 화면 수치가 `/api/checks`·`/api/ops` 응답과 같고, 응답 수치를 바꾸면 「불일치」가 뜨는 것도 포함 |
-| 2 | `npm run decider:test` / `fixture:7` / `detect:test` | 7개 통과 / allow·step_up / 6개 통과 | 미등록 기기 deny | 실행함 (로컬): 통과 |
+| 1 | `node --test` 8개 파일 | 50건 | — | 실행함 (로컬, 작업 트리 기준, 가짜 응답): 성공 49 · 실패 1. 실패 1건은 `test/ops-summary.test.mjs`의 `GET /api/ops` 시험으로, 이 PC에 `npm install`을 하지 않아 `@supabase/supabase-js`를 찾지 못한 것입니다. 점검 코드를 옆 파일 없이(data: 주소) 불러와 실행, 로그인 없이도 화면 수치가 `/api/checks` 응답과 같음, 응답 수치를 바꾸면 「불일치」가 뜨는 것도 포함 |
+| 2 | `npm run decider:test` / `fixture:7` / `detect:test` | 7개 / allow·step_up / 6개 | 미등록 기기 deny | 실행함 (로컬, 가상 요청 연습): 판정기 7건 기대와 같음 · 정상 allow·복합 이상 step_up · 탐지 6건 기대와 같음 |
 | 3 | `npm run evidence` (로그인 없음, 배포 `3b5bb78`) | 정상 4건 허용 (HTTP 200) | 금지 15건 거부 (HTTP 401/405 등) | 실행함: 정상 4 허용 · 금지 15 거부 · 다름 0 (요청 ID·시각은 `docs/EVIDENCE.md`) |
 | 4 | 같은 표의 함수 호출 행 (판정기·탐지기·정책) | 13건 기대와 같음 | — | 실행함 (요청 아님): 13건 같음 · 다름 0 (정책 사본 SHA-256 검증 통과) |
-| 5 | 12단계 점검 목록 (`src/checks.mjs`, 배포 `3b5bb78`) | GET 9건만, 정상 허용 5 | 금지 거부 14 | 실행함: 전체 20 · 막음 14 · 허용 5 · 다름 0 · 미실행 1 (로그인 없는 복구 `POST`) |
+| 5 | 12단계 점검 목록 (`src/attack-check.mjs`, 점검 19개) | 정상 요청 1개는 로그인·기기 서명이 필요해 보내지 않음 | 금지 요청 GET 16건 (판정기·탐지·정책 `?case=` 7건 포함) | 배포 주소 대상: **미실행** (이 보완을 커밋·배포한 뒤 `npm run bundle`로 실행). 바뀌기 전 목록은 배포 `3b5bb78`에서 전체 20 · 막음 14 · 허용 5 · 다름 0 · 미실행 1이었습니다 |
 | 6 | 41종 공격 | — | — | 실행하지 않음. 심판이 보내는 시험입니다 |
 | 7 | `npm run evidence -- --with-account` | 로그인 후 서명 요청 허용 (A 계정 기준) | 서명 없음·변경·B 계정의 A 메모 접근 거부 | **미실행** (계정 값은 사용자가 본인 터미널에서 넣어야 함). 계정 필요 행 정상 11 · 금지 10건이 표에 미실행으로 남아 있음 |
-| 8 | 실제 브라우저에서 로그인 → 기기 승인 → 작전실 확인 | 승인 뒤 자료실·작전실·점검 기록 열림 | 승인 전 메모 없음 | **미실행** (화면을 직접 조작하지 않음) |
-| 9 | 이 보완을 배포한 뒤 `GET /api/checks`와 `npm run bundle` | 두 결과의 `attackId`·`expected`·`observed`가 같음 | — | 커밋·배포 뒤 실행, 결과는 제출 묶음에 그대로 기록 |
+| 8 | 실제 브라우저에서 첫 화면 → 로그인 → 기기 승인 → 작전실 확인 | 로그인 전에도 서버 점검 기록 보임, 승인 뒤 자료실·작전실 열림 | 승인 전 메모 없음 | **미실행** (화면을 직접 조작하지 않음) |
+| 9 | 이 보완을 배포한 뒤 `GET /api/checks`와 `npm run bundle` | 두 결과의 `attackId`·`stage`·`expected`·`observed`·`result`가 같음 | — | **미실행** (커밋·배포 뒤 실행, 결과는 제출 묶음에 그대로 기록) |
 
 ## 다음 단계의 코딩 도구에 전달할 규칙
 

@@ -156,10 +156,17 @@
         <button id="ops-refresh" class="secondary" style="padding:4px 12px; font-size:13px;">다시 읽기</button>
       </div>
       <div id="ops-body"></div>
-      <div class="ops-section">
-        <h4>점검 기록 (제출 묶음과 같은 목록 · GET /api/checks) <span id="checks-match" class="pill wait">읽는 중</span></h4>
-        <div id="checks-body"></div>
+    </div>
+
+    <!-- 12단계 탈환 작전실 · 서버 점검 기록 (로그인 없이 공개, GET /api/checks를 그대로 옮김) -->
+    <div class="card-box" id="checks-box">
+      <h3 style="margin-top:0; margin-bottom:8px; font-size:16px;">탈환 작전실 · 서버 점검 기록</h3>
+      <p class="hint" style="margin-top:0;">아래 수치는 서버 점검 기록(GET /api/checks)을 화면에서 계산하지 않고 그대로 옮긴 값입니다. 서버가 제출 묶음(npm run bundle)과 같은 점검 함수(src/attack-check.mjs)로 이 배포에 GET 요청을 실제로 보내 받은 응답으로 센 결과이며, 기록을 읽지 못하면 수치를 비워 둡니다. 화면 문구는 심판 판정이 아닙니다.</p>
+      <div class="status-row">
+        <span id="checks-match" class="pill wait">읽는 중</span>
+        <button id="checks-refresh" class="secondary" style="padding:4px 12px; font-size:13px;">다시 읽기</button>
       </div>
+      <div id="checks-body"></div>
     </div>
   </main>
 
@@ -462,7 +469,7 @@
       opsBody.replaceChildren();
 
       const decider = data.decider;
-      const dBox = section('판정기 규칙', decider.status, decider.total ? decider.passed + '/' + decider.total + ' 통과' : '');
+      const dBox = section('판정기 규칙', decider.status, decider.total ? '기대와 같음 ' + decider.passed + '/' + decider.total : '');
       for (const rule of decider.rules || []) dBox.append(row(node('code', '', rule.id), rule.label));
       if (decider.error) dBox.append(failureRow(decider));
       if (decider.note) dBox.append(node('p', 'hint', decider.note));
@@ -470,7 +477,7 @@
 
       const detection = data.detection;
       const tBox = section('탐지 사건', detection.practice.status,
-        detection.practice.total ? detection.practice.passed + '/' + detection.practice.total + ' 통과' : '');
+        detection.practice.total ? '기대와 같음 ' + detection.practice.passed + '/' + detection.practice.total : '');
       tBox.append(row('규칙: 같은 사용자·기기의 GET이 ' + detection.rule.windowMinutes + '분 안에 '
         + detection.rule.burstLimit + '건을 넘고 평소와 다른 네트워크가 함께일 때 ', node('code', '', detection.rule.reasonCode)));
       if (detection.practice.error) tBox.append(failureRow(detection.practice));
@@ -546,11 +553,13 @@
       opsTime.textContent = '읽은 시각 ' + data.generatedAt;
     }
 
-    // ---- 점검 기록: 제출 묶음과 같은 목록(src/checks.mjs)을 서버가 지금 실행한 결과 ----
+    // ---- 서버 점검 기록 (로그인 없이 공개): GET /api/checks의 수치를 계산하지 않고 그대로 옮깁니다 ----
     const checksBody = document.getElementById('checks-body');
     const checksMatch = document.getElementById('checks-match');
-    const RESULT_TEXT = { blocked: '막음', allowed: '허용', failed: '기대와 다름', not_run: '미실행' };
-    const CHECK_KEYS = [['total', '전체'], ['blocked', '막음'], ['allowed', '허용'], ['failed', '기대와 다름'], ['notRun', '미실행']];
+    const RESULT_TEXT = { blocked: '막음', breached: '뚫림', not_run: '미실행' };
+    // [응답의 수치 이름, 화면 이름, 같은 수치를 attempts에서 셀 때의 result 값]
+    const CHECK_KEYS = [['total', '점검 항목', null], ['blocked', '막은 공격', 'blocked'], ['failed', '뚫린 공격', 'breached'],
+      ['notRun', '실행하지 않은 점검', 'not_run']];
 
     function setChecksMatch(kind, text) {
       checksMatch.className = 'pill' + (kind ? ' ' + kind : '');
@@ -564,42 +573,37 @@
         const res = await fetch('/api/checks', { cache: 'no-store' });
         const data = await res.json().catch(() => ({}));
         if (!res.ok || data.schema !== 'byteback.checks.v1' || !Array.isArray(data.attempts)) {
-          checksBody.append(node('p', 'hint', '점검 기록을 받지 못했습니다 (' + (data.error || 'HTTP ' + res.status) + ').'));
+          checksBody.append(node('p', 'hint', '서버 점검 기록을 읽지 못했습니다 (' + (data.error || 'HTTP ' + res.status) + '). 수치를 표시하지 않습니다.'));
           setChecksMatch('bad', '읽지 못함');
           return;
         }
-        // 화면의 수치는 서버 요약을 그대로 보여 주고, 같은 attempts 목록에서 다시 세어 맞는지 표시합니다.
-        const again = {
-          total: data.attempts.length,
-          blocked: data.attempts.filter(a => a.result === 'blocked').length,
-          allowed: data.attempts.filter(a => a.result === 'allowed').length,
-          failed: data.attempts.filter(a => a.result === 'failed').length,
-          notRun: data.attempts.filter(a => a.result === 'not_run').length,
-        };
         const parts = [];
         CHECK_KEYS.forEach(([key, label], index) => {
-          parts.push((index ? ' · ' : '') + label + ' ', node('code', '', String(data[key])));
+          parts.push((index ? ' · ' : '') + label + ' ', node('code', '', Number.isInteger(data[key]) ? String(data[key]) : '-'));
         });
         checksBody.append(row(...parts));
-        checksBody.append(row('확인 시각 ' + data.checkedAt + (data.commit ? ' · 배포 커밋 ' + data.commit : '')));
-        checksBody.append(node('p', 'hint', '판정기·탐지·정책 점검은 학생 코드를 서버에서 직접 실행한 결과입니다. '
-          + data.engine + '이 실제로 집행했는지는 미실행입니다. 미실행 점검은 요청을 보내지 않았고 통과로 세지 않습니다.'));
+        checksBody.append(row('기록 시각 ' + data.checkedAt + (data.commit ? ' · 배포 커밋 ' + data.commit : '') + (data.target ? ' · 대상 ' + data.target : '')));
+        checksBody.append(node('p', 'hint', '막은 공격·뚫린 공격은 배포 주소에 실제로 보낸 GET 요청의 응답(HTTP 상태, jsonReady)으로만 정합니다. '
+          + '실행하지 않은 점검은 요청을 보내지 않았고 막은 공격으로 세지 않습니다. 판정기·탐지·정책 점검은 배포의 GET /api/checks?case=… 응답이며, '
+          + data.engine + '이 실제로 집행했는지는 확인하지 않았습니다(미실행).'));
         checksBody.append(node('p', 'hint', data.attacks41));
-        checksBody.append(table(['단계', '점검', '출처', '결과', '관찰값'],
-          data.attempts.map(a => [a.stage, a.attackId, a.sourceLabel, RESULT_TEXT[a.result] || a.result, a.observed])));
-        const mismatched = CHECK_KEYS.filter(([key]) => again[key] !== data[key]).map(([, label]) => label);
+        checksBody.append(table(['단계', '점검', '기대', '실제 응답', '결과'],
+          data.attempts.map(a => [a.stage, a.attackId, a.expected, a.observed, RESULT_TEXT[a.result] || a.result])));
+        // 같은 attempts에서 다시 세어 다를 때만 알립니다. 화면 수치는 바꾸지 않습니다.
+        const mismatched = CHECK_KEYS.filter(([key, , result]) => data[key] !== (result
+          ? data.attempts.filter(a => a.result === result).length : data.attempts.length)).map(([, label]) => label);
         if (mismatched.length) setChecksMatch('bad', '불일치 · ' + mismatched.join(', '));
-        else setChecksMatch('ok', '일치 · ' + CHECK_KEYS.length + '개 수치 대조');
+        else setChecksMatch('', '서버 기록 그대로');
       } catch (err) {
-        checksBody.append(node('p', 'hint', '점검 기록 오류: ' + err.message));
+        checksBody.append(node('p', 'hint', '서버 점검 기록 오류: ' + err.message + '. 수치를 표시하지 않습니다.'));
         setChecksMatch('bad', '읽지 못함');
       }
     }
+    document.getElementById('checks-refresh').addEventListener('click', loadChecks);
 
     async function loadOps() {
       if (!currentSession?.access_token || !deviceApproved) return;
       opsBox.style.display = 'block';
-      loadChecks();
       opsMatch.className = 'pill wait';
       opsMatch.textContent = '읽는 중';
       try {
@@ -623,7 +627,6 @@
     function hideOps() {
       opsBox.style.display = 'none';
       opsBody.replaceChildren();
-      checksBody.replaceChildren();
     }
 
     // ---- 자료실 (승인 기기만) ----
@@ -740,6 +743,8 @@
 
     // 예전 단계에서 탭 세션 저장소에 남았을 수 있는 토큰을 지웁니다. 새로 저장하지 않습니다.
     try { sessionStorage.removeItem('vault-session'); } catch {}
+    // 서버 점검 기록은 공개 경로라 로그인과 상관없이 처음부터 읽습니다.
+    loadChecks();
   </script>
 </body>
 </html>

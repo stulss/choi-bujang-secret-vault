@@ -1,166 +1,178 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
+import handler from '../api/checks.js';
 import { runAttackChecks } from '../src/attack-check.mjs';
-import {
-  ATTACKS_41_NOTE, ENGINE, MAX_REQUESTS, checksReport, createReadOnlyFetch, runChecks, summarizeChecks, toAttempts,
-} from '../src/checks.mjs';
+import { ATTACKS_41_NOTE, CASE_IDS, checksReport, runCase } from '../src/checks.mjs';
 
 // 가짜 응답만 씁니다. 실제 배포 주소나 원본 API를 호출하지 않습니다.
-const config = {
-  step: 12, publicAppUrl: 'https://example-app.vercel.app', sampleMarker: 'SAMPLE_NOTE_1',
-  originalApiUrl: 'https://example-origin.supabase.co/rest/v1/notes', anonKey: 'anon_public_key_value',
-};
+process.chdir(fileURLToPath(new URL('..', import.meta.url)));
+const APP = 'https://example-app.vercel.app';
 
-function fakeFetch(overrides = {}) {
+function call(query, method = 'GET') {
+  return new Promise((resolve, reject) => {
+    const out = { headers: {} };
+    Promise.resolve(handler({ method, query, headers: {} }, {
+      setHeader: (key, value) => { out.headers[key.toLowerCase()] = value; },
+      status(code) { out.status = code; return { json(body) { out.body = body; resolve(out); } }; },
+    })).catch(reject);
+  });
+}
+
+// 배포를 흉내 내는 가짜 fetch: /api/checks?case=… 는 진짜 점검 API 처리기로 응답합니다.
+function fakeDeployment(overrides = {}) {
   const calls = [];
   const impl = async (url, init = {}) => {
-    const target = new URL(url);
-    calls.push({ method: init.method, path: `${target.host}${target.pathname}${target.search}`, init });
-    const key = `${target.pathname}`;
-    if (overrides[key]) return new Response(overrides[key].body ?? '{}', { status: overrides[key].status });
-    if (target.hostname.includes('origin')) return new Response('{}', { status: 401 });
-    if (key === '/data.json') return new Response('{"notes":[]}', { status: 200 });
-    if (key === '/manifest.webmanifest') return new Response('{"name":"앱","display":"standalone"}', { status: 200 });
-    if (key === '/') return new Response("crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign'])", { status: 200 });
-    if (key === '/api/notes/export') return new Response('{}', { status: 404 });
-    return new Response('{}', { status: 401 });
+    const u = new URL(String(url));
+    calls.push({ url: u, init });
+    if (overrides[u.pathname]) return overrides[u.pathname]();
+    if (u.pathname === '/api/checks' && u.searchParams.has('case')) {
+      const out = await call({ case: u.searchParams.get('case') });
+      return new Response(JSON.stringify(out.body), { status: out.status });
+    }
+    if (u.pathname === '/data.json') return new Response('{"notes":[]}', { status: 200 });
+    if (u.pathname === '/') return new Response("crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign'])", { status: 200 });
+    return new Response('{"error":"UNAUTHORIZED"}', { status: 401 });
   };
   return { impl, calls };
 }
 
-test('읽기 전용 요청기는 GET·HEAD 외 요청과 상한을 넘는 요청을 보내기 전에 거부한다', async () => {
-  const { impl, calls } = fakeFetch();
-  const guarded = createReadOnlyFetch(impl, 2);
-  await assert.rejects(guarded('https://example-app.vercel.app/api/restore', { method: 'POST' }), /READ_ONLY_VIOLATION POST/u);
-  await assert.rejects(guarded('https://example-app.vercel.app/api/notes', { method: 'put' }), /READ_ONLY_VIOLATION PUT/u);
-  assert.equal(calls.length, 0);
-  await guarded('https://example-app.vercel.app/a');
-  await guarded('https://example-app.vercel.app/b', { method: 'HEAD' });
-  await assert.rejects(guarded('https://example-app.vercel.app/c'), /REQUEST_LIMIT 2/u);
-  assert.equal(calls.length, 2);
-  assert.equal(guarded.count(), 2);
-  assert.equal(MAX_REQUESTS, 24);
-});
-
-test('12단계 점검은 GET·HEAD만, 점검 하나에 요청 1건, 24건 이하로 보낸다', async () => {
-  const { impl, calls } = fakeFetch();
-  const records = await runChecks(config, { fetchImpl: impl });
-  assert.ok(records.length >= 1 && records.length <= 20);
-  assert.ok(calls.length <= MAX_REQUESTS);
-  assert.ok(calls.every(c => ['GET', 'HEAD'].includes(c.method)), calls.map(c => c.method).join(','));
-  assert.equal(calls.length, records.filter(r => r.source === 'http' && r.result !== 'not_run').length);
-  assert.equal(new Set(records.map(r => r.attackId)).size, records.length);
-  assert.ok(calls.every(c => c.init.redirect === 'error'));
-});
-
-test('쓰기가 필요한 복구 점검은 보내지 않고 not_run이며, 나머지는 기대대로다', async () => {
-  const { impl, calls } = fakeFetch();
-  const records = await runChecks(config, { fetchImpl: impl });
-  const restore = records.find(r => r.attackId === 'restore_unauthenticated_blocked');
-  assert.deepEqual([restore.result, restore.observed], ['not_run', 'not_run']);
-  assert.equal(calls.some(c => c.path.includes('/api/restore')), false);
-  for (const r of records.filter(item => item.result !== 'not_run')) {
-    assert.ok(['blocked', 'allowed'].includes(r.result), `${r.attackId} ${r.observed}`);
-  }
-  assert.equal(records.find(r => r.attackId === 'unauthenticated_api_blocked').observed, 'HTTP 401');
-  assert.equal(records.find(r => r.attackId === 'unregistered_device_denied').observed, 'deny; device_not_registered');
-  assert.equal(records.find(r => r.attackId === 'pwa_manifest_served').result, 'allowed');
-});
-
-test('observed에는 설명 문장이 없고 사실 값만 있다', async () => {
-  const { impl } = fakeFetch();
-  const records = await runChecks(config, { fetchImpl: impl });
-  for (const r of records) {
-    assert.doesNotMatch(r.observed, /[가-힣]/u, `${r.attackId}: ${r.observed}`);
-    assert.match(r.observed, /^(HTTP \d{3}(; .+)?|not_run|allow|deny|step_up|observe|propose_revocation|verified|stopped|B->A|error)/u, r.attackId);
-    assert.ok(r.expected.length > 0 && r.expected.length <= 300);
-  }
-});
-
-test('기대와 다른 응답은 failed로 남고 요약에 한 번만 센다', async () => {
-  const { impl } = fakeFetch({ '/api/notes': { status: 200, body: '[]' }, '/api/ops': { status: 404 } });
-  const records = await runChecks(config, { fetchImpl: impl });
-  // 가짜 응답은 경로 /api/notes 전체(목록, ?id= 단건)에 적용되므로 두 점검이 함께 실패합니다.
-  const failed = records.filter(r => r.result === 'failed').map(r => r.attackId).sort();
-  assert.deepEqual(failed, ['ops_summary_unauthenticated_blocked', 'unauthenticated_api_blocked', 'unauthenticated_single_note_blocked']);
-  const s = summarizeChecks(records);
-  assert.equal(s.total, records.length);
-  assert.equal(s.blocked + s.allowed + s.failed + s.notRun, s.total);
-  assert.equal(s.failed, 3);
-  assert.equal(s.notRun, 1);
-});
-
-test('판정기·탐지·정책 점검은 학생 코드 실행으로 표시하고 엔진 집행은 not_run이다', async () => {
-  const { impl } = fakeFetch();
-  const records = await runChecks(config, { fetchImpl: impl });
-  const rules = records.filter(r => r.source !== 'http');
-  assert.ok(rules.length > 0);
-  for (const r of rules) {
-    assert.equal(r.engine, ENGINE);
-    assert.equal(r.engine, 'ALEPH SDP 엔진');
-    assert.equal(r.engineEnforced, 'not_run');
-    assert.match(r.sourceLabel, /^학생 /u);
-  }
-  assert.ok(records.filter(r => r.source === 'http').every(r => r.engineEnforced === undefined));
-});
-
-test('제출 묶음(12단계)과 /api/checks의 attempts는 같은 목록에서 나온 같은 값이다', async () => {
+async function withFetch(impl, fn) {
   const original = globalThis.fetch;
+  globalThis.fetch = impl;
   try {
-    globalThis.fetch = fakeFetch().impl;
-    const bundle = await runAttackChecks(config);
-    assert.ok(bundle.every(item => Object.keys(item).sort().join(',') === 'attackId,expected,observed'));
-
-    const { default: handler } = await import('../api/checks.js');
-    let status;
-    let body;
-    const cwd = process.cwd;
-    process.cwd = () => new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/u, '$1');
-    try {
-      await handler({ method: 'GET', headers: {} }, {
-        setHeader() {},
-        status(value) { status = value; return { json(value) { body = value; } }; },
-      });
-    } finally {
-      process.cwd = cwd;
-    }
-    assert.equal(status, 200);
-    assert.equal(body.schema, 'byteback.checks.v1');
-    assert.deepEqual(toAttempts(body.attempts), bundle);
-    const s = summarizeChecks(body.attempts);
-    for (const key of ['total', 'blocked', 'allowed', 'failed', 'notRun']) assert.equal(body[key], s[key], key);
-    assert.equal(body.attacks41, ATTACKS_41_NOTE);
-    assert.equal(body.engine, 'ALEPH SDP 엔진');
-    assert.doesNotMatch(JSON.stringify(body), /anon_public_key_value|sb_secret|Bearer /u);
+    return await fn();
   } finally {
     globalThis.fetch = original;
   }
+}
+
+const byId = attempts => Object.fromEntries(attempts.map(a => [a.attackId, a]));
+
+test('점검 코드는 다른 파일을 불러오지 않는 한 파일이고, 그 파일 하나만 있어도 돈다', async () => {
+  const source = await readFile(new URL('../src/attack-check.mjs', import.meta.url), 'utf8');
+  assert.doesNotMatch(source, /\bimport\b|\brequire\s*\(/u);
+  // 옆에 다른 파일이 없는 곳(data: 주소)에서 불러와도 실행됩니다.
+  const isolated = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+  const attempts = await withFetch(fakeDeployment().impl, () => isolated.runAttackChecks(APP));
+  assert.ok(attempts.length > 0);
+});
+
+test('runner처럼 배포 주소 문자열로 불러도 설정 객체로 불러도 같고, 잘못된 주소는 거부한다', async () => {
+  const { impl } = fakeDeployment();
+  const fromUrl = await withFetch(impl, () => runAttackChecks(APP));
+  const fromConfig = await withFetch(impl, () => runAttackChecks({ step: 12, publicAppUrl: APP }));
+  assert.deepEqual(fromConfig, fromUrl);
+  for (const bad of [undefined, 'http://example-app.vercel.app', 'https://x.example/', `${APP}/path`, { publicAppUrl: 'nope' }]) {
+    await assert.rejects(runAttackChecks(bad), /publicAppUrl/u);
+  }
+});
+
+test('배포 주소 한 곳에 GET만, 점검 하나에 요청 한 번, 24건 이하로 보내고 runner가 관측할 표시를 붙인다', async () => {
+  const { impl, calls } = fakeDeployment();
+  const attempts = await withFetch(impl, () => runAttackChecks(APP));
+  assert.ok(attempts.length >= 1 && attempts.length <= 20);
+  assert.ok(calls.length <= 24);
+  const sent = attempts.filter(a => a.result !== 'not_run');
+  assert.equal(calls.length, sent.length);
+  for (const c of calls) {
+    assert.equal(c.url.origin, APP);
+    assert.equal(c.init.method, 'GET');
+    assert.equal(c.init.redirect, 'manual');
+  }
+  assert.deepEqual(calls.map(c => c.init.alephEvidence.caseId).sort(), sent.map(a => a.attackId).sort());
+  assert.equal(calls.some(c => c.url.pathname.startsWith('/api/restore')), false);
+  assert.equal(new Set(attempts.map(a => a.attackId)).size, attempts.length);
+  for (const a of attempts) assert.deepEqual(Object.keys(a).sort(), ['attackId', 'expected', 'observed', 'result', 'stage']);
+});
+
+test('observed에는 대조 가능한 값만 있고, 보내지 않은 점검은 observed·result가 not_run이다', async () => {
+  const attempts = await withFetch(fakeDeployment().impl, () => runAttackChecks(APP));
+  for (const a of attempts) {
+    assert.match(a.observed, /^(not_run|HTTP \d{3}(; jsonReady=(true|false))?(; jsonArrayLength=\d+)?)$/u, a.attackId);
+    assert.equal(a.result === 'not_run', a.observed === 'not_run', a.attackId);
+    assert.ok(['blocked', 'breached', 'not_run'].includes(a.result), a.attackId);
+    assert.ok(Number.isInteger(a.stage) && a.stage >= 1 && a.stage <= 12, a.attackId);
+    assert.ok(a.expected.length > 0 && a.expected.length <= 300, a.attackId);
+  }
+  assert.deepEqual(attempts.filter(a => a.result === 'not_run').map(a => a.attackId).sort(),
+    ['approved_device_note_list', 'original_api_direct_access_blocked', 'restore_unauthenticated_blocked']);
+  const sent = attempts.filter(a => a.result !== 'not_run');
+  assert.ok(sent.every(a => a.result === 'blocked'), sent.filter(a => a.result !== 'blocked').map(a => `${a.attackId} ${a.observed}`).join(', '));
+  assert.equal(byId(attempts).unauthenticated_api_blocked.observed, 'HTTP 401');
+  assert.equal(byId(attempts).unregistered_device_denied.observed, 'HTTP 200; jsonReady=true');
+});
+
+test('응답이 기대와 다르면 breached, 응답을 받지 못하면 not_run이다', async () => {
+  const leaked = await withFetch(fakeDeployment({
+    '/api/notes': () => new Response('[{"title":"가상"}]', { status: 200 }),
+    '/data.json': () => new Response('{"sampleMarker":"SAMPLE_NOTE_1","notes":[{"title":"가상"}]}', { status: 200 }),
+    '/api/ops': () => { throw new TypeError('network'); },
+  }).impl, () => runAttackChecks(APP));
+  const got = byId(leaked);
+  assert.deepEqual([got.unauthenticated_api_blocked.result, got.unauthenticated_api_blocked.observed], ['breached', 'HTTP 200; jsonArrayLength=1']);
+  assert.deepEqual([got.data_json_notes_cleared.result, got.data_json_notes_cleared.observed], ['breached', 'HTTP 200']);
+  assert.deepEqual([got.ops_summary_unauthenticated_blocked.result, got.ops_summary_unauthenticated_blocked.observed], ['not_run', 'not_run']);
+
+  const notReady = await withFetch(fakeDeployment({
+    '/api/checks': () => new Response('{"ready":false}', { status: 200 }),
+  }).impl, () => runAttackChecks(APP));
+  const viaCase = notReady.filter(a => CASE_IDS.includes(a.attackId));
+  assert.equal(viaCase.length, CASE_IDS.length);
+  assert.ok(viaCase.every(a => a.result === 'breached' && a.observed === 'HTTP 200; jsonReady=false'));
+});
+
+test('/api/checks?case=… 는 고정된 가상 입력만 실행하고, 지금 학생 코드에서는 모두 ready=true다', async () => {
+  for (const id of CASE_IDS) {
+    const out = await call({ case: id });
+    assert.equal(out.status, 200, id);
+    assert.equal(out.body.ready, true, `${id} ${out.body.observed}`);
+    assert.equal(out.body.engine, 'ALEPH SDP 엔진');
+    assert.equal(out.body.engineEnforced, 'not_run');
+  }
+  assert.equal((await call({ case: 'unauthenticated_api_blocked' })).status, 400);
+  assert.equal((await call({ case: 'constructor' })).status, 400);
+  assert.equal((await call({ case: ['unregistered_device_denied'] })).status, 400);
+  assert.equal(await runCase('__proto__'), null);
+});
+
+test('점검 코드가 묻는 case 이름은 서버의 가상 입력 표와 같다', async () => {
+  const { impl, calls } = fakeDeployment();
+  await withFetch(impl, () => runAttackChecks(APP));
+  const asked = calls.filter(c => c.url.pathname === '/api/checks').map(c => c.url.searchParams.get('case')).sort();
+  assert.deepEqual(asked, [...CASE_IDS].sort());
+});
+
+test('/api/checks는 runAttackChecks 결과를 그대로 돌려주고 수치는 그 결과를 한 번씩 센다', async () => {
+  const config = JSON.parse(await readFile(new URL('../aleph.config.json', import.meta.url), 'utf8'));
+  const { impl } = fakeDeployment();
+  const [record, direct] = await withFetch(impl, async () => [await call({}), await runAttackChecks(config.publicAppUrl)]);
+  assert.equal(record.status, 200);
+  assert.equal(record.headers['cache-control'], 'no-store');
+  assert.equal(record.body.schema, 'byteback.checks.v1');
+  assert.deepEqual(record.body.attempts, direct);
+  const count = result => direct.filter(a => a.result === result).length;
+  assert.deepEqual([record.body.total, record.body.blocked, record.body.failed, record.body.notRun],
+    [direct.length, count('blocked'), count('breached'), count('not_run')]);
+  assert.equal(record.body.total, record.body.blocked + record.body.failed + record.body.notRun);
+  assert.equal(record.body.attacks41, ATTACKS_41_NOTE);
+  assert.doesNotMatch(JSON.stringify(record.body), /sb_publishable_|sb_secret|Bearer |"(title|body|content)"\s*:/u);
 });
 
 test('/api/checks는 GET·HEAD 외 요청을 405로 거부하고 점검을 실행하지 않는다', async () => {
-  const original = globalThis.fetch;
   let called = 0;
-  try {
-    globalThis.fetch = async () => { called += 1; return new Response('{}', { status: 200 }); };
-    const { default: handler } = await import('../api/checks.js');
-    let status;
-    await handler({ method: 'POST', headers: {} }, {
-      setHeader() {},
-      status(value) { status = value; return { json() {} }; },
-    });
-    assert.equal(status, 405);
-    assert.equal(called, 0);
-  } finally {
-    globalThis.fetch = original;
-  }
+  const out = await withFetch(async () => { called += 1; return new Response('{}', { status: 200 }); }, () => call({}, 'POST'));
+  assert.equal(out.status, 405);
+  assert.equal(called, 0);
 });
 
 test('보고서 수치는 같은 이름으로 한 번씩만 있다', () => {
   const report = checksReport([
-    { attackId: 'a', result: 'blocked' }, { attackId: 'b', result: 'allowed' }, { attackId: 'c', result: 'not_run' },
+    { attackId: 'a', result: 'blocked' }, { attackId: 'b', result: 'breached' }, { attackId: 'c', result: 'not_run' },
   ], { checkedAt: 't' });
-  assert.deepEqual([report.total, report.blocked, report.allowed, report.failed, report.notRun], [3, 1, 1, 0, 1]);
+  assert.deepEqual([report.total, report.blocked, report.failed, report.notRun], [3, 1, 1, 1]);
   const text = JSON.stringify(report);
   // 수치 키(이름 뒤에 콜론)만 셉니다. attempts 안의 result 값 "blocked"는 키가 아닙니다.
-  for (const key of ['"total":', '"blocked":', '"allowed":', '"failed":', '"notRun":']) assert.equal(text.split(key).length - 1, 1, key);
+  for (const key of ['"total":', '"blocked":', '"failed":', '"notRun":']) assert.equal(text.split(key).length - 1, 1, key);
 });
