@@ -1,0 +1,191 @@
+{
+  "schema": "aleph.xdr.result.v1",
+  "moduleKey": "exfiltration",
+  "decisions": [
+    {
+      "alertId": "ex-01",
+      "action": "block",
+      "confidence": 0.95,
+      "reason": "한꺼번에 많은 파일을 대용량으로 전송"
+    },
+    {
+      "alertId": "ex-02",
+      "action": "block",
+      "confidence": 0.95,
+      "reason": "업무 시간 밖 압축 파일 반출"
+    },
+    {
+      "alertId": "ex-03",
+      "action": "block",
+      "confidence": 0.92,
+      "reason": "같은 목적지로 대용량 전송 반복"
+    },
+    {
+      "alertId": "ex-04",
+      "action": "block",
+      "confidence": 0.95,
+      "reason": "한꺼번에 많은 파일을 대용량으로 전송"
+    },
+    {
+      "alertId": "ex-05",
+      "action": "block",
+      "confidence": 0.95,
+      "reason": "한꺼번에 많은 파일을 대용량으로 전송"
+    },
+    {
+      "alertId": "ex-06",
+      "action": "block",
+      "confidence": 0.92,
+      "reason": "같은 목적지로 대용량 전송 반복"
+    },
+    {
+      "alertId": "ex-07",
+      "action": "block",
+      "confidence": 0.9,
+      "reason": "처음 보는 주소로 압축 파일 대용량 전송"
+    },
+    {
+      "alertId": "ex-08",
+      "action": "block",
+      "confidence": 0.95,
+      "reason": "한꺼번에 많은 파일을 대용량으로 전송"
+    },
+    {
+      "alertId": "ex-09",
+      "action": "block",
+      "confidence": 0.92,
+      "reason": "같은 목적지로 대용량 전송 반복"
+    },
+    {
+      "alertId": "ex-10",
+      "action": "block",
+      "confidence": 0.9,
+      "reason": "처음 보는 주소로 압축 파일 대용량 전송"
+    },
+    {
+      "alertId": "ex-11",
+      "action": "alert",
+      "confidence": 0.65,
+      "reason": "평소와 다른 주소로 작은 전송"
+    },
+    {
+      "alertId": "ex-12",
+      "action": "alert",
+      "confidence": 0.55,
+      "reason": "평소 목적지의 전송량·파일 수 변화"
+    },
+    {
+      "alertId": "ex-13",
+      "action": "alert",
+      "confidence": 0.6,
+      "reason": "압축 파일만 만들었거나 일부만 전송"
+    },
+    {
+      "alertId": "ex-14",
+      "action": "alert",
+      "confidence": 0.65,
+      "reason": "평소와 다른 주소로 작은 전송"
+    },
+    {
+      "alertId": "ex-15",
+      "action": "alert",
+      "confidence": 0.5,
+      "reason": "유출 기법 표시만 있는 약한 신호"
+    },
+    {
+      "alertId": "ex-16",
+      "action": "alert",
+      "confidence": 0.55,
+      "reason": "평소 목적지의 전송량·파일 수 변화"
+    },
+    {
+      "alertId": "ex-17",
+      "action": "alert",
+      "confidence": 0.55,
+      "reason": "평소 목적지의 전송량·파일 수 변화"
+    },
+    {
+      "alertId": "ex-18",
+      "action": "alert",
+      "confidence": 0.65,
+      "reason": "평소와 다른 주소로 작은 전송"
+    },
+    {
+      "alertId": "ex-19",
+      "action": "alert",
+      "confidence": 0.5,
+      "reason": "유출 기법 표시만 있는 약한 신호"
+    },
+    {
+      "alertId": "ex-20",
+      "action": "alert",
+      "confidence": 0.6,
+      "reason": "압축 파일만 만들었거나 일부만 전송"
+    },
+    {
+      "alertId": "ex-21",
+      "action": "record",
+      "confidence": 0.05,
+      "reason": "알려진 패턴 없음, 정상 이벤트로 기록"
+    },
+    {
+      "alertId": "ex-22",
+      "action": "record",
+      "confidence": 0.05,
+      "reason": "알려진 패턴 없음, 정상 이벤트로 기록"
+    },
+    {
+      "alertId": "ex-23",
+      "action": "record",
+      "confidence": 0.05,
+      "reason": "알려진 패턴 없음, 정상 이벤트로 기록"
+    },
+    {
+      "alertId": "ex-24",
+      "action": "record",
+      "confidence": 0.05,
+      "reason": "알려진 패턴 없음, 정상 이벤트로 기록"
+    },
+    {
+      "alertId": "ex-25",
+      "action": "record",
+      "confidence": 0.05,
+      "reason": "알려진 패턴 없음, 정상 이벤트로 기록"
+    },
+    {
+      "alertId": "ex-26",
+      "action": "record",
+      "confidence": 0.05,
+      "reason": "알려진 패턴 없음, 정상 이벤트로 기록"
+    },
+    {
+      "alertId": "ex-27",
+      "action": "record",
+      "confidence": 0.05,
+      "reason": "알려진 패턴 없음, 정상 이벤트로 기록"
+    },
+    {
+      "alertId": "ex-28",
+      "action": "record",
+      "confidence": 0.05,
+      "reason": "알려진 패턴 없음, 정상 이벤트로 기록"
+    },
+    {
+      "alertId": "ex-29",
+      "action": "record",
+      "confidence": 0.05,
+      "reason": "알려진 패턴 없음, 정상 이벤트로 기록"
+    },
+    {
+      "alertId": "ex-30",
+      "action": "record",
+      "confidence": 0.05,
+      "reason": "알려진 패턴 없음, 정상 이벤트로 기록"
+    }
+  ],
+  "counts": {
+    "block": 10,
+    "alert": 10,
+    "record": 10
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "schema": "aleph.xdr.deny-rules.v1",
+  "rules": [
+    {
+      "ruleId": "xdr.exfiltration.deny",
+      "srcip": "192.0.2.20",
+      "account": "user01",
+      "sourceAlertId": "ex-01",
+      "reason": "한꺼번에 많은 파일을 대용량으로 전송",
+      "confidence": 0.95,
+      "createdAt": "2026-09-27T00:16:03.000Z",
+      "expiresAt": "2026-09-28T00:16:03.000Z"
+    },
+    {
+      "ruleId": "xdr.exfiltration.deny",
+      "srcip": "198.51.100.20",
+      "account": "user02",
+      "sourceAlertId": "ex-03",
+      "reason": "같은 목적지로 대용량 전송 반복",
+      "confidence": 0.92,
+      "createdAt": "2026-09-27T01:05:14.000Z",
+      "expiresAt": "2026-09-28T01:05:14.000Z"
+    },
+    {
+      "ruleId": "xdr.exfiltration.deny",
+      "srcip": "203.0.113.20",
+      "account": "user03",
+      "sourceAlertId": "ex-04",
+      "reason": "한꺼번에 많은 파일을 대용량으로 전송",
+      "confidence": 0.95,
+      "createdAt": "2026-09-27T01:20:07.000Z",
+      "expiresAt": "2026-09-28T01:20:07.000Z"
+    },
+    {
+      "ruleId": "xdr.exfiltration.deny",
+      "srcip": "192.0.2.25",
+      "account": "user04",
+      "sourceAlertId": "ex-05",
+      "reason": "한꺼번에 많은 파일을 대용량으로 전송",
+      "confidence": 0.95,
+      "createdAt": "2026-09-27T02:04:26.000Z",
+      "expiresAt": "2026-09-28T02:04:26.000Z"
+    },
+    {
+      "ruleId": "xdr.exfiltration.deny",
+      "srcip": "198.51.100.25",
+      "account": "user05",
+      "sourceAlertId": "ex-06",
+      "reason": "같은 목적지로 대용량 전송 반복",
+      "confidence": 0.92,
+      "createdAt": "2026-09-27T03:02:19.000Z",
+      "expiresAt": "2026-09-28T03:02:19.000Z"
+    },
+    {
+      "ruleId": "xdr.exfiltration.deny",
+      "srcip": "203.0.113.25",
+      "account": "user06",
+      "sourceAlertId": "ex-07",
+      "reason": "처음 보는 주소로 압축 파일 대용량 전송",
+      "confidence": 0.9,
+      "createdAt": "2026-09-27T04:12:08.000Z",
+      "expiresAt": "2026-09-28T04:12:08.000Z"
+    },
+    {
+      "ruleId": "xdr.exfiltration.deny",
+      "srcip": "192.0.2.26",
+      "account": "user07",
+      "sourceAlertId": "ex-08",
+      "reason": "한꺼번에 많은 파일을 대용량으로 전송",
+      "confidence": 0.95,
+      "createdAt": "2026-09-27T05:03:41.000Z",
+      "expiresAt": "2026-09-28T05:03:41.000Z"
+    },
+    {
+      "ruleId": "xdr.exfiltration.deny",
+      "srcip": "198.51.100.26",
+      "account": "user08",
+      "sourceAlertId": "ex-09",
+      "reason": "같은 목적지로 대용량 전송 반복",
+      "confidence": 0.92,
+      "createdAt": "2026-09-27T06:08:12.000Z",
+      "expiresAt": "2026-09-28T06:08:12.000Z"
+    },
+    {
+      "ruleId": "xdr.exfiltration.deny",
+      "srcip": "203.0.113.26",
+      "account": "user01",
+      "sourceAlertId": "ex-10",
+      "reason": "처음 보는 주소로 압축 파일 대용량 전송",
+      "confidence": 0.9,
+      "createdAt": "2026-09-27T07:01:05.000Z",
+      "expiresAt": "2026-09-28T07:01:05.000Z"
+    }
+  ]
+}

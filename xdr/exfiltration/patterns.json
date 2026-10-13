@@ -1,0 +1,80 @@
+{
+  "schema": "aleph.xdr.patterns.v1",
+  "moduleKey": "exfiltration",
+  "source": "MITRE ATT&CK T1041 Exfiltration Over C2 Channel (https://attack.mitre.org/techniques/T1041/) · T1048 Exfiltration Over Alternative Protocol (https://attack.mitre.org/techniques/T1048/)",
+  "note": "대용량 기준 50000000 바이트(약 50MB), 파일 수 50건, 반복 5번은 이 과제의 시험 경보에 맞춘 값이며 ATT&CK 이 정한 값이 아닙니다. 평소 목적지로 가는 작은 전송과 서비스 계정(svc-)의 평소 동기화는 정상 운영으로 보고 패턴에 넣지 않았습니다.",
+  "patterns": [
+    {
+      "id": "bulk-files-large-transfer",
+      "name": "한꺼번에 많은 파일을 대용량으로 전송",
+      "tier": "clear",
+      "baseConfidence": 0.95,
+      "condition": { "context": "T1041·T1048 표시", "signal": "파일 50건 이상", "also": "전송량 50000000 바이트 이상" },
+      "evidence": "ATT&CK T1041·T1048: 짧은 시간에 파일 수십~수백 건을 큰 용량으로 내보내는 것은 수집한 자료를 한 번에 빼내려는 유출 형태."
+    },
+    {
+      "id": "archive-outside-hours",
+      "name": "업무 시간 밖 압축 파일 반출",
+      "tier": "clear",
+      "baseConfidence": 0.95,
+      "condition": { "context": "T1041·T1048 표시", "signal": "압축 파일 전송", "also": "수업·업무 시간 밖, 전송량 50000000 바이트 이상" },
+      "evidence": "ATT&CK T1048: 자료를 압축해 업무 시간 밖에 내보내는 것은 눈에 덜 띄는 시각에 묶음 자료를 빼내는 유출 형태."
+    },
+    {
+      "id": "repeated-large-transfer",
+      "name": "같은 목적지로 대용량 전송 반복",
+      "tier": "clear",
+      "baseConfidence": 0.92,
+      "condition": { "context": "T1041·T1048 표시", "signal": "전송 5번 이상 반복", "also": "전송량 50000000 바이트 이상" },
+      "evidence": "ATT&CK T1041: 같은 통로로 큰 전송이 되풀이되는 것은 자료를 나누어 계속 빼내는 유출 형태."
+    },
+    {
+      "id": "archive-to-new-destination",
+      "name": "처음 보는 주소로 압축 파일 대용량 전송",
+      "tier": "clear",
+      "baseConfidence": 0.9,
+      "condition": { "context": "T1041·T1048 표시", "signal": "압축 파일 전송", "also": "처음 보는 주소·목적지, 전송량 50000000 바이트 이상" },
+      "evidence": "ATT&CK T1048: 처음 보는 곳으로 압축한 큰 자료를 보내는 것은 평소 업무 흐름이 아닌 외부 반출 형태."
+    },
+    {
+      "id": "large-transfer-new-destination",
+      "name": "처음 보는 목적지로 대용량 전송",
+      "tier": "clear",
+      "baseConfidence": 0.9,
+      "condition": { "context": "T1041·T1048 표시", "signal": "처음 보는 목적지 또는 외부 주소", "also": "전송량 50000000 바이트 이상" },
+      "evidence": "ATT&CK T1041·T1048: 평소 쓰지 않던 목적지로 큰 용량이 나가는 것은 정상 업무 경로가 아닌 유출 형태."
+    },
+    {
+      "id": "small-transfer-unusual-address",
+      "name": "평소와 다른 주소로 작은 전송",
+      "tier": "suspect",
+      "baseConfidence": 0.65,
+      "condition": { "context": "T1041·T1048 표시와 규칙 수준 5 이상", "signal": "처음 보는 주소·목적지 또는 평소와 다른 주소", "absent": "대용량 전송" },
+      "evidence": "ATT&CK T1048: 낯선 주소로의 전송은 유출의 시험 단계일 수 있지만 용량이 작거나 실패했으면 정상 업무와 구분되지 않아 알림으로 확인."
+    },
+    {
+      "id": "archive-without-transfer",
+      "name": "압축 파일만 만들었거나 일부만 전송",
+      "tier": "suspect",
+      "baseConfidence": 0.6,
+      "condition": { "context": "T1041·T1048 표시와 규칙 수준 5 이상", "signal": "압축 파일 생성 또는 일부 전송", "absent": "대용량 전송, 처음 보는 목적지" },
+      "evidence": "ATT&CK T1048: 자료를 압축해 두는 것은 반출 준비일 수 있지만 외부 전송이 없거나 일부이면 자동 차단 없이 알림으로 확인."
+    },
+    {
+      "id": "usual-destination-volume-change",
+      "name": "평소 목적지의 전송량·파일 수 변화",
+      "tier": "suspect",
+      "baseConfidence": 0.55,
+      "condition": { "context": "T1041·T1048 표시와 규칙 수준 5 이상", "signal": "평소 목적지·수업 자료 주소·백업 전송에서 전송량이나 파일 수가 한 번 늘어남" },
+      "evidence": "ATT&CK T1041: 평소 목적지로 가는 증가는 정상 백업과 구분되지 않아 자동 차단 없이 알림으로 확인."
+    },
+    {
+      "id": "exfiltration-tagged-low-signal",
+      "name": "유출 기법 표시만 있는 약한 신호",
+      "tier": "suspect",
+      "baseConfidence": 0.5,
+      "condition": { "context": "T1041·T1048 표시와 규칙 수준 5 이상", "absent": "위 패턴의 신호" },
+      "evidence": "ATT&CK T1041·T1048 로 분류된 경보지만 대용량·낯선 목적지 같은 유출 신호가 없으므로 자동 차단 없이 알림으로만 남김."
+    }
+  ]
+}
