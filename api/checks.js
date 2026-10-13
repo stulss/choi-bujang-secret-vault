@@ -20,30 +20,30 @@ async function serverRecord() {
   let total = 41;
 
   try {
-    const bundle = JSON.parse(await readFile(new URL('../artifacts/submission.json', import.meta.url), 'utf8'));
-    if (Array.isArray(bundle.attackAttempts)) attempts = bundle.attackAttempts;
-    if (bundle.checkedAt) checkedAt = bundle.checkedAt;
-    if (bundle.commit) commit = String(bundle.commit).slice(0, 12);
-    blocked = attempts.filter(a => a.result === 'blocked' || a.status === 'blocked').length;
-    notRun = attempts.filter(a => a.result === 'not_run' || a.status === 'not_run').length;
-    failed = attempts.length - blocked - notRun;
-    total = attempts.length;
+    const ev = JSON.parse(await readFile(new URL('../public/ops-evidence.json', import.meta.url), 'utf8'));
+    if (ev.generatedAt) checkedAt = ev.generatedAt;
+    if (ev.deployedCommit) commit = String(ev.deployedCommit).slice(0, 12);
+    blocked = ev.summary?.attacksBlocked ?? 4;
+    notRun = ev.summary?.attacksNotRun ?? 37;
+    failed = ev.summary?.attacksNotBlocked ?? 0;
+    total = ev.summary?.attacksTotal ?? 41;
+    attempts = (ev.attacks ?? []).map(a => ({
+      attackId: a.code,
+      stage: a.stage,
+      expected: a.name,
+      observed: a.status === 'blocked' ? 'HTTP 401' : 'not_run',
+      result: a.status === 'blocked' ? 'blocked' : 'not_run',
+    }));
   } catch {
     try {
-      const ev = JSON.parse(await readFile(new URL('../public/ops-evidence.json', import.meta.url), 'utf8'));
-      if (ev.generatedAt) checkedAt = ev.generatedAt;
-      if (ev.deployedCommit) commit = String(ev.deployedCommit).slice(0, 12);
-      blocked = ev.summary?.attacksBlocked ?? 4;
-      notRun = ev.summary?.attacksNotRun ?? 37;
-      failed = ev.summary?.attacksNotBlocked ?? 0;
-      total = ev.summary?.attacksTotal ?? 41;
-      attempts = (ev.attacks ?? []).map(a => ({
-        attackId: a.code,
-        stage: a.stage,
-        expected: a.name,
-        observed: a.status === 'blocked' ? 'HTTP 401' : 'not_run',
-        result: a.status === 'blocked' ? 'blocked' : 'not_run',
-      }));
+      const bundle = JSON.parse(await readFile(new URL('../artifacts/submission.json', import.meta.url), 'utf8'));
+      if (Array.isArray(bundle.attackAttempts)) attempts = bundle.attackAttempts;
+      if (bundle.checkedAt) checkedAt = bundle.checkedAt;
+      if (bundle.commit) commit = String(bundle.commit).slice(0, 12);
+      blocked = attempts.filter(a => a.result === 'blocked' || a.status === 'blocked').length;
+      notRun = attempts.filter(a => a.result === 'not_run' || a.status === 'not_run').length;
+      failed = attempts.length - blocked - notRun;
+      total = attempts.length;
     } catch {}
   }
 
