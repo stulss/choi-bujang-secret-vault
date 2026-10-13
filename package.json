@@ -1,11 +1,26 @@
 {
-  "name": "byteback-sample-pass",
+  "name": "aleph-defense-starter",
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node -e \"process.exit(0)\"",
-    "test": "node --test test/rule-check.test.mjs",
-    "check": "node scripts/bundle.mjs",
-    "bundle": "node scripts/bundle.mjs"
+    "build": "node scripts/build-public.mjs",
+    "test:r5": "node --test test/r5.test.mjs",
+    "test:package": "node --test test/package-starter.test.mjs",
+    "bundle": "node scripts/bundle.mjs",
+    "decider:test": "node scripts/decider-test.mjs",
+    "detect:test": "node scripts/detect-test.mjs",
+    "fixture:7": "node scripts/fixture-7.mjs",
+    "xdr:run": "node scripts/xdr-run.mjs",
+    "xdr:apply": "node xdr/brute-force/apply.mjs",
+    "xdr:test": "node --test test/xdr-brute-force.test.mjs",
+    "policy:diff": "node scripts/policy-restore.mjs diff",
+    "policy:restore": "node scripts/policy-restore.mjs restore"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.117.2",
+    "jose": "6.2.12"
   }
 }

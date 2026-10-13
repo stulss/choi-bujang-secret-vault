@@ -1,34 +1,29 @@
 {
-  "schema": "aleph.config.v1",
-  "step": 12,
+  "step": 11,
   "repoUrl": "https://github.com/stulss/choi-bujang-secret-vault",
-  "originalApiUrl": "https://stulss-choi-bujang-secret-vault.vercel.app/rest/v1/notes",
-  "restoreRoute": "/api/restore/:noteId",
+  "publicAppUrl": "https://stulss-choi-bujang-secret-vault.vercel.app",
+  "sampleMarker": "SAMPLE_NOTE_1",
+  "judgeIssuer": "https://aleph-judge-production.up.railway.app/defense/judge",
+  "identityProvider": {
+    "issuer": "https://kolzruwueiachnjjkcya.supabase.co/auth/v1",
+    "jwksUrl": "https://kolzruwueiachnjjkcya.supabase.co/auth/v1/.well-known/jwks.json",
+    "audience": "authenticated"
+  },
   "allowedRoutes": [
-    {
-      "service": "notes",
-      "method": "GET",
-      "pathPattern": "/api/my/notes",
-      "zone": "my-notes"
-    },
-    {
-      "service": "notes",
-      "method": "GET",
-      "pathPattern": "/notes/:id",
-      "zone": "my-notes"
-    },
-    {
-      "service": "notes",
-      "method": "GET",
-      "pathPattern": "/api/notes/:id",
-      "zone": "my-notes"
-    },
-    {
-      "service": "notices",
-      "method": "GET",
-      "pathPattern": "/api/notices",
-      "zone": "class-notices"
-    }
+    "GET /api/notes",
+    "POST /api/notes",
+    "GET /api/notes/:id",
+    "PUT /api/notes/:id",
+    "DELETE /api/notes/:id",
+    "GET /api/notices",
+    "GET /api/notices/:id",
+    "POST /api/notices",
+    "PUT /api/notices/:id",
+    "DELETE /api/notices/:id",
+    "POST /api/restore",
+    "GET /api/device",
+    "POST /api/device"
   ],
-  "publicAppUrl": "https://stulss-choi-bujang-secret-vault.vercel.app"
+  "originalApiUrl": "https://kolzruwueiachnjjkcya.supabase.co/rest/v1/notes",
+  "restoreRoute": "POST /api/restore"
 }

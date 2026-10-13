@@ -1,37 +1,32 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": "npm run build",
   "outputDirectory": "public",
   "rewrites": [
-    {
-      "source": "/rest/v1/(.*)",
-      "destination": "/api/denied"
-    },
-    {
-      "source": "/notes/:id",
-      "destination": "/api/notes/:id"
-    }
+    { "source": "/api/notes/:id", "destination": "/api/notes?id=:id" },
+    { "source": "/api/notices/:id", "destination": "/api/notices?id=:id" },
+    { "source": "/api/restore/:id", "destination": "/api/restore?id=:id" }
   ],
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'"
-        },
-        {
-          "key": "Referrer-Policy",
-          "value": "no-referrer"
-        }
+        { "key": "X-Content-Type-Options", "value": "nosniff" }
+      ]
+    },
+    {
+      "source": "/sw.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache" },
+        { "key": "Service-Worker-Allowed", "value": "/" }
+      ]
+    },
+    {
+      "source": "/",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" }
       ]
     }
-  ],
-  "functions": {
-    "api/checks.js": {
-      "includeFiles": "artifacts/**"
-    }
-  }
+  ]
 }

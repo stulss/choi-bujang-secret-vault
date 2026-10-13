@@ -1,0 +1,14 @@
+{
+  "name": "최부장 비밀 자료실",
+  "short_name": "비밀 자료실",
+  "description": "BYTE BACK 방어전 가상 메모 자료실. 설치해도 기기 승인은 서버가 따로 확인합니다.",
+  "lang": "ko",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#101a28",
+  "theme_color": "#101a28",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

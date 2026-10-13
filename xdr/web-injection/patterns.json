@@ -1,0 +1,48 @@
+{
+  "schema": "aleph.xdr.patterns.v1",
+  "moduleKey": "web-injection",
+  "source": "MITRE ATT&CK T1190 Exploit Public-Facing Application (https://attack.mitre.org/techniques/T1190/)",
+  "note": "minCount·minLevel 숫자는 이 과제의 시험 경보에 맞춘 기준이며 ATT&CK 이 정한 값이 아닙니다.",
+  "patterns": [
+    {
+      "id": "sql-injection-burst",
+      "name": "요청 인자 안의 SQL 구문 반복",
+      "tier": "clear",
+      "baseConfidence": 0.95,
+      "condition": { "context": "T1190 또는 웹 주입 설명", "signal": "SQL 구문 또는 데이터베이스 조회", "minCount": 8, "minLevel": 10 },
+      "evidence": "ATT&CK T1190 외부 공개 앱 악용: 외부 입력값에 SQL 질의 구문을 삽입하여 데이터베이스 비인가 조회나 인증 우회를 시도하는 형태."
+    },
+    {
+      "id": "xss-script-injection-burst",
+      "name": "스크립트 태그 삽입 반복",
+      "tier": "clear",
+      "baseConfidence": 0.95,
+      "condition": { "context": "T1190 또는 웹 주입 설명", "signal": "스크립트 삽입 또는 스크립트 표식", "minCount": 8, "minLevel": 10 },
+      "evidence": "ATT&CK T1190 외부 공개 앱 악용: 웹 요청 매개변수에 악성 스크립트 태그나 실행 코드를 삽입하여 클라이언트 측 악성 행위를 유도하는 형태."
+    },
+    {
+      "id": "path-traversal-burst",
+      "name": "경로 거슬러 올라가기(../) 반복",
+      "tier": "clear",
+      "baseConfidence": 0.95,
+      "condition": { "context": "T1190 또는 웹 주입 설명", "signal": "경로 거슬러 올라가기 또는 경로 이탈", "minCount": 8, "minLevel": 10 },
+      "evidence": "ATT&CK T1190 외부 공개 앱 악용: 파일 경로나 디렉터리 탐색 문자(../)를 반복 주입하여 제한된 상위 파일 시스템 조회를 시도하는 형태."
+    },
+    {
+      "id": "command-separator-burst",
+      "name": "명령 구분자 표기 반복",
+      "tier": "clear",
+      "baseConfidence": 0.95,
+      "condition": { "context": "T1190 또는 웹 주입 설명", "signal": "명령 구분자 표기", "minCount": 8, "minLevel": 10 },
+      "evidence": "ATT&CK T1190 외부 공개 앱 악용: 웹 입력값에 세미콜론이나 파이프 등 명령 구분자를 주입하여 시스템 명령 실행을 유도하는 형태."
+    },
+    {
+      "id": "injection-single-or-suspect",
+      "name": "반복 없는 단발성 주입 의심 문자",
+      "tier": "suspect",
+      "baseConfidence": 0.5,
+      "condition": { "context": "T1190 또는 웹 주입 설명", "anyOf": { "minCount": 1, "minLevel": 5 } },
+      "evidence": "ATT&CK T1190 외부 공개 앱 악용: 주입 의심 문자가 포함되었으나 단발성이거나 일상 단어 검색일 가능성이 있어 자동 차단하지 않고 확인이 필요한 형태."
+    }
+  ]
+}
