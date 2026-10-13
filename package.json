@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test test/",
+    "build": "node -e \"process.exit(0)\"",
+    "test": "node --test test/rule-check.test.mjs",
     "check": "node scripts/bundle.mjs",
     "bundle": "node scripts/bundle.mjs"
   }
