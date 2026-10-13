@@ -1,24 +1,24 @@
 {
   "schema": "aleph.ops-evidence.v1",
-  "generatedAt": "2026-10-13T04:38:27.319Z",
-  "deployedCommit": "25f906cdec099fb929f7e16d0b82d4d2b090c3f9",
+  "generatedAt": "2026-10-13T04:42:51.473Z",
+  "deployedCommit": "e6441cf884d0f00ca5a6d99f03e296d34516b0bd",
   "writesSent": true,
   "rows": [
     {
-      "requestId": "icn1::62ch5-1791866283598-69f94d819397",
-      "checkedAt": "2026-10-13T04:38:24.122Z",
+      "requestId": "icn1::wdn2p-1791866543079-9e12eb81b85f",
+      "checkedAt": "2026-10-13T04:42:43.826Z",
       "id": "N01",
       "stage": 1,
       "kind": "normal",
       "request": "GET /aleph.json",
       "expected": "HTTP 200, 배포 커밋 확인",
-      "actual": "HTTP 200, 커밋 25f906c",
+      "actual": "HTTP 200, 커밋 e6441cf",
       "result": "pass",
       "source": "live_http"
     },
     {
-      "requestId": "icn1::wdn2p-1791866283638-fe81c4df1860",
-      "checkedAt": "2026-10-13T04:38:24.149Z",
+      "requestId": "icn1::2jtkw-1791866543354-1e7c4eafa37c",
+      "checkedAt": "2026-10-13T04:42:44.307Z",
       "id": "N02",
       "stage": 11,
       "kind": "normal",
@@ -29,8 +29,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::lltt9-1791866283676-1a7a0d542980",
-      "checkedAt": "2026-10-13T04:38:24.194Z",
+      "requestId": "icn1::qs77v-1791866543822-a0566ad1faec",
+      "checkedAt": "2026-10-13T04:42:44.607Z",
       "id": "N03",
       "stage": 11,
       "kind": "normal",
@@ -41,8 +41,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::gfmdp-1791866283744-f47f7c5cdc50",
-      "checkedAt": "2026-10-13T04:38:24.258Z",
+      "requestId": "icn1::fz4mf-1791866544144-835f5deec2e7",
+      "checkedAt": "2026-10-13T04:42:44.869Z",
       "id": "N04",
       "stage": 11,
       "kind": "normal",
@@ -53,8 +53,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::iad1::lltt9-1791866283783-6f836651cda4",
-      "checkedAt": "2026-10-13T04:38:24.605Z",
+      "requestId": "icn1::iad1::fz4mf-1791866544396-9889465691c7",
+      "checkedAt": "2026-10-13T04:42:45.180Z",
       "id": "F01",
       "stage": 1,
       "kind": "forbidden",
@@ -65,8 +65,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::iad1::wqqsj-1791866284118-c27e158a6ba3",
-      "checkedAt": "2026-10-13T04:38:24.851Z",
+      "requestId": "icn1::iad1::fsr5l-1791866544693-62103048c612",
+      "checkedAt": "2026-10-13T04:42:45.608Z",
       "id": "F02",
       "stage": 1,
       "kind": "forbidden",
@@ -77,8 +77,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::iad1::62ch5-1791866284372-7b6b56b316cd",
-      "checkedAt": "2026-10-13T04:38:25.074Z",
+      "requestId": "icn1::iad1::7tdqh-1791866545119-7b95dec8ff84",
+      "checkedAt": "2026-10-13T04:42:45.823Z",
       "id": "F03",
       "stage": 3,
       "kind": "forbidden",
@@ -89,8 +89,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::5xgr4-1791866284589-1b1b5623498d",
-      "checkedAt": "2026-10-13T04:38:25.093Z",
+      "requestId": "icn1::7tdqh-1791866545342-a38ded10f0f9",
+      "checkedAt": "2026-10-13T04:42:46.057Z",
       "id": "F04",
       "stage": 2,
       "kind": "forbidden",
@@ -101,8 +101,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::62ch5-1791866284619-cc918fce738a",
-      "checkedAt": "2026-10-13T04:38:25.121Z",
+      "requestId": "icn1::g6gxt-1791866545577-a7699692b678",
+      "checkedAt": "2026-10-13T04:42:46.088Z",
       "id": "F05",
       "stage": 2,
       "kind": "forbidden",
@@ -113,8 +113,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::62ch5-1791866284650-4529b6d69a03",
-      "checkedAt": "2026-10-13T04:38:25.151Z",
+      "requestId": "icn1::g6gxt-1791866545603-3877c0bdc70b",
+      "checkedAt": "2026-10-13T04:42:46.329Z",
       "id": "F06",
       "stage": 5,
       "kind": "forbidden",
@@ -125,8 +125,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "01a1338d-aa9e-71ff-8ef8-d60cdd87b096",
-      "checkedAt": "2026-10-13T04:38:25.529Z",
+      "requestId": "01a13391-ad27-7a82-98f4-1a27998a78dc",
+      "checkedAt": "2026-10-13T04:42:48.681Z",
       "id": "F07",
       "stage": 5,
       "kind": "forbidden",
@@ -137,8 +137,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::iad1::62ch5-1791866285043-3df7adb62ad5",
-      "checkedAt": "2026-10-13T04:38:25.744Z",
+      "requestId": "icn1::iad1::lhgfh-1791866548203-1f94dea122fc",
+      "checkedAt": "2026-10-13T04:42:48.913Z",
       "id": "F08",
       "stage": 8,
       "kind": "forbidden",
@@ -149,8 +149,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::iad1::xpg22-1791866285271-440044cea989",
-      "checkedAt": "2026-10-13T04:38:25.978Z",
+      "requestId": "icn1::iad1::9td6p-1791866548435-6e47759c483c",
+      "checkedAt": "2026-10-13T04:42:49.223Z",
       "id": "F09",
       "stage": 8,
       "kind": "forbidden",
@@ -161,8 +161,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::iad1::qs77v-1791866285504-2d35b7fc9b76",
-      "checkedAt": "2026-10-13T04:38:26.228Z",
+      "requestId": "icn1::iad1::bmnkc-1791866548753-e5dc67ff997d",
+      "checkedAt": "2026-10-13T04:42:49.547Z",
       "id": "F10",
       "stage": 11,
       "kind": "forbidden",
@@ -173,8 +173,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::iad1::4vrpc-1791866285750-ee8a129d4396",
-      "checkedAt": "2026-10-13T04:38:26.469Z",
+      "requestId": "icn1::iad1::lkwtz-1791866549074-ada7e75329c1",
+      "checkedAt": "2026-10-13T04:42:49.797Z",
       "id": "F11",
       "stage": 10,
       "kind": "forbidden",
@@ -185,20 +185,20 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::62ch5-1791866285996-3f3ca8c347a7",
-      "checkedAt": "2026-10-13T04:38:26.497Z",
+      "requestId": "icn1::iad1::lkwtz-1791866549309-c2ddb401bd12",
+      "checkedAt": "2026-10-13T04:42:50.088Z",
       "id": "F12",
       "stage": 12,
       "kind": "forbidden",
       "request": "GET /api/ops (토큰 없음)",
       "expected": "HTTP 401, 작전실 기록 없음",
-      "actual": "HTTP 404",
-      "result": "fail",
+      "actual": "HTTP 401",
+      "result": "pass",
       "source": "live_http"
     },
     {
-      "requestId": "icn1::iad1::2xzgt-1791866286035-f200afa4c837",
-      "checkedAt": "2026-10-13T04:38:26.737Z",
+      "requestId": "icn1::iad1::vsf2k-1791866549626-796488fa7b9a",
+      "checkedAt": "2026-10-13T04:42:50.324Z",
       "id": "W01",
       "stage": 3,
       "kind": "forbidden",
@@ -209,8 +209,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::iad1::5xgr4-1791866286263-fd50867996e4",
-      "checkedAt": "2026-10-13T04:38:27.000Z",
+      "requestId": "icn1::iad1::5xgr4-1791866549835-f052759f1774",
+      "checkedAt": "2026-10-13T04:42:51.139Z",
       "id": "W02",
       "stage": 10,
       "kind": "forbidden",
@@ -221,8 +221,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "icn1::iad1::vsf2k-1791866286527-ccd5e5b741ed",
-      "checkedAt": "2026-10-13T04:38:27.239Z",
+      "requestId": "icn1::iad1::gcrr4-1791866550662-ad9a4c21fa15",
+      "checkedAt": "2026-10-13T04:42:51.389Z",
       "id": "W03",
       "stage": 8,
       "kind": "forbidden",
@@ -233,8 +233,8 @@
       "source": "live_http"
     },
     {
-      "requestId": "ca5e65d1-8327-421c-ac30-bc485f9340fb",
-      "checkedAt": "2026-10-13T04:38:27.243Z",
+      "requestId": "53b85e46-01ea-4b15-a39f-58823f5c4079",
+      "checkedAt": "2026-10-13T04:42:51.394Z",
       "id": "L01",
       "stage": 6,
       "kind": "normal",
@@ -245,8 +245,8 @@
       "source": "local_function"
     },
     {
-      "requestId": "619f5299-2e53-445b-966e-d38730338507",
-      "checkedAt": "2026-10-13T04:38:27.243Z",
+      "requestId": "13f445d8-80b6-41b2-b9ee-5f2095c0e6f5",
+      "checkedAt": "2026-10-13T04:42:51.394Z",
       "id": "L02",
       "stage": 6,
       "kind": "forbidden",
@@ -257,8 +257,8 @@
       "source": "local_function"
     },
     {
-      "requestId": "d2ef3c43-39ac-447b-bd45-600368344ccb",
-      "checkedAt": "2026-10-13T04:38:27.243Z",
+      "requestId": "be5d74c1-7d7e-4644-9c67-23955e248bdd",
+      "checkedAt": "2026-10-13T04:42:51.394Z",
       "id": "L03",
       "stage": 7,
       "kind": "forbidden",
@@ -269,8 +269,8 @@
       "source": "local_function"
     },
     {
-      "requestId": "0e0af11e-362e-4aaa-8e00-7422ddb123ca",
-      "checkedAt": "2026-10-13T04:38:27.243Z",
+      "requestId": "b7e679d0-a6ce-4fae-91c2-fe2d63dfca20",
+      "checkedAt": "2026-10-13T04:42:51.394Z",
       "id": "L04",
       "stage": 7,
       "kind": "normal",
@@ -281,8 +281,8 @@
       "source": "local_function"
     },
     {
-      "requestId": "7a4f1e3b-7569-4112-a722-9094416eb0fe",
-      "checkedAt": "2026-10-13T04:38:27.243Z",
+      "requestId": "0a28ba90-3e00-4d13-b573-8c250a25539b",
+      "checkedAt": "2026-10-13T04:42:51.394Z",
       "id": "L05",
       "stage": 8,
       "kind": "forbidden",
@@ -293,8 +293,8 @@
       "source": "local_function"
     },
     {
-      "requestId": "974e8873-3016-4175-831b-2c6c431b3010",
-      "checkedAt": "2026-10-13T04:38:27.243Z",
+      "requestId": "3cbc84a3-1c82-4ff2-84d2-07cdf08ee874",
+      "checkedAt": "2026-10-13T04:42:51.394Z",
       "id": "L06",
       "stage": 8,
       "kind": "normal",
@@ -305,8 +305,8 @@
       "source": "local_function"
     },
     {
-      "requestId": "3d014f7b-1b47-4016-b6b5-46b6ae634691",
-      "checkedAt": "2026-10-13T04:38:27.243Z",
+      "requestId": "c04321c4-273b-4da4-8919-dcbe278fd425",
+      "checkedAt": "2026-10-13T04:42:51.394Z",
       "id": "L07",
       "stage": 8,
       "kind": "forbidden",
@@ -317,8 +317,8 @@
       "source": "local_function"
     },
     {
-      "requestId": "bdad9bfb-07f9-432d-875a-ffd9cbddc9b5",
-      "checkedAt": "2026-10-13T04:38:27.243Z",
+      "requestId": "1e94715e-dd81-4d9e-b345-b9fb6254fb4c",
+      "checkedAt": "2026-10-13T04:42:51.394Z",
       "id": "L08",
       "stage": 8,
       "kind": "forbidden",
@@ -329,8 +329,8 @@
       "source": "local_function"
     },
     {
-      "requestId": "d9cae009-5093-450a-8c5d-198cf5594230",
-      "checkedAt": "2026-10-13T04:38:27.243Z",
+      "requestId": "2414c0f5-d3b3-46cc-8b1e-95672dd89eae",
+      "checkedAt": "2026-10-13T04:42:51.395Z",
       "id": "L09",
       "stage": 9,
       "kind": "forbidden",
@@ -341,8 +341,8 @@
       "source": "local_function"
     },
     {
-      "requestId": "4b637307-aaf1-4171-a3fc-95f33720273d",
-      "checkedAt": "2026-10-13T04:38:27.244Z",
+      "requestId": "8117fd14-2540-4be6-bcf5-11a2e6466e43",
+      "checkedAt": "2026-10-13T04:42:51.395Z",
       "id": "L10",
       "stage": 9,
       "kind": "normal",
@@ -353,8 +353,8 @@
       "source": "local_function"
     },
     {
-      "requestId": "2baff669-e7c1-49a0-8e0d-91160d5e0327",
-      "checkedAt": "2026-10-13T04:38:27.244Z",
+      "requestId": "c486e3cb-3558-4b66-9bdb-d0ba971ec0ed",
+      "checkedAt": "2026-10-13T04:42:51.396Z",
       "id": "L11",
       "stage": 9,
       "kind": "normal",
@@ -365,8 +365,8 @@
       "source": "local_function"
     },
     {
-      "requestId": "f94f44f4-5e78-4f22-a0c3-3b24c0e6d42b",
-      "checkedAt": "2026-10-13T04:38:27.245Z",
+      "requestId": "4f5bc73f-d645-42cc-a95c-8535c5a83203",
+      "checkedAt": "2026-10-13T04:42:51.396Z",
       "id": "L12",
       "stage": 10,
       "kind": "normal",
@@ -377,8 +377,8 @@
       "source": "local_function"
     },
     {
-      "requestId": "acc2ae57-d021-497e-ae05-14824a880bbd",
-      "checkedAt": "2026-10-13T04:38:27.245Z",
+      "requestId": "26a32b04-0568-4c3e-a73e-8f6257a018d4",
+      "checkedAt": "2026-10-13T04:42:51.397Z",
       "id": "L13",
       "stage": 10,
       "kind": "forbidden",
@@ -389,14 +389,14 @@
       "source": "local_function"
     },
     {
-      "requestId": "4736b7ab-1dce-4438-b3d6-3034c50e7d33",
-      "checkedAt": "2026-10-13T04:38:27.319Z",
+      "requestId": "2a81e93c-f17b-4e33-8df0-73015e947add",
+      "checkedAt": "2026-10-13T04:42:51.473Z",
       "id": "L14",
       "stage": 2,
       "kind": "forbidden",
       "request": "git grep HEAD (비밀값 검색)",
       "expected": "서버 키·JWT·개인키 0건",
-      "actual": "25f906c에서 0개 파일",
+      "actual": "e6441cf에서 0개 파일",
       "result": "pass",
       "source": "local_function"
     },
@@ -774,8 +774,8 @@
   ],
   "summary": {
     "rows": 38,
-    "forbiddenRejected": 22,
-    "forbiddenFailed": 1,
+    "forbiddenRejected": 23,
+    "forbiddenFailed": 0,
     "forbiddenNotRun": 3,
     "normalAllowed": 10,
     "normalFailed": 0,
@@ -785,5 +785,5 @@
     "attacksNotRun": 31,
     "attacksTotal": 41
   },
-  "digest": "6e841883e27e27551a1191e4ec0b2aea08355771d65c81967e77128fbbf13658"
+  "digest": "ccb942b6949dd4e744ade572b31a7e897636ac16ad4cf8cd7d74451c1541c44a"
 }
