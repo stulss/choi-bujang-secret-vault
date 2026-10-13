@@ -28,6 +28,8 @@ function isSuspiciousAccess(request) {
 const ALLOWED_ROUTES = new Set([
   'GET /notes', 'POST /notes', 'GET /notes/:id', 'PUT /notes/:id', 'DELETE /notes/:id',
   'GET /notices', 'GET /notices/:id', 'POST /notices', 'PUT /notices/:id', 'DELETE /notices/:id',
+  // 10단계 복구 경로: 한 건 복원만 허용합니다. 주인·사본 대조는 api/restore.js가 합니다.
+  'POST /restore',
 ]);
 
 // 공지 구역의 자료 ID 모양 (메모 ID로 공지 구역을, 공지 ID로 메모 구역을 열 수 없음)

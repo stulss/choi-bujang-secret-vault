@@ -1012,5 +1012,64 @@ export async function runAttackChecks(config) {
     return checks;
   }
 
+  if (config.step === 10) {
+    // 복구 뒤 1~9단계 정상·금지 요청 재시험: 9단계 점검을 그대로 다시 실행한 결과를 먼저 담습니다.
+    const checks = await runAttackChecks({ ...config, step: 9 });
+
+    try {
+      const res = await fetch(new URL('/api/restore', app), {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id: '00000000-0000-4000-8000-000000000000' }),
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      checks.push({
+        attackId: 'restore_unauthenticated_blocked',
+        expected: '로그인 없이 복구 경로(POST /api/restore) 호출 시 복원 없이 거부됨 (HTTP 401)',
+        observed: res.status === 401
+          ? '비로그인 복구 요청 차단 확인 (HTTP 401)'
+          : `복구 경로 응답 확인 (HTTP ${res.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'restore_unauthenticated_blocked',
+        expected: '로그인 없이 복구 경로(POST /api/restore) 호출 시 복원 없이 거부됨 (HTTP 401)',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const { loadVerifiedBackup, evaluateTestPolicy } = await import('../scripts/policy-restore.mjs');
+      const { readFile } = await import('node:fs/promises');
+      const { manifest } = loadVerifiedBackup();
+      checks.push({
+        attackId: 'policy_backup_reverified',
+        expected: '침해 전 시험 정책 사본을 다시 읽어 SHA-256·버전 검증 통과',
+        observed: `사본 ${manifest.version} 재검증 통과 (SHA-256 ${manifest.sha256.slice(0, 12)}…)`,
+      });
+      const policy = JSON.parse(await readFile(new URL('../policy/test-policy.json', import.meta.url), 'utf8'));
+      const cross = evaluateTestPolicy(policy, { method: 'GET', route: '/notes/:id', subjectOwner: 'b', targetOwner: 'a' });
+      const own = evaluateTestPolicy(policy, { method: 'GET', route: '/notes/:id', subjectOwner: 'a', targetOwner: 'a' });
+      checks.push({
+        attackId: 'policy_restored_cross_owner_denied',
+        expected: '되돌린 시험 정책에서 B의 A 메모 요청은 거부, A의 자기 메모 요청은 허용',
+        observed: `시험 정책 재판정 결과 (B→A ${cross}, A→A ${own})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'policy_backup_reverified',
+        expected: '침해 전 시험 정책 사본을 다시 읽어 SHA-256·버전 검증 통과',
+        observed: `중단 (${err.message})`,
+      });
+    }
+
+    checks.push({
+      attackId: 'restore_single_note_live',
+      expected: '시험 계정 B의 메모 한 건을 바꾸거나 지운 뒤 복구하면 ID·소유자·내용 해시가 사본과 같음',
+      observed: '미실행 (이 점검은 시험 계정 B 토큰으로 배포된 복구 경로를 호출하지 않음)',
+    });
+
+    return checks;
+  }
+
   throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
 }

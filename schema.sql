@@ -51,3 +51,51 @@ SELECT
     has_table_privilege('anon', 'public.notes', 'insert') AS anon_insert,
     has_table_privilege('authenticated', 'public.notes', 'select') AS auth_select,
     has_table_privilege('authenticated', 'public.notes', 'insert') AS auth_insert;
+
+-- ==============================================================================
+-- 10단계: 비공개 가상 메모 사본과 복구 감사 기록
+-- Supabase SQL Editor에서 이 아래 부분만 한 번 실행합니다. 기존 notes 자료는 바꾸지 않습니다.
+-- ==============================================================================
+
+-- 7. 메모를 만들 때의 내용과 내용 해시를 남기는 비공개 사본 (서버 전용 키로만 접근)
+CREATE TABLE IF NOT EXISTS public.note_backups (
+    note_id UUID PRIMARY KEY,
+    owner_id UUID NOT NULL,
+    title TEXT NOT NULL,
+    body TEXT NOT NULL,
+    content_hash TEXT NOT NULL CHECK (content_hash ~ '^[0-9a-f]{64}$'),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- 8. 복구 요청마다 한 줄씩 추가만 하는 감사 기록 (본문은 남기지 않음)
+CREATE TABLE IF NOT EXISTS public.restore_audit (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    note_id UUID NOT NULL,
+    owner_id UUID NOT NULL,
+    stage TEXT NOT NULL,
+    result TEXT NOT NULL,
+    action TEXT,
+    dry_run BOOLEAN NOT NULL DEFAULT false,
+    at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- 9. 사본과 감사 기록은 고치거나 지울 수 없게 막습니다 (서버 전용 키도 동일)
+CREATE OR REPLACE FUNCTION public.reject_backup_audit_change() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION '% is append-only', TG_TABLE_NAME;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS note_backups_append_only ON public.note_backups;
+CREATE TRIGGER note_backups_append_only BEFORE UPDATE OR DELETE ON public.note_backups
+  FOR EACH ROW EXECUTE FUNCTION public.reject_backup_audit_change();
+
+DROP TRIGGER IF EXISTS restore_audit_append_only ON public.restore_audit;
+CREATE TRIGGER restore_audit_append_only BEFORE UPDATE OR DELETE ON public.restore_audit
+  FOR EACH ROW EXECUTE FUNCTION public.reject_backup_audit_change();
+
+-- 10. 브라우저 키(anon)와 로그인 사용자(authenticated)의 직접 접근 권한 회수
+REVOKE ALL ON TABLE public.note_backups, public.restore_audit FROM PUBLIC, anon, authenticated;
+ALTER TABLE public.note_backups ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.restore_audit ENABLE ROW LEVEL SECURITY;

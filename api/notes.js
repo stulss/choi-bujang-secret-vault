@@ -1,22 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { NOTE_ID, noteContentHash, ownerIdFor } from '../src/note-owner.mjs';
 import { createLoginVerifier } from '../src/verify-login.mjs';
 
 let verifierInstance = null;
-
-const NOTE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
-
-// 메모 구역의 주인 ID. 심판 토큰은 실행 ID와 a/b 신원까지 묶어 A·B 구역이 섞이지 않게 합니다.
-function ownerIdFor(verified) {
-  if (verified.kind !== 'judge') return verified.userId;
-  const hex = createHash('sha256')
-    .update(`aleph-judge-owner:${verified.runId}:${verified.identity}:${verified.userId}`)
-    .digest('hex');
-  const variant = ((parseInt(hex[16], 16) & 3) | 8).toString(16);
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-${variant}${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
-}
 
 async function getVerifier() {
   if (!verifierInstance) {
@@ -173,6 +162,17 @@ export default async function handler(request, response) {
       if (error) {
         return response.status(500).json({ error: 'DATABASE_INSERT_ERROR' });
       }
+
+      // 10단계: 만들 때의 내용을 비공개 사본(note_backups)에 검증용 해시와 함께 남깁니다.
+      // 이후 수정은 사본에 반영하지 않습니다. 사본 저장이 실패해도 메모 생성은 유지하고, 복구 때 사본 없음으로 멈춥니다.
+      const { error: backupError } = await supabase.from('note_backups').insert({
+        note_id: id,
+        owner_id: ownerId,
+        title,
+        body: bodyText,
+        content_hash: noteContentHash({ id, ownerId, title, body: bodyText }),
+      });
+      if (backupError) console.log('[NOTES_API] BACKUP_INSERT_FAILED', backupError.code ?? 'unknown');
 
       return response.status(201).json({
         id,
