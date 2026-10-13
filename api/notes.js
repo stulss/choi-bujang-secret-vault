@@ -111,10 +111,17 @@ export default async function handler(request, response) {
           .eq('id', noteId)
           .maybeSingle();
 
-        if (error || !data || data.owner_id !== verified.userId) {
+        if (error || !data) {
           return response.status(404).json({
             error: 'NOTE_NOT_FOUND',
-            message: '해당 구역의 자료가 존재하지 않거나 접근 권한이 없습니다.',
+            message: '자료를 찾을 수 없습니다.',
+          });
+        }
+
+        if (data.owner_id !== verified.userId) {
+          return response.status(403).json({
+            error: 'FORBIDDEN_ZONE_ACCESS',
+            message: '다른 구역의 자료입니다.',
           });
         }
 
@@ -193,10 +200,17 @@ export default async function handler(request, response) {
         .eq('id', noteId)
         .maybeSingle();
 
-      if (fetchErr || !existing || existing.owner_id !== verified.userId) {
+      if (fetchErr || !existing) {
         return response.status(404).json({
           error: 'NOTE_NOT_FOUND',
-          message: '해당 구역의 자료가 존재하지 않거나 수정 권한이 없습니다.',
+          message: '수정할 자료가 존재하지 않습니다.',
+        });
+      }
+
+      if (existing.owner_id !== verified.userId) {
+        return response.status(403).json({
+          error: 'FORBIDDEN_ZONE_ACCESS',
+          message: '다른 구역의 자료입니다.',
         });
       }
 
@@ -260,10 +274,17 @@ export default async function handler(request, response) {
         .eq('id', noteId)
         .maybeSingle();
 
-      if (fetchErr || !existing || existing.owner_id !== verified.userId) {
+      if (fetchErr || !existing) {
         return response.status(404).json({
           error: 'NOTE_NOT_FOUND',
-          message: '해당 구역의 자료가 존재하지 않거나 삭제 권한이 없습니다.',
+          message: '삭제할 자료가 존재하지 않습니다.',
+        });
+      }
+
+      if (existing.owner_id !== verified.userId) {
+        return response.status(403).json({
+          error: 'FORBIDDEN_ZONE_ACCESS',
+          message: '다른 구역의 자료입니다.',
         });
       }
 

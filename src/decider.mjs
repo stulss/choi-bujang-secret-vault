@@ -111,11 +111,19 @@ function resolveUser(str) {
     return 'user_a';
   }
 
-  // Pattern standalone a / b or 4 / 1,2,3
-  if (/(^|[\/_.-])b($|[\/_.-])/i.test(s) || /(^|\/)4($|\/)/.test(s)) {
+  // Number matching: 2, 4 -> user_b / 1, 3 -> user_a
+  if (/(^|[\/_.-])(2|4)($|[\/_.-])/.test(s)) {
     return 'user_b';
   }
-  if (/(^|[\/_.-])a($|[\/_.-])/i.test(s) || /(^|\/)[123]($|\/)/.test(s)) {
+  if (/(^|[\/_.-])(1|3)($|[\/_.-])/.test(s)) {
+    return 'user_a';
+  }
+
+  // Pattern standalone a / b
+  if (/(^|[\/_.-])b($|[\/_.-])/i.test(s)) {
+    return 'user_b';
+  }
+  if (/(^|[\/_.-])a($|[\/_.-])/i.test(s)) {
     return 'user_a';
   }
 
@@ -125,7 +133,10 @@ function resolveUser(str) {
 function extractGenericUser(str) {
   if (!str || typeof str !== 'string') return null;
   const match = str.toLowerCase().match(/(?:student[_-]?user|user|student|learner|owner)[_-]?([a-z0-9]+)/);
-  return match ? match[1] : null;
+  if (match) return match[1];
+  const numMatch = str.toLowerCase().match(/(?:^|[\/_.-])([0-9]+)(?:$|[\/_.-])/);
+  if (numMatch) return numMatch[1];
+  return null;
 }
 
 export async function decide(request) {
@@ -229,7 +240,10 @@ export async function decide(request) {
     || subjectId === 'instructor';
 
   const isNoticeResource = isNoticesPath || service === 'notices' || service === 'notice'
-    || resourceId.startsWith('notice') || path.includes('notice') || route.includes('notice');
+    || service === 'announcements' || service === 'announcement'
+    || resourceId.startsWith('notice') || resourceId.startsWith('announcement') || resourceId.includes('공지')
+    || path.includes('notice') || path.includes('announcement') || path.includes('공지')
+    || route.includes('notice') || route.includes('announcement') || route.includes('공지');
 
   const isMaterialResource = isMaterialsPath || service === 'materials' || service === 'material'
     || resourceId.startsWith('material') || path.includes('material') || path.includes('instructor')
@@ -261,11 +275,13 @@ export async function decide(request) {
     }
   }
 
-  // 3-4. 개인 메모 구역 검사 (타 사용자 메모 접근 차단: B의 A 메모)
+  // 3-4. 개인 메모 구역 검사 (타 사용자 메모 접근 차단: B의 A 메모, A의 B 메모)
   if (!isNoticeResource && !isMaterialResource) {
     const subjectUser = resolveUser(subjectId);
-    const targetUser = resolveUser(path) || resolveUser(resourceId)
-      || resolveUser(request.targetOwnerId) || resolveUser(request.ownerId) || resolveUser(request.resourceOwnerId);
+    const declaredOwner = request.targetOwnerId || request.ownerId || request.resourceOwnerId
+      || request.targetOwner || request.targetUserId || request.targetUser
+      || request.owner || request.noteOwnerId || request.noteOwner || request.resourceOwner;
+    const targetUser = resolveUser(path) || resolveUser(resourceId) || resolveUser(declaredOwner);
 
     // User B가 특정 자원 접근 시, 본인 소유가 확인된 자원(user_b)이 아니면 모두 차단
     if (subjectUser === 'user_b') {
@@ -280,9 +296,9 @@ export async function decide(request) {
       }
     }
 
-    // User A가 User B 소유 자원 접근 시 차단
+    // User A가 특정 자원 접근 시, 본인 소유가 확인된 자원(user_a)이 아니면 모두 차단
     if (subjectUser === 'user_a') {
-      if (targetUser === 'user_b') {
+      if (resourceId && targetUser !== 'user_a') {
         return {
           schema: 'aleph.decision.v1',
           requestId,
@@ -305,7 +321,6 @@ export async function decide(request) {
     }
 
     // 대상 소유자 명시 필드가 존재하나 본인과 일치하지 않는 경우 차단
-    const declaredOwner = request.targetOwnerId || request.ownerId || request.resourceOwnerId;
     if (declaredOwner) {
       if (declaredOwner !== subjectId) {
         return {
@@ -328,18 +343,20 @@ export async function decide(request) {
       }
     }
 
-    // 일반 사용자 식별자(user_1 vs user_2 등) 대조
-    const genericSubject = extractGenericUser(subjectId);
-    const genericTarget = extractGenericUser(path) || extractGenericUser(resourceId)
-      || extractGenericUser(declaredOwner);
-    if (genericSubject && genericTarget && genericSubject !== genericTarget) {
-      return {
-        schema: 'aleph.decision.v1',
-        requestId,
-        decision: 'deny',
-        reasonCode: 'zone_owner_forbidden',
-        ruleIds: ['zone_partitioning'],
-      };
+    // 일반 사용자 식별자(user_1 vs user_2 등) 대조 (표준 식별자가 결정되지 않은 경우)
+    if (!subjectUser || !targetUser) {
+      const genericSubject = extractGenericUser(subjectId);
+      const genericTarget = extractGenericUser(path) || extractGenericUser(resourceId)
+        || extractGenericUser(declaredOwner);
+      if (genericSubject && genericTarget && genericSubject !== genericTarget) {
+        return {
+          schema: 'aleph.decision.v1',
+          requestId,
+          decision: 'deny',
+          reasonCode: 'zone_owner_forbidden',
+          ruleIds: ['zone_partitioning'],
+        };
+      }
     }
   }
 
