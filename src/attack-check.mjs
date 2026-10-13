@@ -1544,13 +1544,24 @@ async function runMeasuredAttackChecks(config) {
     const results = [];
     for (const req of attack.requests) {
       try {
-        const res = await http(app, { method: 'GET', ...req });
-        results.push({ ...req, status: res.status, requestId: res.requestId, text: res.text });
+        // 이전 단계에서 통과한 요청과 같은 옵션(redirect: 'error')으로 보내고, 요청마다 점검 이름을 헤더로 붙입니다.
+        const res = await fetch(new URL(req.path, app), {
+          method: 'GET', redirect: 'error', signal: timeoutSignal(10000),
+          headers: { ...(req.headers ?? {}), 'x-aleph-attack-id': attack.code },
+        });
+        const text = await res.text();
+        results.push({ ...req, status: res.status, requestId: res.headers.get('x-vercel-id') || null, text });
       } catch (error) {
         results.push({ ...req, status: 0, requestId: null, text: '', error: error?.name ?? 'Error' });
       }
     }
-    const verdict = results.some(r => r.status === 0) ? { blocked: false, note: '요청 실패' } : attack.judge(results);
+    // 요청이 하나라도 응답을 받지 못했으면 그 공격은 실행하지 못한 것입니다. 결과를 지어내지 않고 not_run 으로 둡니다.
+    if (results.some(r => r.status === 0)) {
+      const failed = results.filter(r => r.status === 0).map(r => `${r.path}(${r.error})`).join(', ');
+      checks.push({ attackId: attack.code, expected: `${attack.expected} — 요청이 응답을 받지 못해 미실행: ${failed}`.slice(0, 300), observed: 'not_run' });
+      continue;
+    }
+    const verdict = attack.judge(results);
     const lines = results.map(r => `GET ${r.path} → ${r.status ? `HTTP ${r.status}` : `요청 실패(${r.error})`}${r.requestId ? ` (${r.requestId})` : ''}`);
     const observed = `${lines.join('; ')}${verdict.note ? ` · ${verdict.note}` : ''} · ${verdict.blocked ? '막음' : '못 막음'}`;
     checks.push({ attackId: attack.code, expected: attack.expected, observed: observed.length > 300 ? `${observed.slice(0, 296)}…` : observed });
