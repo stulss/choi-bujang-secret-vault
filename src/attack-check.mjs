@@ -948,6 +948,67 @@ export async function runAttackChecks(config) {
       });
     }
 
+    const virtualReads = (count, extra) => Array.from({ length: count }, (_, i) => ({
+      at: new Date(Date.UTC(2026, 9, 1, 0, 0, 0) + i * 2000).toISOString(),
+      method: 'GET', identity: { sub: 'doppel_fixture' }, deviceId: 'bbbbbbbbbbbbbbbb', ...extra,
+    }));
+
+    try {
+      const { detect } = await import('./detect.mjs');
+      const result = detect(virtualReads(150, { network: 'unusual' }));
+      checks.push({
+        attackId: 'detect_combined_propose_device',
+        expected: '평소와 다른 네트워크와 다량 조회가 함께인 가상 사건은 기기 한 개 대상 회수 제안',
+        observed: result.action === 'propose_revocation' && result.deviceId === 'bbbbbbbbbbbbbbbb' && result.reasonCode
+          ? `가상 기기 한 개 대상 회수 제안 확인 (${result.action}, ${result.reasonCode})`
+          : `탐지 결과 상이 (${result.action}, ${result.reasonCode ?? '-'})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'detect_combined_propose_device',
+        expected: '평소와 다른 네트워크와 다량 조회가 함께인 가상 사건은 기기 한 개 대상 회수 제안',
+        observed: `복합 탐지 점검 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const { detect } = await import('./detect.mjs');
+      const result = detect(virtualReads(150, { network: 'usual', region: 'foreign' }));
+      checks.push({
+        attackId: 'detect_region_only_observe',
+        expected: '지역만 다르고 네트워크는 평소와 같은 가상 사건은 회수 제안 없이 observe',
+        observed: result.action === 'observe'
+          ? '지역 단독 사건 회수 제안 없음 확인 (observe)'
+          : `탐지 결과 상이 (${result.action})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'detect_region_only_observe',
+        expected: '지역만 다르고 네트워크는 평소와 같은 가상 사건은 회수 제안 없이 observe',
+        observed: `지역 단독 점검 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const { decide } = await import('./decider.mjs');
+      const { fixtureRequests } = await import('../scripts/fixture-7.mjs');
+      const { normal } = fixtureRequests();
+      const res = await decide(normal);
+      checks.push({
+        attackId: 'normal_device_kept',
+        expected: '탐지 규칙을 넣은 뒤에도 정상 기기의 가상 요청은 기존 응답 형식으로 허용',
+        observed: res.decision === 'allow' && Object.keys(res).sort().join(',') === 'decision,reasonCode,requestId,ruleIds,schema'
+          ? '정상 기기 허용 유지 확인 (allow, 응답 5항목)'
+          : `판정 결과 상이 (${res.decision}, ${res.reasonCode})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'normal_device_kept',
+        expected: '탐지 규칙을 넣은 뒤에도 정상 기기의 가상 요청은 기존 응답 형식으로 허용',
+        observed: `정상 기기 점검 실패 (${err.message})`,
+      });
+    }
+
     return checks;
   }
 
