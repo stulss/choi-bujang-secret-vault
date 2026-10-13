@@ -1120,24 +1120,10 @@ export async function runAttackChecks(config) {
   }
 
   if (config.step === 12) {
-    // 1~11단계 점검을 그대로 다시 실행하고, 탈환 작전실 요약 경로가 로그인 없이 열리지 않는지 확인합니다.
-    // 제출 묶음은 점검 20개까지만 받으므로, 시험 계정 토큰이 필요해 보내지 않는 복구 점검(restore_single_note_live, 미실행)은
-    // 여기서 빼고 그 미실행 기록은 docs/EVIDENCE.md의 A05·A06 행에 남깁니다.
-    const checks = (await runAttackChecks({ ...config, step: 11 }))
-      .filter(item => item.attackId !== 'restore_single_note_live');
-
-    try {
-      const res = await fetch(new URL('/api/ops', app), { redirect: 'error', signal: AbortSignal.timeout(10000) });
-      checks.push({
-        attackId: 'ops_summary_unauthenticated_blocked',
-        expected: '로그인·기기 서명 없이 탈환 작전실 요약(/api/ops)을 요청하면 기록을 주지 않고 거부 (HTTP 401)',
-        observed: res.status === 401 ? '비로그인 작전실 요약 요청 거부 확인 (HTTP 401)' : `작전실 요약 응답 확인 (HTTP ${res.status})`,
-      });
-    } catch (err) {
-      checks.push({ attackId: 'ops_summary_unauthenticated_blocked', expected: '비로그인 작전실 요약 요청 거부 (HTTP 401)', observed: `요청 실패 (${err.message})` });
-    }
-
-    return checks;
+    // 12단계 점검은 src/checks.mjs 목록 하나로 실행합니다. GET /api/checks와 작전실 화면도 같은 목록을 씁니다.
+    // GET·HEAD만 최대 24건 보내고, 쓰기 요청이 필요한 점검은 보내지 않고 not_run으로 남깁니다.
+    const { runChecks, toAttempts } = await import('./checks.mjs');
+    return toAttempts(await runChecks(config));
   }
 
   throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');

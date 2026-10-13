@@ -34,6 +34,8 @@ const ALLOWED_ROUTES = new Set([
   'GET /device', 'POST /device',
   // 12단계 탈환 작전실 요약: 읽기만 허용합니다. 소유자 범위는 api/ops.js가 토큰 신원으로 정합니다.
   'GET /ops',
+  // 12단계 점검 기록: 공개 경로의 응답 상태만 돌려주는 읽기 전용 경로입니다.
+  'GET /checks',
 ]);
 
 // 공지 구역의 자료 ID 모양 (메모 ID로 공지 구역을, 공지 ID로 메모 구역을 열 수 없음)

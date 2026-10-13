@@ -240,8 +240,8 @@
 ## 12단계: 설치·실행·중지·복구 안내
 
 ### 기준 커밋과 범위
-- **검사한 커밋**: `5ec5f26` (배포 커밋 `5ec5f268089c…`). 2026-10-13 `npm run evidence`가 배포 주소의 `GET /aleph.json`에서 읽은 값이며, 이 저장소의 HEAD와 같습니다.
-- 이 안내와 아래 파일들은 그 커밋 **뒤에 만든 12단계 저장점**입니다: `api/ops.js`, `src/ops-summary.mjs`(탈환 작전실), `src/evidence.mjs`·`scripts/evidence.mjs`(실측 표 절차), `docs/ATTACKS.json`(41종 목록), 해당 시험, `docs/EVIDENCE.md`, 화면의 「탈환 작전실」 칸, 허용 경로 `GET /api/ops`, 12단계 점검(`src/attack-check.mjs`), `.gitattributes`, `aleph.config.json`의 `step: 12`. `docs/EVIDENCE.md`의 실측은 저장점 이전 배포(`5ec5f26`)를 대상으로 한 것입니다. 저장점이 배포되기 전에는 배포 주소에서 `/api/ops`와 작전실 화면을 확인할 수 없습니다.
+- **검사한 커밋**: `3b5bb78` (12단계 저장점, 배포 커밋 `3b5bb784f69d…`). 2026-10-13 `npm run evidence`가 배포 주소의 `GET /aleph.json`에서 읽은 값입니다. `docs/EVIDENCE.md`와 아래 「재현 순서」의 배포 실측은 이 배포를 대상으로 했습니다.
+- 그 뒤의 보완(이 안내가 들어 있는 커밋): 12단계 점검을 한 목록(`src/checks.mjs`)으로 모아 제출 묶음·`GET /api/checks`·작전실 화면이 같은 값을 쓰게 함, 제출 묶음은 GET·HEAD만 최대 24건(코드로 강제), `observed`는 사실 값만, 41종은 한 줄 문장으로 정리. 이 보완이 배포되기 전에는 배포 주소에서 `/api/checks`를 확인할 수 없습니다.
 
 ### 누가 만든 것인가
 
@@ -250,7 +250,7 @@
 | **학생 몫** | 판정기 규칙 3개 (`device_registered`, `step_up_required`, `zone_partitioning`) | `src/decider.mjs` |
 | **학생 몫** | 탐지 규칙 (10분 안 같은 사용자·기기의 GET 120건 초과 + 낯선 네트워크 → 회수 **제안**) | `src/detect.mjs` |
 | **학생 몫** | 접속 앱 (설치형 웹앱 화면, 기기 승인·서명, 작전실 화면) | `public/index.html`, `public/sw.js`, `public/manifest.webmanifest`, `public/offline.html` |
-| **학생 몫** | 자료실 서버 함수와 DB (로그인 중계, 메모, 공지, 복구, 기기 승인, 작전실 요약) | `api/*.js`, `src/verify-login.mjs`, `src/device-auth.mjs`, `src/note-owner.mjs`, `schema.sql` |
+| **학생 몫** | 자료실 서버 함수와 DB (로그인 중계, 메모, 공지, 복구, 기기 승인, 작전실 요약, 점검 기록) | `api/*.js`, `src/verify-login.mjs`, `src/device-auth.mjs`, `src/note-owner.mjs`, `src/checks.mjs`, `schema.sql` |
 | **학생 몫** | 정책 사본과 되돌리기 | `policy/`, `scripts/policy-restore.mjs` |
 | **제공: ALEPH SDP 엔진** | 신원·기기·경로를 확인해 `aleph.decision.v1` 요청을 판정기에 전달하고 응답을 받는 엔진, 사건 전달, 접속 회수 집행과 경과 시간 측정, 심판 접수 | **이 저장소에 엔진 코드는 없습니다.** 계약만 `docs/DECIDER_REQUEST.md`(`student-kit/sdp-core/decision-contract.mjs` 설명)에 있고, 심판 접수 주소는 운영 측이 채운 `aleph.config.json`의 `judgeIssuer`입니다. |
 | **제공: 시작 틀** (`ChoiTimo/aleph-defense-starter`) | 1단계 틀과 빌드, `src/decider.mjs`·`src/detect.mjs`의 출발 템플릿, 판정기 연습 도구 `scripts/decider-test.mjs`, 보너스 연습 경보(`xdr/`), 배포 양식(`package/`) | 커밋 기록상 작성자 ChoiTimo (`0f9a3c9`, `de3cf4f`, `8fb5b6d`) |
@@ -267,11 +267,11 @@
 5. 배포합니다. 빌드 명령 `npm run build`는 Vercel이 주는 저장소·커밋·배포 URL이 없으면 일부러 실패합니다.
 
 ### 실행
-- 로컬 연습 (엔진·배포 없이): `npm run decider:test` · `npm run fixture:7` · `npm run detect:test` · `npm run policy:diff` · `node --test test/ops-summary.test.mjs test/evidence.test.mjs test/package-starter.test.mjs test/r5.test.mjs test/xdr-brute-force.test.mjs test/xdr-run.test.mjs`
+- 로컬 연습 (엔진·배포 없이): `npm run decider:test` · `npm run fixture:7` · `npm run detect:test` · `npm run policy:diff` · `node --test test/checks.test.mjs test/screen.test.mjs test/ops-summary.test.mjs test/evidence.test.mjs test/package-starter.test.mjs test/r5.test.mjs test/xdr-brute-force.test.mjs test/xdr-run.test.mjs`
 - 배포 화면: 주소를 열고 시험 계정으로 로그인 → 「이 기기 승인 요청」 → 「서버 확인 완료」 뒤 자료실과 「탈환 작전실」이 열립니다. 승인 전에는 메모를 불러오지 않습니다.
 - 실측 표 (1~11단계 정상·금지 요청 한 장): `npm run evidence` → `docs/EVIDENCE.md`. 로그인 없는 요청만 보냅니다. 시험 계정 요청까지 보내려면 본인 터미널에서 환경변수 `EVIDENCE_EMAIL`·`EVIDENCE_PASSWORD`(A 계정), `EVIDENCE_B_EMAIL`·`EVIDENCE_B_PASSWORD`(B 계정, 남의 메모 접근 거부 확인용)를 직접 넣고 `npm run evidence -- --with-account`를 실행합니다. 이 명령은 계정마다 승인 기기 1개를 남기고 A 계정에 가상 메모 1건을 만들었다 지웁니다(복구용 비공개 사본은 추가 전용이라 남습니다). 계정 값은 화면·표·기록·Git에 남지 않으며, 실행 기록 `artifacts/evidence.json`은 커밋하지 않습니다.
-- 41종 시험 목록은 `docs/ATTACKS.json`(`[{stage, code, name, measuredBy:[행 ID]}]`)에 있습니다. 단계·코드·이름은 이전 12단계 시도의 기록(커밋 `7490adb`의 `docs/EVIDENCE.md`)에서 가져왔고, 근거 행(`measuredBy`)은 **지금 표의 행 가운데 같은 요청을 실제로 보내는 것만** 연결했습니다. 연결하지 않은 시험은 미실행이며 통과로 세지 않습니다. 목록 파일이 없으면 종별 판정을 하지 않습니다.
-- 41종 중 26종은 근거 행이 없습니다: 만료·다른 대상 토큰, 배포 번들·저장소의 시험 비밀값 검색, 심판 소유 메모(R3), 원본 DB 직접 조회·수정(사용자 토큰 사용), 미등록 기기·기기 불일치·mTLS, 7·9단계 가상 사건과 회수 뒤 재접속, 복구 후 재전송, 12단계 연속 공격. 이들은 심판·엔진이 보내는 요청이거나 이 절차가 아직 같은 요청을 보내지 못하는 것입니다.
+- 12단계 점검 기록: `GET /api/checks` (로그인 불필요, 공개 경로의 응답 상태만). 제출 묶음(`npm run bundle`)과 같은 목록·같은 함수(`src/checks.mjs`)로 지금 점검을 실행해 `total`·`blocked`·`allowed`·`failed`·`notRun`과 점검 목록 `attempts`를 돌려줍니다. 배포 주소에는 GET·HEAD만 최대 24건 보내고, 쓰기 요청이 필요한 점검(로그인 없는 복구 `POST`)은 보내지 않고 `not_run`으로 둡니다. 판정기·탐지·정책 점검은 학생 코드를 직접 실행한 결과이며, ALEPH SDP 엔진이 실제로 집행했는지는 `engineEnforced: not_run`입니다. 작전실 화면의 「점검 기록」은 이 응답의 수치를 그대로 보여 주고, 같은 목록에서 다시 세어 일치 여부를 표시합니다.
+- 41종 공격 전체는 심판이 보내며 이 저장소에서는 실행하지 않았습니다. 표에 없는 공격을 통과로 적지 않습니다.
 
 ### 중지
 - 로컬에는 계속 떠 있는 서버가 없습니다. 위 명령은 한 번 실행하고 끝납니다.
@@ -292,14 +292,15 @@
 
 | 순서 | 명령·화면 | 정상 기대 | 거부 기대 | 이번 결과 |
 |---|---|---|---|---|
-| 1 | `node --test` 6개 파일 | 36건 통과 | — | 실행함 (로컬, 작업 트리 기준): 36건 통과 |
+| 1 | `node --test` 8개 파일 | 48건 통과 | — | 실행함 (로컬, 작업 트리 기준): 48건 통과. 화면 스크립트를 가짜 DOM에서 실행해 화면 수치가 `/api/checks`·`/api/ops` 응답과 같고, 응답 수치를 바꾸면 「불일치」가 뜨는 것도 포함 |
 | 2 | `npm run decider:test` / `fixture:7` / `detect:test` | 7개 통과 / allow·step_up / 6개 통과 | 미등록 기기 deny | 실행함 (로컬): 통과 |
-| 3 | `npm run evidence` (로그인 없음, 배포 `5ec5f26`) | 정상 4건 허용 (HTTP 200) | 금지 15건 거부 (HTTP 401/405 등) | 실행함: 정상 4 허용 · 금지 15 거부 · 다름 0 (요청 ID·시각은 `docs/EVIDENCE.md`) |
+| 3 | `npm run evidence` (로그인 없음, 배포 `3b5bb78`) | 정상 4건 허용 (HTTP 200) | 금지 15건 거부 (HTTP 401/405 등) | 실행함: 정상 4 허용 · 금지 15 거부 · 다름 0 (요청 ID·시각은 `docs/EVIDENCE.md`) |
 | 4 | 같은 표의 함수 호출 행 (판정기·탐지기·정책) | 13건 기대와 같음 | — | 실행함 (요청 아님): 13건 같음 · 다름 0 (정책 사본 SHA-256 검증 통과) |
-| 4-1 | 같은 표의 41종 (`docs/ATTACKS.json`) | 근거 행이 실제 요청이고 모두 기대와 같을 때만 「막음」 | — | 실행함: **막음 7 · 못 막음 0 · 미실행 34**. 계정 없이는 막음으로 세지 않습니다. 근거 행이 없는 26종은 같은 요청을 보내는 행이 아직 없어 미실행입니다 |
-| 5 | `npm run evidence -- --with-account` | 로그인 후 서명 요청 허용 (A 계정 기준) | 서명 없음·변경·B 계정의 A 메모 접근 거부 | **미실행** (계정 값은 사용자가 본인 터미널에서 넣어야 함). 계정 필요 행 정상 11 · 금지 10건이 표에 미실행으로 남아 있음 |
-| 6 | 화면에서 로그인 → 기기 승인 → 작전실 확인 | 승인 뒤 자료실과 작전실 열림 | 승인 전 메모 없음 | **미실행** (화면을 직접 조작하지 않음) |
-| 7 | `npm run bundle` | 점검 결과가 제출 묶음에 기록 | — | **미실행** |
+| 5 | 12단계 점검 목록 (`src/checks.mjs`, 배포 `3b5bb78`) | GET 9건만, 정상 허용 5 | 금지 거부 14 | 실행함: 전체 20 · 막음 14 · 허용 5 · 다름 0 · 미실행 1 (로그인 없는 복구 `POST`) |
+| 6 | 41종 공격 | — | — | 실행하지 않음. 심판이 보내는 시험입니다 |
+| 7 | `npm run evidence -- --with-account` | 로그인 후 서명 요청 허용 (A 계정 기준) | 서명 없음·변경·B 계정의 A 메모 접근 거부 | **미실행** (계정 값은 사용자가 본인 터미널에서 넣어야 함). 계정 필요 행 정상 11 · 금지 10건이 표에 미실행으로 남아 있음 |
+| 8 | 실제 브라우저에서 로그인 → 기기 승인 → 작전실 확인 | 승인 뒤 자료실·작전실·점검 기록 열림 | 승인 전 메모 없음 | **미실행** (화면을 직접 조작하지 않음) |
+| 9 | 이 보완을 배포한 뒤 `GET /api/checks`와 `npm run bundle` | 두 결과의 `attackId`·`expected`·`observed`가 같음 | — | 커밋·배포 뒤 실행, 결과는 제출 묶음에 그대로 기록 |
 
 ## 다음 단계의 코딩 도구에 전달할 규칙
 

@@ -6,18 +6,11 @@ import { collectEvidence, renderMarkdown } from '../src/evidence.mjs';
 // 1~11단계 정상·금지 요청 실측 표: npm run evidence
 // 배포 주소(aleph.config.json의 publicAppUrl)에 로그인 없는 정상·금지 요청을 실제로 보내고,
 // 판정기·탐지기·정책 함수 결과와 함께 docs/EVIDENCE.md 한 표로 씁니다. 원본 기록은 artifacts/evidence.json(커밋 제외)에 남깁니다.
-// 계정 토큰·기기 서명이 필요한 요청은 보내지 않고 미실행으로 남깁니다. 시험 종 목록이 없으면 종별 판정을 하지 않습니다.
+// 계정 토큰·기기 서명이 필요한 요청은 보내지 않고 미실행으로 남깁니다. 41종 공격은 심판이 보내므로 이 표에서 세지 않습니다.
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 try {
   const config = JSON.parse(readFileSync(join(root, 'aleph.config.json'), 'utf8'));
-  let attacks = null;
-  try {
-    attacks = JSON.parse(readFileSync(join(root, 'docs', 'ATTACKS.json'), 'utf8'));
-    if (!Array.isArray(attacks)) throw new Error('docs/ATTACKS.json은 시험 종 배열이어야 합니다.');
-  } catch (error) {
-    if (error.code !== 'ENOENT') throw error;
-  }
   // 시험 계정은 환경변수로만 받습니다. 코드·표·기록·화면에 출력하지 않습니다.
   //   A 계정: EVIDENCE_EMAIL, EVIDENCE_PASSWORD   B 계정(남의 메모 접근 거부 확인용): EVIDENCE_B_EMAIL, EVIDENCE_B_PASSWORD
   // --with-account 가 있을 때만 사용하며, 시험 계정마다 승인 기기 1개 등록이 남고 A 계정에 가상 메모 1건 추가·삭제가 생깁니다.
@@ -32,7 +25,7 @@ try {
   const evidence = await collectEvidence(config, { account, accountB });
   mkdirSync(join(root, 'artifacts'), { recursive: true });
   writeFileSync(join(root, 'artifacts', 'evidence.json'), `${JSON.stringify(evidence, null, 2)}\n`, 'utf8');
-  const markdown = renderMarkdown(evidence, attacks);
+  const markdown = renderMarkdown(evidence);
   writeFileSync(join(root, 'docs', 'EVIDENCE.md'), markdown, 'utf8');
   process.stdout.write(`${markdown.split('\n').slice(2, 6).join('\n')}\n표: docs/EVIDENCE.md\n`);
   if (evidence.rows.some(item => item.result === 'fail')) {

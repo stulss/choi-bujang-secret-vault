@@ -23,7 +23,8 @@
     "POST /api/restore",
     "GET /api/device",
     "POST /api/device",
-    "GET /api/ops"
+    "GET /api/ops",
+    "GET /api/checks"
   ],
   "originalApiUrl": "https://kolzruwueiachnjjkcya.supabase.co/rest/v1/notes",
   "restoreRoute": "POST /api/restore"

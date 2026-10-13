@@ -4,7 +4,8 @@
   "buildCommand": "npm run build",
   "outputDirectory": "public",
   "functions": {
-    "api/ops.js": { "includeFiles": "policy/**" }
+    "api/ops.js": { "includeFiles": "policy/**" },
+    "api/checks.js": { "includeFiles": "policy/**", "maxDuration": 30 }
   },
   "rewrites": [
     { "source": "/api/notes/:id", "destination": "/api/notes?id=:id" },

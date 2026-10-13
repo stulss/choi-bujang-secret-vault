@@ -156,6 +156,10 @@
         <button id="ops-refresh" class="secondary" style="padding:4px 12px; font-size:13px;">다시 읽기</button>
       </div>
       <div id="ops-body"></div>
+      <div class="ops-section">
+        <h4>점검 기록 (제출 묶음과 같은 목록 · GET /api/checks) <span id="checks-match" class="pill wait">읽는 중</span></h4>
+        <div id="checks-body"></div>
+      </div>
     </div>
   </main>
 
@@ -542,9 +546,60 @@
       opsTime.textContent = '읽은 시각 ' + data.generatedAt;
     }
 
+    // ---- 점검 기록: 제출 묶음과 같은 목록(src/checks.mjs)을 서버가 지금 실행한 결과 ----
+    const checksBody = document.getElementById('checks-body');
+    const checksMatch = document.getElementById('checks-match');
+    const RESULT_TEXT = { blocked: '막음', allowed: '허용', failed: '기대와 다름', not_run: '미실행' };
+    const CHECK_KEYS = [['total', '전체'], ['blocked', '막음'], ['allowed', '허용'], ['failed', '기대와 다름'], ['notRun', '미실행']];
+
+    function setChecksMatch(kind, text) {
+      checksMatch.className = 'pill' + (kind ? ' ' + kind : '');
+      checksMatch.textContent = text;
+    }
+
+    async function loadChecks() {
+      setChecksMatch('wait', '읽는 중');
+      checksBody.replaceChildren();
+      try {
+        const res = await fetch('/api/checks', { cache: 'no-store' });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.schema !== 'byteback.checks.v1' || !Array.isArray(data.attempts)) {
+          checksBody.append(node('p', 'hint', '점검 기록을 받지 못했습니다 (' + (data.error || 'HTTP ' + res.status) + ').'));
+          setChecksMatch('bad', '읽지 못함');
+          return;
+        }
+        // 화면의 수치는 서버 요약을 그대로 보여 주고, 같은 attempts 목록에서 다시 세어 맞는지 표시합니다.
+        const again = {
+          total: data.attempts.length,
+          blocked: data.attempts.filter(a => a.result === 'blocked').length,
+          allowed: data.attempts.filter(a => a.result === 'allowed').length,
+          failed: data.attempts.filter(a => a.result === 'failed').length,
+          notRun: data.attempts.filter(a => a.result === 'not_run').length,
+        };
+        const parts = [];
+        CHECK_KEYS.forEach(([key, label], index) => {
+          parts.push((index ? ' · ' : '') + label + ' ', node('code', '', String(data[key])));
+        });
+        checksBody.append(row(...parts));
+        checksBody.append(row('확인 시각 ' + data.checkedAt + (data.commit ? ' · 배포 커밋 ' + data.commit : '')));
+        checksBody.append(node('p', 'hint', '판정기·탐지·정책 점검은 학생 코드를 서버에서 직접 실행한 결과입니다. '
+          + data.engine + '이 실제로 집행했는지는 미실행입니다. 미실행 점검은 요청을 보내지 않았고 통과로 세지 않습니다.'));
+        checksBody.append(node('p', 'hint', data.attacks41));
+        checksBody.append(table(['단계', '점검', '출처', '결과', '관찰값'],
+          data.attempts.map(a => [a.stage, a.attackId, a.sourceLabel, RESULT_TEXT[a.result] || a.result, a.observed])));
+        const mismatched = CHECK_KEYS.filter(([key]) => again[key] !== data[key]).map(([, label]) => label);
+        if (mismatched.length) setChecksMatch('bad', '불일치 · ' + mismatched.join(', '));
+        else setChecksMatch('ok', '일치 · ' + CHECK_KEYS.length + '개 수치 대조');
+      } catch (err) {
+        checksBody.append(node('p', 'hint', '점검 기록 오류: ' + err.message));
+        setChecksMatch('bad', '읽지 못함');
+      }
+    }
+
     async function loadOps() {
       if (!currentSession?.access_token || !deviceApproved) return;
       opsBox.style.display = 'block';
+      loadChecks();
       opsMatch.className = 'pill wait';
       opsMatch.textContent = '읽는 중';
       try {
@@ -568,6 +623,7 @@
     function hideOps() {
       opsBox.style.display = 'none';
       opsBody.replaceChildren();
+      checksBody.replaceChildren();
     }
 
     // ---- 자료실 (승인 기기만) ----

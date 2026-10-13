@@ -24,7 +24,8 @@
     "POST /api/restore",
     "GET /api/device",
     "POST /api/device",
-    "GET /api/ops"
+    "GET /api/ops",
+    "GET /api/checks"
   ],
   "originalApiUrl": "https://kolzruwueiachnjjkcya.supabase.co/rest/v1/notes",
   "anonKey": "sb_publishable_3D_1RN4Dd6nO8BeqsEgpLQ_6zwwEInV",

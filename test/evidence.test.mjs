@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { attackStatus, collectEvidence, renderMarkdown, summarize } from '../src/evidence.mjs';
+import { collectEvidence, renderMarkdown, summarize } from '../src/evidence.mjs';
 
 // 가짜 fetch만 씁니다. 실제 배포 주소나 원본 API를 호출하지 않습니다.
 const config = {
@@ -116,25 +116,14 @@ test('표와 기록 어디에도 토큰·공개 키·응답 본문이 없다', a
   assert.doesNotMatch(text, /"(?:body|text)"\s*:/u);
 });
 
-test('시험 종 목록이 없으면 종별 판정을 하지 않고, 있어도 근거가 없으면 미실행이다', async () => {
+test('41종 공격은 한 줄 문장으로만 적고 막음·통과 수를 세지 않는다', async () => {
   const { evidence } = await run();
-  const withoutList = renderMarkdown(evidence, null);
-  assert.match(withoutList, /목록\(`docs\/ATTACKS\.json`\)이 없어/u);
-  assert.doesNotMatch(withoutList, /실측 막음 \d/u);
-
-  const attacks = [
-    { stage: 3, code: 'MISSING_TOKEN', name: '토큰 없이 조회', measuredBy: ['F03'] },
-    { stage: 3, code: 'NO_EVIDENCE_ROW', name: '근거 행이 없는 시험', measuredBy: [] },
-    { stage: 4, code: 'NEEDS_ACCOUNT', name: '계정이 필요한 시험', measuredBy: ['A02'] },
-    { stage: 8, code: 'FUNCTION_ONLY', name: '함수 호출만 있는 시험', measuredBy: ['L05'] },
-    { stage: 9, code: 'UNKNOWN_ROW', name: '없는 행을 가리키는 시험', measuredBy: ['Z99'] },
-  ];
-  const status = Object.fromEntries(attackStatus(evidence.rows, attacks).map(a => [a.code, a.status]));
-  assert.deepEqual(status, {
-    MISSING_TOKEN: 'blocked', NO_EVIDENCE_ROW: 'not_run', NEEDS_ACCOUNT: 'not_run', FUNCTION_ONLY: 'not_run', UNKNOWN_ROW: 'not_run',
-  });
-  const failed = await run({ 'GET /api/notes': { status: 200, body: '[]' } });
-  assert.equal(attackStatus(failed.evidence.rows, attacks)[0].status, 'not_blocked');
+  const markdown = renderMarkdown(evidence);
+  const section = markdown.split('## 41종 공격')[1];
+  assert.ok(section, '41종 구역이 있어야 함');
+  assert.equal(section.trim(), '41종 공격 전체는 심판이 보내며 이 저장소에서는 실행하지 않았습니다. 표에 없는 공격을 통과로 적지 않습니다.');
+  assert.doesNotMatch(markdown, /41종[^\n]*(막음|통과)\s*\d/u);
+  assert.doesNotMatch(markdown, /ATTACKS\.json/u);
 });
 
 test('요약 수치는 행에서 센 값과 같다', async () => {
@@ -321,30 +310,3 @@ test('서버가 다른 기기를 확인했다고 응답하면 A07이 fail로 남
   assert.equal(evidence.rows.find(r => r.id === 'A07').result, 'fail');
 });
 
-import { readFile } from 'node:fs/promises';
-
-test('docs/ATTACKS.json은 41종이고 근거 행은 현재 표의 실제 HTTP 행만 가리킨다', async () => {
-  const attacks = JSON.parse(await readFile(new URL('../docs/ATTACKS.json', import.meta.url), 'utf8'));
-  assert.equal(attacks.length, 41);
-  assert.equal(new Set(attacks.map(a => a.code)).size, 41);
-  assert.ok(attacks.every(a => Number.isInteger(a.stage) && a.stage >= 1 && a.stage <= 12 && a.name && Array.isArray(a.measuredBy)));
-
-  const { evidence } = await run();
-  const byId = Object.fromEntries(evidence.rows.map(r => [r.id, r]));
-  for (const attack of attacks) {
-    for (const id of attack.measuredBy) {
-      assert.ok(byId[id], `${attack.code}: 표에 없는 행 ${id}`);
-      assert.notEqual(byId[id].source, 'local_function', `${attack.code}: 함수 호출 행 ${id}은 막음 근거가 아님`);
-    }
-  }
-
-  // 로그인 없이 실행하면 로그인 없는 행(F…)만으로 확인되는 시험만 막음이고, 나머지는 미실행입니다. 통과로 채우지 않습니다.
-  const status = attackStatus(evidence.rows, attacks);
-  const tally = key => status.filter(a => a.status === key).length;
-  assert.deepEqual([tally('blocked'), tally('not_blocked'), tally('not_run')], [7, 0, 34]);
-  for (const a of status.filter(item => item.measuredBy.some(id => id.startsWith('A')))) {
-    assert.equal(a.status, 'not_run', `${a.code}: 계정 없이 막음으로 세면 안 됨`);
-  }
-  const markdown = renderMarkdown(evidence, attacks);
-  assert.match(markdown, /목록 41종: 실측 막음 7 · 실측 못 막음 0 · 미실행 34/u);
-});

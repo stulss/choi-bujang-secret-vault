@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { fixtureRequests } from '../scripts/fixture-7.mjs';
+import { ATTACKS_41_NOTE } from './checks.mjs';
 import { evaluateTestPolicy, loadVerifiedBackup } from '../scripts/policy-restore.mjs';
 import { decide } from './decider.mjs';
 import { detect } from './detect.mjs';
@@ -342,27 +343,12 @@ export function summarize(rows) {
   };
 }
 
-// 공격 목록(attacks: [{ stage, code, name, measuredBy: [행 ID] }])의 상태를 정합니다.
-// 근거 행이 모두 실제 HTTP 요청이고 모두 pass일 때만 blocked, 하나라도 fail이면 not_blocked, 그 밖에는 not_run입니다.
-export function attackStatus(rows, attacks) {
-  const byId = new Map(rows.map(item => [item.id, item]));
-  return attacks.map(attack => {
-    const evidence = (attack.measuredBy ?? []).map(id => byId.get(id)).filter(item => item?.source === 'live_http');
-    const complete = evidence.length > 0 && evidence.length === attack.measuredBy.length;
-    let status = 'not_run';
-    if (evidence.some(item => item.result === 'fail')) status = 'not_blocked';
-    else if (complete && evidence.every(item => item.result === 'pass')) status = 'blocked';
-    return { ...attack, status };
-  });
-}
-
 export const evidenceDigest = evidence => createHash('sha256').update(JSON.stringify(evidence.rows)).digest('hex');
 
 const cell = value => String(value ?? '').replace(/\|/gu, '\\|').replace(/\r?\n/gu, ' ');
 const RESULT_LABEL = { pass: '기대와 같음', fail: '기대와 다름', not_run: '미실행' };
-const ATTACK_LABEL = { blocked: '실측 막음', not_blocked: '실측 못 막음', not_run: '미실행' };
 
-export function renderMarkdown(evidence, attacks = null) {
+export function renderMarkdown(evidence) {
   const s = evidence.summary;
   const lines = [
     '# 1~11단계 정상·금지 요청 실측 표',
@@ -377,17 +363,9 @@ export function renderMarkdown(evidence, attacks = null) {
     '|---|---|---|---|---|---|---|---|---|',
     ...evidence.rows.map(r => `| ${r.id} | ${r.stage} | ${r.kind === 'normal' ? '정상' : '금지'} | ${cell(r.request)} | ${cell(r.expected)} | ${cell(r.actual)} | ${RESULT_LABEL[r.result]} | ${r.requestId ? `\`${r.requestId}\`` : '-'} | ${r.checkedAt ?? '-'} |`),
     '',
-    '## 시험 종별 실행 여부',
+    '## 41종 공격',
     '',
+    ATTACKS_41_NOTE,
   ];
-  if (!attacks) {
-    lines.push('시험 종 목록(`docs/ATTACKS.json`)이 없어 종별 판정을 하지 않았습니다. 목록 안의 시험은 전부 미실행이며 통과로 세지 않습니다.');
-  } else {
-    const status = attackStatus(evidence.rows, attacks);
-    const tally = key => status.filter(item => item.status === key).length;
-    lines.push(`- 목록 ${status.length}종: 실측 막음 ${tally('blocked')} · 실측 못 막음 ${tally('not_blocked')} · 미실행 ${tally('not_run')} (막음은 근거 행이 모두 실제 HTTP 요청이고 모두 기대와 같을 때만 셉니다)`, '',
-      '| 단계 | 코드 | 시험 | 상태 | 근거 행 |', '|---|---|---|---|---|',
-      ...status.map(a => `| ${a.stage} | ${cell(a.code)} | ${cell(a.name)} | ${ATTACK_LABEL[a.status]} | ${(a.measuredBy ?? []).join(', ') || '-'} |`));
-  }
   return `${lines.join('\n')}\n`;
 }
