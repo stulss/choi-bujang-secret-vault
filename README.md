@@ -250,9 +250,9 @@
 ### 1~11단계 실측 증거 표 (`npm run evidence` → `docs/EVIDENCE.md`, `public/ops-evidence.json`)
 - 배포 주소로 정상·금지 요청을 실제로 보내고 **요청 / 기대 결과 / 실제 결과 / 판단 / 요청 ID / 확인 시각**을 한 표로 씁니다. 요청 ID는 응답 헤더 `x-vercel-id`(원본 API는 `sb-request-id`), 판정기·탐지기 행은 그 실행의 판정 요청 UUID입니다.
 - 시험 계정 토큰·기기 서명이 필요한 요청(T01~T05)은 보내지 않고 **미실행**으로 둡니다.
-- 41종 공격은 같은 종류의 요청을 실제로 보내 막힌 경우만 「실측 막음」으로 세고, 나머지는 「미실행」입니다. 41종을 모두 막았다고 적지 않습니다.
-- `npm run bundle`(심판 격리 환경)은 같은 모듈을 **GET·HEAD만** 보내는 방식으로 다시 실행하고, 쓰기 요청 행(W01~W03)은 `not_run`으로 둡니다.
-- 이번 저장점의 표: 검사한 배포 커밋 `e6441cf`(작전실·증거 코드가 들어간 12단계 첫 저장점) · 금지 요청 거부 23 / 다름 0 / 미실행 3 · 정상 요청 허용 10 / 다름 0 / 미실행 2 · 41종 중 실측 막음 10, 미실행 31. 이 표를 담은 저장점은 `e6441cf` 바로 다음 커밋이며 코드 변경 없이 증거 표와 README만 갱신합니다. (첫 실행은 `25f906c` 배포를 검사해 F12가 HTTP 404였습니다.)
+- 41종 공격은 **실제 HTTP 요청이 막힌 경우만** 「실측 막음」으로 세고, 나머지는 「미실행」입니다. 판정기·탐지기·정책 함수의 로컬 실행은 요청 기록이 남지 않으므로 「로컬 실행(요청 아님)」으로 따로 적고 막음 수에 넣지 않습니다. 41종을 모두 막았다고 적지 않습니다.
+- `npm run bundle`(심판 격리 환경)은 41종 공격 코드를 점검 이름(attackId)으로 쓰고, **각 점검이 그 자리에서 직접 보낸 GET 요청**의 상태 코드와 요청 ID만 적습니다(7종). 토큰·기기 서명·쓰기 요청이 필요한 13종은 `observed: not_run`입니다. git 명령은 실행하지 않습니다. `npm run evidence`도 같은 조건(GET·HEAD만)으로 실행해 화면 수치와 제출 묶음의 기준을 맞춥니다.
+- 이번 저장점의 표: 검사한 배포 커밋 `bf82b65` · 실제 API 응답: 금지 요청 거부 12 / 다름 0 / 미실행 7 · 정상 요청 허용 4 / 다름 0 / 미실행 2 · 로컬 실행(요청 아님) 기대와 같음 13 · 41종 중 실측 막음 7(ANONYMOUS_NOTE_LIST·ANONYMOUS_NOTE_READ·MISSING_LOGIN_TOKEN·FORGED_LOGIN_TOKEN·STATIC_SEED_DATA_SCAN·BUILT_BUNDLE_SECRET_SCAN·ORIGIN_ALIAS_BYPASS), 미실행 34.
 
 ### 출처: 제공 엔진과 학생 작업
 | 구분 | 출처 | 내용 |
@@ -278,7 +278,7 @@
 3. `npm run decider:test`, `npm run fixture:7`, `npm run detect:test`, `npm run policy:diff`
 4. `npm run evidence` → `docs/EVIDENCE.md`에서 금지 거부·정상 허용·미실행 건수와 요청 ID 확인
 5. 화면에서 로그인 → 기기 승인 → 작전실의 「일치/불일치」와 증거 표 확인
-6. `npm run bundle` → `artifacts/submission.json` (GET·HEAD만, 쓰기 요청은 `not_run`)
+6. `npm run bundle` → `artifacts/submission.json` (41종 코드 이름 점검 20개: 실제 GET 요청 7종 + not_run 13종)
 
 ## 다음 단계의 코딩 도구에 전달할 규칙
 

@@ -1120,39 +1120,10 @@ export async function runAttackChecks(config) {
   }
 
   if (config.step === 12) {
-    // 격리 환경 규칙: 공개 HTTPS 주소로 GET·HEAD만 보내고, 쓰기 요청과 토큰이 필요한 요청은 not_run 으로 둡니다.
-    // 증거 수집기는 이 파일 아래에 함께 있어 추가 파일을 불러오지 않습니다(격리 실행기 대비).
-    const evidence = await collectEvidence(config, { allowWrites: false });
-    const checks = [];
-    const label = { pass: '기대와 같음', fail: '기대와 다름', not_run: 'not_run' };
-    for (let stage = 1; stage <= 12; stage += 1) {
-      const rows = evidence.rows.filter(item => item.stage === stage);
-      if (!rows.length) continue;
-      const measured = rows.filter(item => item.result !== 'not_run');
-      const text = rows.map(item => `${item.id} ${item.actual}${item.result === 'not_run' ? '' : ` [${label[item.result]}]`}`).join('; ');
-      checks.push({
-        attackId: `stage${String(stage).padStart(2, '0')}_measured_requests`,
-        expected: `${stage}단계 정상 요청 허용·금지 요청 거부를 실제 응답으로 확인 (${rows.map(item => item.id).join(', ')})`,
-        observed: measured.length ? text.slice(0, 300) : 'not_run',
-      });
-    }
-    const s = evidence.summary;
-    checks.push({
-      attackId: 'evidence_summary_measured',
-      expected: '금지 요청 거부와 정상 요청 허용을 실측 결과로만 세고, 미실행은 따로 셈',
-      observed: `금지 거부 ${s.forbiddenRejected}·다름 ${s.forbiddenFailed}·미실행 ${s.forbiddenNotRun} / 정상 허용 ${s.normalAllowed}·다름 ${s.normalFailed}·미실행 ${s.normalNotRun} (검사한 배포 커밋 ${evidence.deployedCommit ? evidence.deployedCommit.slice(0, 7) : '확인 못 함'})`,
-    });
-    checks.push({
-      attackId: 'attack41_run_status',
-      expected: '41종 공격은 같은 종류의 요청을 실제로 보내 막힌 것만 막음으로 세고 나머지는 미실행',
-      observed: `실측 막음 ${s.attacksBlocked} · 실측 못 막음 ${s.attacksNotBlocked} · 미실행 ${s.attacksNotRun} / 전체 ${s.attacksTotal}`,
-    });
-    checks.push({
-      attackId: 'combined_attacks_live',
-      expected: '12단계 복합 공격 3종(무인증+타인 메모, 미등록 기기+회수 신원, 복구 뒤 무서명 변경+구역 밖 조회)',
-      observed: 'not_run',
-    });
-    return checks;
+    // 심판은 이 단계에서 제출 묶음 실행 중 실제로 나간 요청 기록만 봅니다(격리 환경: GET·HEAD, 공개 HTTPS).
+    // 그래서 점검 이름(attackId)은 41종 공격 코드를 그대로 쓰고, 각 점검이 그 자리에서 직접 요청을 보낸 결과만 적습니다.
+    // 요청을 보내지 않는 공격(토큰·기기 서명·쓰기 요청이 필요한 것)은 observed 를 not_run 으로만 둡니다.
+    return runMeasuredAttackChecks(config);
   }
 
   throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
@@ -1198,17 +1169,18 @@ const EMPTY_SHA256 = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b78
 const SECRET_IN_PAGE = /sb_secret_[A-Za-z0-9_-]{8,}|service_role|SUPABASE_SECRET_KEY|BEGIN (EC |RSA )?PRIVATE KEY-----|"d"\s*:\s*"[A-Za-z0-9_-]{40,}"/u;
 const ZERO_ID = '00000000-0000-4000-8000-000000000001';
 
-// 41종 공격(방어전 안내의 담당 단계·이름). measuredBy의 행이 모두 실측으로 막혔을 때만 "막음"으로 셉니다.
+// 41종 공격(방어전 안내의 담당 단계·이름). measuredBy의 HTTP 요청 행이 모두 실제로 막혔을 때만 "막음"으로 셉니다.
+// 판정기·탐지기 함수 호출(L 행)은 요청 기록이 남지 않으므로 공격 막음 수에 넣지 않습니다.
 export const ATTACKS = [
   [1, 'ANONYMOUS_NOTE_LIST', '인증 없이 개인 메모 목록을 조회', ['F01']],
   [1, 'ANONYMOUS_NOTE_READ', '인증 없이 개인 메모를 조회', ['F02']],
   [2, 'BUILT_BUNDLE_SECRET_SCAN', '배포 번들에서 시험 비밀값을 검색', ['F05']],
-  [2, 'REPOSITORY_SECRET_SCAN', '제출 커밋에서 시험 비밀값을 검색', ['L14']],
+  [2, 'REPOSITORY_SECRET_SCAN', '제출 커밋에서 시험 비밀값을 검색', []],
   [2, 'STATIC_SEED_DATA_SCAN', '공개 정적 파일에서 개인 메모 시드를 검색', ['F04']],
-  [3, 'ANONYMOUS_NOTE_WRITE', '인증 없이 개인 메모를 추가', ['W01']],
+  [3, 'ANONYMOUS_NOTE_WRITE', '인증 없이 개인 메모를 추가', []],
   [3, 'EXPIRED_LOGIN_TOKEN', '만료된 로그인 토큰으로 조회', []],
   [3, 'FORGED_LOGIN_TOKEN', '서명이 위조된 로그인 토큰으로 조회', ['F03']],
-  [3, 'MISSING_LOGIN_TOKEN', '로그인 토큰 없이 보호 API 조회', ['F01']],
+  [3, 'MISSING_LOGIN_TOKEN', '로그인 토큰 없이 보호 API 조회', ['F09', 'F10', 'F12']],
   [3, 'TOKEN_WRONG_AUDIENCE', '다른 서비스용으로 발급된 로그인 토큰으로 메모 조회', []],
   [4, 'FOREIGN_NOTE_DELETE', '시험 계정 B로 A의 메모 삭제', []],
   [4, 'R3_JUDGE_OWNED_NOTE', '학생 시험 신원으로 심판 소유 메모 조회', []],
@@ -1219,7 +1191,7 @@ export const ATTACKS = [
   [6, 'DEVICE_SUBJECT_MISMATCH', '등록 기기와 다른 사용자 토큰을 조합', []],
   [6, 'MISSING_CLIENT_CERTIFICATE', '클라이언트 인증서 없이 mTLS 통로 요청', []],
   [6, 'UNREGISTERED_DEVICE', '미등록 기기 인증서로 자료실 조회', []],
-  [6, 'UNREGISTERED_VIRTUAL_DEVICE_RULE', '판정기에 등록되지 않은 가상 기기 사건을 직접 입력', ['L02']],
+  [6, 'UNREGISTERED_VIRTUAL_DEVICE_RULE', '판정기에 등록되지 않은 가상 기기 사건을 직접 입력', []],
   [7, 'ANOMALOUS_HOUR_EVENT', '평소와 다른 시각의 가상 접속 사건을 입력', []],
   [7, 'ANOMALOUS_NETWORK_ACTION', '낯선 네트워크에서 대량 수정하는 가상 사건을 입력', []],
   [7, 'ANOMALOUS_REGION_EVENT', '가상 접속 지역이 급변한 사건을 판정기에 입력', []],
@@ -1481,12 +1453,17 @@ export function attackStatus(rows) {
 
 // 화면과 제출 묶음이 같은 계산을 씁니다: 행의 결과를 세기만 하고 다른 값으로 채우지 않습니다.
 export function summarize(rows) {
-  const count = (kind, result) => rows.filter(item => (!kind || item.kind === kind) && item.result === result).length;
+  const http = rows.filter(item => item.source !== 'local_function');
+  const count = (list, kind, result) => list.filter(item => item.kind === kind && item.result === result).length;
+  const localRows = rows.filter(item => item.source === 'local_function');
   const attacks = attackStatus(rows);
   return {
     rows: rows.length,
-    forbiddenRejected: count('forbidden', 'pass'), forbiddenFailed: count('forbidden', 'fail'), forbiddenNotRun: count('forbidden', 'not_run'),
-    normalAllowed: count('normal', 'pass'), normalFailed: count('normal', 'fail'), normalNotRun: count('normal', 'not_run'),
+    // 실제 API 응답(HTTP 요청)과 보내지 않은 요청만 셉니다.
+    forbiddenRejected: count(http, 'forbidden', 'pass'), forbiddenFailed: count(http, 'forbidden', 'fail'), forbiddenNotRun: count(http, 'forbidden', 'not_run'),
+    normalAllowed: count(http, 'normal', 'pass'), normalFailed: count(http, 'normal', 'fail'), normalNotRun: count(http, 'normal', 'not_run'),
+    // 학생 판정기·탐지기·정책 함수의 로컬 실행 결과 (요청 아님)
+    localMatched: localRows.filter(item => item.result === 'pass').length, localDiffered: localRows.filter(item => item.result === 'fail').length,
     attacksBlocked: attacks.filter(item => item.status === 'blocked').length,
     attacksNotBlocked: attacks.filter(item => item.status === 'not_blocked').length,
     attacksNotRun: attacks.filter(item => item.status === 'not_run').length,
@@ -1495,3 +1472,90 @@ export function summarize(rows) {
 }
 
 export const evidenceDigest = evidence => sha256Hex(JSON.stringify(evidence.rows));
+
+// ============================================================================
+// 12단계 제출 묶음 점검: 41종 공격 코드 이름으로, 그 점검 안에서 직접 보낸 GET·HEAD 요청 결과만 적습니다.
+// ============================================================================
+const FORGED_TOKEN = 'Bearer eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJmb3JnZWQifQ.Zm9yZ2Vk';
+
+// 각 공격: 보낼 요청과, 응답이 "막음"인지 가르는 기준. 요청 결과를 그대로 적고 계산으로 채우지 않습니다.
+function measuredAttackPlan(config) {
+  const marker = config.sampleMarker;
+  const scan = (res, { needMarker = true } = {}) => {
+    const secret = SECRET_IN_PAGE.test(res.text);
+    const seed = needMarker && res.text.includes(marker);
+    return { blocked: res.status === 200 && !secret && !seed, note: `비밀값 ${secret ? '있음' : '없음'}${needMarker ? `·표식 ${seed ? '있음' : '없음'}` : ''}` };
+  };
+  return [
+    { code: 'anonymous_note_list', expected: '토큰 없이 메모 목록 조회 → HTTP 401, 메모 없음',
+      requests: [{ path: '/api/notes' }], judge: ([r]) => ({ blocked: r.status === 401 }) },
+    { code: 'anonymous_note_read', expected: '토큰 없이 메모 한 건 조회 → HTTP 401',
+      requests: [{ path: `/api/notes?id=${ZERO_ID}` }], judge: ([r]) => ({ blocked: r.status === 401 }) },
+    { code: 'missing_login_token', expected: '로그인 토큰 없이 보호 API(공지·기기·작전실) 조회 → HTTP 401',
+      requests: [{ path: '/api/notices?id=notice-01' }, { path: '/api/device' }, { path: '/api/ops' }],
+      judge: rs => ({ blocked: rs.every(r => r.status === 401) }) },
+    { code: 'forged_login_token', expected: '서명이 위조된 로그인 토큰으로 메모 조회 → HTTP 401',
+      requests: [{ path: '/api/notes', headers: { authorization: FORGED_TOKEN } }], judge: ([r]) => ({ blocked: r.status === 401 }) },
+    { code: 'static_seed_data_scan', expected: '공개 정적 파일(data.json)에 개인 메모 시드·표식 없음',
+      requests: [{ path: '/data.json' }], judge: ([r]) => {
+        let empty = false;
+        try { const data = JSON.parse(r.text); empty = Array.isArray(data.notes) && data.notes.length === 0; } catch {}
+        const seed = r.text.includes(marker);
+        return { blocked: r.status === 200 && empty && !seed, note: `메모 ${empty ? '0건' : '있음/형식 다름'}·표식 ${seed ? '있음' : '없음'}` };
+      } },
+    { code: 'built_bundle_secret_scan', expected: '배포 화면 묶음(/, manifest, sw.js)에 시험 비밀값 없음',
+      requests: [{ path: '/' }, { path: '/manifest.webmanifest' }, { path: '/sw.js' }],
+      judge: rs => {
+        const parts = rs.map(r => scan(r, { needMarker: false }));
+        return { blocked: parts.every(p => p.blocked), note: parts.map(p => p.note).join(', ') };
+      } },
+    { code: 'origin_alias_bypass', expected: '공개 정적 파일(aleph.config.json, aleph.json, offline.html)에 서버 전용 키·시드 표식 없음',
+      requests: [{ path: '/aleph.config.json' }, { path: '/aleph.json' }, { path: '/offline.html' }],
+      judge: rs => {
+        const parts = rs.map(r => scan(r));
+        return { blocked: parts.every(p => p.blocked), note: parts.map(p => p.note).join(', ') };
+      } },
+  ];
+}
+
+// 토큰·기기 서명·쓰기 요청이 필요해 격리 환경에서 보내지 않는 공격 (observed 는 not_run)
+const NOT_RUN_ATTACKS = [
+  ['anonymous_note_write', '인증 없이 개인 메모 추가 (쓰기 요청, 격리 환경은 GET·HEAD만)'],
+  ['cross_zone_note_list', '다른 구역 메모 목록 조회 (시험 계정 토큰 필요)'],
+  ['cross_zone_note_read', '다른 구역 메모 조회 (시험 계정 토큰 필요)'],
+  ['cross_zone_note_write', '다른 구역 메모 수정 (토큰·쓰기 요청 필요)'],
+  ['student_edits_instructor_notice', '학생 계정으로 강사 공지 수정 (토큰·쓰기 요청 필요)'],
+  ['restore_changed_note', '변조한 B 메모를 복구 경로로 복원 (토큰·쓰기 요청 필요)'],
+  ['restore_deleted_note', '삭제한 B 메모를 복구 경로로 복원 (토큰·쓰기 요청 필요)'],
+  ['unsigned_client_request', '설치형 앱 서명 없이 보호 요청 (승인 기기 계정 토큰 필요)'],
+  ['signed_path_tamper', '서명 뒤 요청 경로 변경 (기기 서명 필요)'],
+  ['signed_body_tamper', '서명 뒤 수정 본문 변경 (기기 서명·쓰기 요청 필요)'],
+  ['combined_anonymous_owner_attack', '무인증 조회와 타인 메모 조회 연속 전송 (타인 메모 조회에 토큰 필요)'],
+  ['combined_device_revocation_attack', '미등록 기기 요청 뒤 회수된 신원으로 재전송 (기기·토큰 필요)'],
+  ['combined_restore_signature_attack', '복구 뒤 서명 없는 변경 요청과 구역 밖 조회 (토큰·쓰기 요청 필요)'],
+];
+
+async function runMeasuredAttackChecks(config) {
+  const app = new URL(config.publicAppUrl);
+  const checks = [];
+  for (const attack of measuredAttackPlan(config)) {
+    const results = [];
+    for (const req of attack.requests) {
+      try {
+        const res = await http(app, { method: 'GET', ...req });
+        results.push({ ...req, status: res.status, requestId: res.requestId, text: res.text });
+      } catch (error) {
+        results.push({ ...req, status: 0, requestId: null, text: '', error: error?.name ?? 'Error' });
+      }
+    }
+    const verdict = results.some(r => r.status === 0) ? { blocked: false, note: '요청 실패' } : attack.judge(results);
+    const lines = results.map(r => `GET ${r.path} → ${r.status ? `HTTP ${r.status}` : `요청 실패(${r.error})`}${r.requestId ? ` (${r.requestId})` : ''}`);
+    const observed = `${lines.join('; ')}${verdict.note ? ` · ${verdict.note}` : ''} · ${verdict.blocked ? '막음' : '못 막음'}`;
+    checks.push({ attackId: attack.code, expected: attack.expected, observed: observed.length > 300 ? `${observed.slice(0, 296)}…` : observed });
+  }
+  for (const [code, why] of NOT_RUN_ATTACKS) {
+    if (checks.length >= 20) break;
+    checks.push({ attackId: code, expected: why, observed: 'not_run' });
+  }
+  return checks;
+}

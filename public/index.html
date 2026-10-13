@@ -401,17 +401,22 @@
         const res = await fetch('/ops-evidence.json', { cache: 'no-store' });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const ev = await res.json();
-        const count = (kind, result) => ev.rows.filter(r => r.kind === kind && r.result === result).length;
+        // 실제 API 응답(HTTP 요청) 행만 금지·정상 수치로 셉니다. 판정기·탐지기 로컬 실행은 따로 보여 줍니다.
+        const httpRows = ev.rows.filter(r => r.source !== 'local_function');
+        const localRows = ev.rows.filter(r => r.source === 'local_function');
+        const count = (kind, result) => httpRows.filter(r => r.kind === kind && r.result === result).length;
         const mine = {
           forbiddenRejected: count('forbidden', 'pass'), forbiddenFailed: count('forbidden', 'fail'), forbiddenNotRun: count('forbidden', 'not_run'),
           normalAllowed: count('normal', 'pass'), normalFailed: count('normal', 'fail'), normalNotRun: count('normal', 'not_run'),
+          localMatched: localRows.filter(r => r.result === 'pass').length, localDiffered: localRows.filter(r => r.result === 'fail').length,
           attacksBlocked: ev.attacks.filter(a => a.status === 'blocked').length,
           attacksNotRun: ev.attacks.filter(a => a.status === 'not_run').length,
         };
         const match = Object.keys(mine).every(k => mine[k] === ev.summary[k]);
         line('실측 증거 (배포 커밋 ' + String(ev.deployedCommit || '?').slice(0, 7) + ', ' + ev.generatedAt + ')',
-          '금지 거부 ' + mine.forbiddenRejected + ' · 다름 ' + mine.forbiddenFailed + ' · 미실행 ' + mine.forbiddenNotRun + ' / 정상 허용 ' + mine.normalAllowed + ' · 다름 ' + mine.normalFailed + ' · 미실행 ' + mine.normalNotRun + (match ? ' · 기록과 일치' : ' · 기록과 불일치'), match ? 'ok' : 'bad');
-        line('41종 공격', '실측 막음 ' + mine.attacksBlocked + ' · 미실행 ' + mine.attacksNotRun + ' / ' + ev.attacks.length + ' (미실행은 막음으로 세지 않음)', 'wait');
+          '실제 API 응답 · 금지 거부 ' + mine.forbiddenRejected + ' · 다름 ' + mine.forbiddenFailed + ' · 미실행 ' + mine.forbiddenNotRun + ' / 정상 허용 ' + mine.normalAllowed + ' · 다름 ' + mine.normalFailed + ' · 미실행 ' + mine.normalNotRun + (match ? ' · 기록과 일치' : ' · 기록과 불일치'), match ? 'ok' : 'bad');
+        line('학생 판정기·탐지기 로컬 실행 (요청 아님)', '기대와 같음 ' + mine.localMatched + ' · 다름 ' + mine.localDiffered + ' — 공격 막음 수에 넣지 않음');
+        line('41종 공격', '실제 요청으로 막음 ' + mine.attacksBlocked + ' · 미실행 ' + mine.attacksNotRun + ' / ' + ev.attacks.length + ' (미실행은 막음으로 세지 않음)', 'wait');
         const label = { pass: '기대와 같음', fail: '기대와 다름', not_run: '미실행' };
         table(opsEvidence, ['ID', '단계', '구분', '요청', '기대', '실제', '판단', '요청 ID', '확인 시각'],
           ev.rows.map(r => [r.id, String(r.stage), r.kind === 'normal' ? '정상' : '금지', r.request, r.expected, r.actual, label[r.result], r.requestId || '-', r.checkedAt || '-']));
