@@ -140,7 +140,10 @@ export async function decide(request) {
     return respond(requestId, 'allow', 'approved', 'zone_partitioning');
   }
 
-  // 5. 개인 메모 구역: 목록·새 메모는 서버가 본인 것으로 묶고, 다른 주인의 메모는 읽기·수정·삭제를 막습니다.
+  // 5. 개인 메모 구역: 여러 사람의 메모를 한꺼번에 여는 목록 조회는 거부하고, 다른 주인의 메모는 읽기·수정·삭제를 막습니다.
+  if (zone === 'notes' && !resourceId && method === 'GET') {
+    return respond(requestId, 'deny', 'zone_owner_forbidden', 'zone_partitioning');
+  }
   if (resourceId && (/^notice-/iu.test(safeDecode(resourceId))
       || isOtherOwnersNote(subjectId, safeDecode(resourceId)))) {
     return respond(requestId, 'deny', 'zone_owner_forbidden', 'zone_partitioning');
