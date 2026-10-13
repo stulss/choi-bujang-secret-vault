@@ -4,5 +4,6 @@ bundle-notes.json
 .env.*
 node_modules/
 public/aleph.json
-supabase/seed.local.sql
-supabase/step4-owners.local.sql
+.vercel
+.env*
+scratch/

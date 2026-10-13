@@ -1,65 +1,10 @@
-// 1~11단계 자기 점검(12단계 runner 규칙). 심판 runner가 격리된 환경에서 이 파일만 불러오므로 import를 쓰지 않습니다.
-// 모든 요청은 배포 주소 한 곳에만 보내고, 그 응답 상태로 observed와 result를 정합니다. 고정 문자열로 「막음」을 적지 않습니다.
-// 판정기·탐지 규칙·정책 사본은 배포의 /api/checks?case=... 로 고정된 가상 입력을 실행해 확인합니다.
-// 요청을 보내지 못한 점검은 result를 not_run으로 둡니다. 토큰·개인키·실명·메모 본문은 결과에 넣지 않습니다.
-// 이 결과는 학생의 자기 점검이며 심판 판정이 아닙니다.
-
-const TEST_UUID = '00000000-0000-4000-8000-000000000001';
-// 서명 자리가 엉터리인 가짜 토큰입니다. 실제 토큰이 아닙니다.
-const FAKE_TOKEN = 'Bearer aaaa.bbbb.cccc';
-
-function newRequestId() {
-  const id = globalThis.crypto?.randomUUID?.();
-  if (id) return id;
-  const hex = Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20)}`;
-}
-
-// 제출 묶음은 격리 환경에서 공개 HTTPS 주소로 GET·HEAD 요청만 보낼 수 있습니다.
-// 쓰기 요청(POST·PUT 등)이 필요한 점검은 보내지 않고 미실행(not_run)으로 남깁니다.
-const READ_METHODS = new Set(['GET', 'HEAD']);
-
-async function probe(base, path, { method = 'GET', headers = {}, body, caseId } = {}) {
-  const requestId = newRequestId();
-  if (!READ_METHODS.has(method)) {
-    return { ran: false, requestId, error: `${method} 쓰기 요청은 제출 묶음에서 보내지 않음(GET·HEAD만 허용)` };
-  }
-  try {
-    const response = await fetch(new URL(path, base), {
-      method, redirect: 'manual', signal: AbortSignal.timeout(10000),
-      headers: { accept: 'application/json', ...(body ? { 'content-type': 'application/json' } : {}), ...headers },
-      body: body ? JSON.stringify(body) : undefined,
-      // runner가 같은 요청을 사례와 이어서 관측할 수 있게 붙이는 메타데이터입니다(요청 헤더·주소에는 넣지 않음).
-      alephEvidence: { caseId, requestKey: requestId },
-    });
-    const text = await response.text();
-    let json;
-    try { json = JSON.parse(text); } catch { json = undefined; }
-    return { ran: true, requestId, status: response.status, json,
-      hasNotes: /"(title|body|content)"\s*:/u.test(text) };
-  } catch (error) {
-    return { ran: false, requestId, error: String(error?.message ?? error).slice(0, 60) };
-  }
-}
-
-const denied = (r) => [401, 403, 404].includes(r.status) && !r.hasNotes;
-const refusedJson = (r) => [401, 403].includes(r.status) && typeof r.json?.error === 'string' && !r.hasNotes;
-
-// observed에는 심판이 같은 요청 기록으로 대조할 수 있는 값(HTTP 상태, jsonReady, jsonArrayLength)만 적습니다.
-// 요청을 보내지 않은(또는 보내지 못한) 점검은 observed와 result를 모두 not_run으로 둡니다.
-function attempt(attackId, stage, expected, r, blockedWhen) {
-  if (!r.ran) return { attackId, stage, expected, observed: 'not_run', result: 'not_run' };
-  const ready = typeof r.json?.ready === 'boolean' ? `; jsonReady=${r.json.ready}` : '';
-  const length = Array.isArray(r.json) ? `; jsonArrayLength=${r.json.length}` : '';
-  return { attackId, stage, expected, observed: `HTTP ${r.status}${ready}${length}`,
-    result: blockedWhen(r) ? 'blocked' : 'breached' };
-}
-
-function appBase(target) {
-  const url = typeof target === 'string' ? target : target?.publicAppUrl;
+// The student changes this check as each stage adds an attack to the same app.
+// Never return tokens, private keys, real names, or note bodies.
+export async function runAttackChecks(config) {
+  if (config.step < 1 || config.step > 12) throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
   let app;
   try {
-    app = new URL(url);
+    app = new URL(config.publicAppUrl);
   } catch {
     throw new Error('aleph.config.json의 실제 배포 주소를 먼저 넣어 주세요.');
   }
@@ -67,43 +12,1112 @@ function appBase(target) {
       || app.pathname !== '/' || app.hostname.endsWith('.example')) {
     throw new Error('aleph.config.json의 실제 배포 주소를 먼저 넣어 주세요.');
   }
-  return app;
-}
+  if (typeof config.sampleMarker !== 'string' || !config.sampleMarker) throw new Error('가상 메모의 확인 표시를 넣어 주세요.');
 
-// 인자는 배포 주소(runner 규칙) 또는 예전처럼 aleph.config.json 객체 둘 다 받습니다.
-export async function runAttackChecks(target) {
-  const app = appBase(target);
-  const out = [];
-  const add = async (id, stage, expected, path, options, rule = denied) => {
-    out.push(attempt(id, stage, expected, await probe(app, path, { ...options, caseId: id }), rule));
-  };
-  await add('s01-static-notes', 1, '/data.json에 메모가 없음', '/data.json');
-  await add('s02-static-copy', 2, '다른 정적 사본(/notes.json)에 메모가 없음', '/notes.json');
-  await add('s03-unauth-list', 3, '로그인 없는 내 메모 목록은 401·403과 JSON 오류', '/api/my/notes', {}, refusedJson);
-  await add('s03-fake-token', 3, '엉터리 토큰은 401·403과 JSON 오류', '/api/my/notes', { headers: { authorization: FAKE_TOKEN } }, refusedJson);
-  await add('s04-query-identity', 4, '쿼리로 넣은 신원·역할은 무시', `/api/my/notes?userId=${TEST_UUID}&role=instructor`, {}, refusedJson);
-  await add('s04-header-identity', 4, '헤더로 넣은 신원·역할은 무시', '/api/my/notes',
-    { headers: { 'x-user-id': TEST_UUID, 'x-role': 'instructor' } }, refusedJson);
-  await add('s04-other-note', 4, '로그인 없이 남의 메모 한 건 조회 거부', `/api/notes/${TEST_UUID}`, {}, refusedJson);
-  await add('s05-direct-table', 5, '배포 주소로 원본 표(/rest/v1/notes)를 직접 읽을 수 없음', '/rest/v1/notes');
-  await add('s08-other-zone', 8, '로그인 없는 강사 공지 조회 거부', '/api/notices', {}, refusedJson);
-  await add('s10-restore-unauth', 10, '로그인 없는 복원 요청 거부', `/api/restore/${TEST_UUID}`,
-    { method: 'POST', body: { confirm: true } }, refusedJson);
-  await add('s11-device', 11, '로그인 없는 기기 상태는 승인 전·자료 없음', '/api/device/status', {},
-    (r) => r.status === 200 && r.json?.approved === false && !r.hasNotes);
-  await add('s11-unsigned-write', 11, '서명·승인 없는 수정 요청 거부', `/api/notes/${TEST_UUID}`,
-    { method: 'PUT', headers: { authorization: FAKE_TOKEN }, body: { title: 'x' } }, refusedJson);
-  await add('s11-unsigned-read', 11, '서명·승인 없는 읽기 요청 거부', `/api/notes/${TEST_UUID}`,
-    { headers: { authorization: FAKE_TOKEN } }, refusedJson);
-
-  // 고정된 가상 입력을 배포의 점검 API에서 실행하고, runner가 같은 HTTP 응답을 관측하게 합니다.
-  for (const [id, stage, expected] of [
-    ['s06-unregistered', 6, '미등록 기기 거부'], ['s07-compound', 7, '복합 이상 접속은 추가 확인'],
-    ['s08-unknown-route', 8, '모르는 경로 거부'], ['s08-all-notes', 8, '전체 메모 목록 거부'],
-    ['s08-write-notice', 8, '반 공지 쓰기 거부'], ['s09-burst-read', 9, '조회 폭주는 회수 제안'],
-    ['s10-policy-verified', 10, '검증한 정책 사본과 지금 정책이 같음']]) {
-    await add(id, stage, expected, `/api/checks?case=${id}`, {}, (r) => r.status === 200 && r.json?.ready === true);
+  if (config.step === 1) {
+    const response = await fetch(new URL('/data.json', app), {
+      redirect: 'error', signal: AbortSignal.timeout(10000),
+    });
+    let visible = false;
+    if (response.ok) {
+      try {
+        const data = await response.json();
+        visible = data?.sampleMarker === config.sampleMarker && Array.isArray(data.notes)
+          && data.notes.length > 0;
+      } catch {
+        // A non-JSON response is a failed check, not a successful deployment.
+      }
+    }
+    return [{ attackId: 'anonymous_note_read', expected: '비로그인 화면에서 가상 메모를 확인',
+      observed: visible ? '비로그인 요청에서 공개 가상 메모 확인 표시가 보임' : `비로그인 요청에서 확인 표시가 보이지 않음 (HTTP ${response.status})` }];
   }
-  out.sort((a, b) => a.stage - b.stage);
-  return out;
+
+  if (config.step === 2) {
+    const checks = [];
+    try {
+      const dataRes = await fetch(new URL('/data.json', app), {
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      let notesEmpty = false;
+      if (dataRes.ok) {
+        try {
+          const data = await dataRes.json();
+          notesEmpty = Array.isArray(data.notes) && data.notes.length === 0 && !data.sampleMarker;
+        } catch {}
+      }
+      checks.push({
+        attackId: 'data_json_notes_cleared',
+        expected: '공개 data.json에서 가상 메모 문장과 확인 표시가 제거되고 비어 있음',
+        observed: notesEmpty ? '정적 data.json에 메모 본문 및 확인 표시가 제거되어 있음 확인' : `정적 data.json 비우기 미확인 (HTTP ${dataRes.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'data_json_notes_cleared',
+        expected: '공개 data.json에서 가상 메모 문장이 제거되고 비어 있음',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const apiRes = await fetch(new URL('/api/notes', app), {
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      let apiAccessible = false;
+      if (apiRes.ok) {
+        try {
+          const json = await apiRes.json();
+          apiAccessible = Array.isArray(json.notes);
+        } catch {}
+      }
+      checks.push({
+        attackId: 'anonymous_api_read',
+        expected: '인증 없는 /api/notes 요청에서 서버 자료가 조회됨 (2단계 약점)',
+        observed: apiAccessible ? '인증 없이 서버 API에서 가상 메모 조회 가능 (약점 확인)' : `서버 API 응답 확인 (HTTP ${apiRes.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'anonymous_api_read',
+        expected: '인증 없는 /api/notes 요청에서 서버 자료가 조회됨 (2단계 약점)',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+    return checks;
+  }
+
+  if (config.step === 3) {
+    const checks = [];
+    try {
+      const dataRes = await fetch(new URL('/data.json', app), {
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      let notesEmpty = false;
+      if (dataRes.ok) {
+        try {
+          const data = await dataRes.json();
+          notesEmpty = Array.isArray(data.notes) && data.notes.length === 0 && !data.sampleMarker;
+        } catch {}
+      }
+      checks.push({
+        attackId: 'data_json_notes_cleared',
+        expected: '공개 data.json에서 가상 메모 문장과 확인 표시가 제거되고 비어 있음',
+        observed: notesEmpty ? '정적 data.json에 메모 본문 및 확인 표시가 제거되어 있음 확인' : `정적 data.json 비우기 미확인 (HTTP ${dataRes.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'data_json_notes_cleared',
+        expected: '공개 data.json에서 가상 메모 문장이 제거되고 비어 있음',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const apiRes = await fetch(new URL('/api/notes', app), {
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      checks.push({
+        attackId: 'unauthenticated_api_blocked',
+        expected: '비로그인 요청에서 /api/notes 접근이 거부됨 (HTTP 401)',
+        observed: apiRes.status === 401 ? '비로그인 요청에서 /api/notes 접근 차단 확인 (HTTP 401)' : `비로그인 접근 차단 미확인 (HTTP ${apiRes.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'unauthenticated_api_blocked',
+        expected: '비로그인 요청에서 /api/notes 접근이 거부됨 (HTTP 401)',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+
+    return checks;
+  }
+
+  if (config.step === 4) {
+    const checks = [];
+    try {
+      const dataRes = await fetch(new URL('/data.json', app), {
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      let notesEmpty = false;
+      if (dataRes.ok) {
+        try {
+          const data = await dataRes.json();
+          notesEmpty = Array.isArray(data.notes) && data.notes.length === 0 && !data.sampleMarker;
+        } catch {}
+      }
+      checks.push({
+        attackId: 'data_json_notes_cleared',
+        expected: '공개 data.json에서 가상 메모 문장과 확인 표시가 제거되고 비어 있음',
+        observed: notesEmpty ? '정적 data.json에 메모 본문 및 확인 표시가 제거되어 있음 확인' : `정적 data.json 비우기 미확인 (HTTP ${dataRes.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'data_json_notes_cleared',
+        expected: '공개 data.json에서 가상 메모 문장이 제거되고 비어 있음',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const apiRes = await fetch(new URL('/api/notes', app), {
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      checks.push({
+        attackId: 'unauthenticated_api_blocked',
+        expected: '비로그인 요청에서 /api/notes 접근이 거부됨 (HTTP 401)',
+        observed: apiRes.status === 401 ? '비로그인 요청에서 /api/notes 접근 차단 확인 (HTTP 401)' : `비로그인 접근 차단 미확인 (HTTP ${apiRes.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'unauthenticated_api_blocked',
+        expected: '비로그인 요청에서 /api/notes 접근이 거부됨 (HTTP 401)',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const singleRes = await fetch(new URL('/api/notes/00000000-0000-4000-8000-000000000001', app), {
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      checks.push({
+        attackId: 'unauthenticated_single_note_blocked',
+        expected: '비로그인 단건 메모 접근 시 거부됨 (HTTP 401)',
+        observed: singleRes.status === 401 ? '비로그인 단건 메모 접근 차단 확인 (HTTP 401)' : `비로그인 단건 접근 차단 미확인 (HTTP ${singleRes.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'unauthenticated_single_note_blocked',
+        expected: '비로그인 단건 메모 접근 시 거부됨 (HTTP 401)',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+
+    return checks;
+  }
+
+  if (config.step === 5) {
+    const checks = [];
+    try {
+      const dataRes = await fetch(new URL('/data.json', app), {
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      let notesEmpty = false;
+      if (dataRes.ok) {
+        try {
+          const data = await dataRes.json();
+          notesEmpty = Array.isArray(data.notes) && data.notes.length === 0 && !data.sampleMarker;
+        } catch {}
+      }
+      checks.push({
+        attackId: 'data_json_notes_cleared',
+        expected: '공개 data.json에서 가상 메모 문장과 확인 표시가 제거되고 비어 있음',
+        observed: notesEmpty ? '정적 data.json에 메모 본문 및 확인 표시가 제거되어 있음 확인' : `정적 data.json 비우기 미확인 (HTTP ${dataRes.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'data_json_notes_cleared',
+        expected: '공개 data.json에서 가상 메모 문장이 제거되고 비어 있음',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const apiRes = await fetch(new URL('/api/notes', app), {
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      checks.push({
+        attackId: 'unauthenticated_api_blocked',
+        expected: '비로그인 요청에서 /api/notes 접근이 거부됨 (HTTP 401)',
+        observed: apiRes.status === 401 ? '비로그인 요청에서 /api/notes 접근 차단 확인 (HTTP 401)' : `비로그인 접근 차단 미확인 (HTTP ${apiRes.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'unauthenticated_api_blocked',
+        expected: '비로그인 요청에서 /api/notes 접근이 거부됨 (HTTP 401)',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const singleRes = await fetch(new URL('/api/notes/00000000-0000-4000-8000-000000000001', app), {
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      checks.push({
+        attackId: 'unauthenticated_single_note_blocked',
+        expected: '비로그인 단건 메모 접근 시 거부됨 (HTTP 401)',
+        observed: singleRes.status === 401 ? '비로그인 단건 메모 접근 차단 확인 (HTTP 401)' : `비로그인 단건 접근 차단 미확인 (HTTP ${singleRes.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'unauthenticated_single_note_blocked',
+        expected: '비로그인 단건 메모 접근 시 거부됨 (HTTP 401)',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const origRes = await fetch(config.originalApiUrl, {
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      checks.push({
+        attackId: 'original_api_direct_access_blocked',
+        expected: '원본 자료 API(originalApiUrl) 직접 접근 시 권한 거부됨 (HTTP 401)',
+        observed: origRes.status === 401 ? '원본 자료 API 직접 접근 차단 확인 (HTTP 401)' : `원본 자료 직접 접근 차단 미확인 (HTTP ${origRes.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'original_api_direct_access_blocked',
+        expected: '원본 자료 API(originalApiUrl) 직접 접근 시 권한 거부됨 (HTTP 401)',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+
+    return checks;
+  }
+
+  if (config.step === 6) {
+    const checks = [];
+    try {
+      const dataRes = await fetch(new URL('/data.json', app), {
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      let notesEmpty = false;
+      if (dataRes.ok) {
+        try {
+          const data = await dataRes.json();
+          notesEmpty = Array.isArray(data.notes) && data.notes.length === 0 && !data.sampleMarker;
+        } catch {}
+      }
+      checks.push({
+        attackId: 'data_json_notes_cleared',
+        expected: '공개 data.json에서 가상 메모 문장과 확인 표시가 제거되고 비어 있음',
+        observed: notesEmpty ? '정적 data.json에 메모 본문 및 확인 표시가 제거되어 있음 확인' : `정적 data.json 비우기 미확인 (HTTP ${dataRes.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'data_json_notes_cleared',
+        expected: '공개 data.json에서 가상 메모 문장이 제거되고 비어 있음',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const apiRes = await fetch(new URL('/api/notes', app), {
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      checks.push({
+        attackId: 'unauthenticated_api_blocked',
+        expected: '비로그인 요청에서 /api/notes 접근이 거부됨 (HTTP 401)',
+        observed: apiRes.status === 401 ? '비로그인 요청에서 /api/notes 접근 차단 확인 (HTTP 401)' : `비로그인 접근 차단 미확인 (HTTP ${apiRes.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'unauthenticated_api_blocked',
+        expected: '비로그인 요청에서 /api/notes 접근이 거부됨 (HTTP 401)',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const singleRes = await fetch(new URL('/api/notes/00000000-0000-4000-8000-000000000001', app), {
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      checks.push({
+        attackId: 'unauthenticated_single_note_blocked',
+        expected: '비로그인 단건 메모 접근 시 거부됨 (HTTP 401)',
+        observed: singleRes.status === 401 ? '비로그인 단건 메모 접근 차단 확인 (HTTP 401)' : `비로그인 단건 접근 차단 미확인 (HTTP ${singleRes.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'unauthenticated_single_note_blocked',
+        expected: '비로그인 단건 메모 접근 시 거부됨 (HTTP 401)',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const origRes = await fetch(config.originalApiUrl, {
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      checks.push({
+        attackId: 'original_api_direct_access_blocked',
+        expected: '원본 자료 API(originalApiUrl) 직접 접근 시 권한 거부됨 (HTTP 401)',
+        observed: origRes.status === 401 ? '원본 자료 API 직접 접근 차단 확인 (HTTP 401)' : `원본 자료 직접 접근 차단 미확인 (HTTP ${origRes.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'original_api_direct_access_blocked',
+        expected: '원본 자료 API(originalApiUrl) 직접 접근 시 권한 거부됨 (HTTP 401)',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const { decide } = await import('./decider.mjs');
+      const unregisteredRes = await decide({
+        schema: 'aleph.decision.v1',
+        requestId: '00000000-0000-4000-8000-000000000000',
+        deviceRegistered: false,
+      });
+      checks.push({
+        attackId: 'unregistered_device_denied',
+        expected: '미등록 기기 가상 요청 시 판정기에서 거부됨 (deny, device_not_registered)',
+        observed: unregisteredRes.decision === 'deny' && unregisteredRes.reasonCode === 'device_not_registered'
+          ? '미등록 기기 가상 요청 판정기 차단 확인 (deny, device_not_registered)'
+          : `판정 결과 상이 (${unregisteredRes.decision}, ${unregisteredRes.reasonCode})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'unregistered_device_denied',
+        expected: '미등록 기기 가상 요청 시 판정기에서 거부됨 (deny, device_not_registered)',
+        observed: `판정 점검 실패 (${err.message})`,
+      });
+    }
+
+    return checks;
+  }
+
+  if (config.step === 7) {
+    const checks = [];
+    try {
+      const dataRes = await fetch(new URL('/data.json', app), {
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      let notesEmpty = false;
+      if (dataRes.ok) {
+        try {
+          const data = await dataRes.json();
+          notesEmpty = Array.isArray(data.notes) && data.notes.length === 0 && !data.sampleMarker;
+        } catch {}
+      }
+      checks.push({
+        attackId: 'data_json_notes_cleared',
+        expected: '공개 data.json에서 가상 메모 문장과 확인 표시가 제거되고 비어 있음',
+        observed: notesEmpty ? '정적 data.json에 메모 본문 및 확인 표시가 제거되어 있음 확인' : `정적 data.json 비우기 미확인 (HTTP ${dataRes.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'data_json_notes_cleared',
+        expected: '공개 data.json에서 가상 메모 문장이 제거되고 비어 있음',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const apiRes = await fetch(new URL('/api/notes', app), {
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      checks.push({
+        attackId: 'unauthenticated_api_blocked',
+        expected: '비로그인 요청에서 /api/notes 접근이 거부됨 (HTTP 401)',
+        observed: apiRes.status === 401 ? '비로그인 요청에서 /api/notes 접근 차단 확인 (HTTP 401)' : `비로그인 접근 차단 미확인 (HTTP ${apiRes.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'unauthenticated_api_blocked',
+        expected: '비로그인 요청에서 /api/notes 접근이 거부됨 (HTTP 401)',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const singleRes = await fetch(new URL('/api/notes/00000000-0000-4000-8000-000000000001', app), {
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      checks.push({
+        attackId: 'unauthenticated_single_note_blocked',
+        expected: '비로그인 단건 메모 접근 시 거부됨 (HTTP 401)',
+        observed: singleRes.status === 401 ? '비로그인 단건 메모 접근 차단 확인 (HTTP 401)' : `비로그인 단건 접근 차단 미확인 (HTTP ${singleRes.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'unauthenticated_single_note_blocked',
+        expected: '비로그인 단건 메모 접근 시 거부됨 (HTTP 401)',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const origRes = await fetch(config.originalApiUrl, {
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      checks.push({
+        attackId: 'original_api_direct_access_blocked',
+        expected: '원본 자료 API(originalApiUrl) 직접 접근 시 권한 거부됨 (HTTP 401)',
+        observed: origRes.status === 401 ? '원본 자료 API 직접 접근 차단 확인 (HTTP 401)' : `원본 자료 직접 접근 차단 미확인 (HTTP ${origRes.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'original_api_direct_access_blocked',
+        expected: '원본 자료 API(originalApiUrl) 직접 접근 시 권한 거부됨 (HTTP 401)',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const { decide } = await import('./decider.mjs');
+      const unregisteredRes = await decide({
+        schema: 'aleph.decision.v1',
+        requestId: '00000000-0000-4000-8000-000000000000',
+        deviceRegistered: false,
+      });
+      checks.push({
+        attackId: 'unregistered_device_denied',
+        expected: '미등록 기기 가상 요청 시 판정기에서 거부됨 (deny, device_not_registered)',
+        observed: unregisteredRes.decision === 'deny' && unregisteredRes.reasonCode === 'device_not_registered'
+          ? '미등록 기기 가상 요청 판정기 차단 확인 (deny, device_not_registered)'
+          : `판정 결과 상이 (${unregisteredRes.decision}, ${unregisteredRes.reasonCode})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'unregistered_device_denied',
+        expected: '미등록 기기 가상 요청 시 판정기에서 거부됨 (deny, device_not_registered)',
+        observed: `판정 점검 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const { fixtureRequests } = await import('../scripts/fixture-7.mjs');
+      const { decide } = await import('./decider.mjs');
+      const { suspicious } = fixtureRequests();
+      const suspiciousRes = await decide(suspicious);
+      checks.push({
+        attackId: 'suspicious_fixture_step_up',
+        expected: '복합 이상 가상 사건은 추가 확인(step_up, step_up_required)으로 판정됨',
+        observed: suspiciousRes.decision === 'step_up' && suspiciousRes.reasonCode === 'step_up_required'
+          ? '복합 이상 사건 판정기 추가 확인(step_up, step_up_required) 정상 확인'
+          : `판정 결과 상이 (${suspiciousRes.decision}, ${suspiciousRes.reasonCode})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'suspicious_fixture_step_up',
+        expected: '복합 이상 가상 사건은 추가 확인(step_up, step_up_required)으로 판정됨',
+        observed: `복합 이상 사건 점검 실패 (${err.message})`,
+      });
+    }
+
+    checks.push({
+      attackId: 'live_reauth_gate_unsupported',
+      expected: '재로그인 시각 확인 계약이 없으므로 가상 사건 규칙만 시험하고 실제 자료 차단은 미실행',
+      observed: '엔진 재로그인 시각 확인 계약 미제공으로 실제 자료 차단 실측은 안전하게 미실행 유지',
+    });
+
+    return checks;
+  }
+
+  if (config.step === 8) {
+    const checks = [];
+    try {
+      const dataRes = await fetch(new URL('/data.json', app), {
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      let notesEmpty = false;
+      if (dataRes.ok) {
+        try {
+          const data = await dataRes.json();
+          notesEmpty = Array.isArray(data.notes) && data.notes.length === 0 && !data.sampleMarker;
+        } catch {}
+      }
+      checks.push({
+        attackId: 'data_json_notes_cleared',
+        expected: '공개 data.json에서 가상 메모 문장과 확인 표시가 제거되고 비어 있음',
+        observed: notesEmpty ? '정적 data.json에 메모 본문 및 확인 표시가 제거되어 있음 확인' : `정적 data.json 비우기 미확인 (HTTP ${dataRes.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'data_json_notes_cleared',
+        expected: '공개 data.json에서 가상 메모 문장이 제거되고 비어 있음',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const apiRes = await fetch(new URL('/api/notes', app), {
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      checks.push({
+        attackId: 'unauthenticated_api_blocked',
+        expected: '비로그인 요청에서 /api/notes 접근이 거부됨 (HTTP 401)',
+        observed: apiRes.status === 401 ? '비로그인 요청에서 /api/notes 접근 차단 확인 (HTTP 401)' : `비로그인 접근 차단 미확인 (HTTP ${apiRes.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'unauthenticated_api_blocked',
+        expected: '비로그인 요청에서 /api/notes 접근이 거부됨 (HTTP 401)',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const singleRes = await fetch(new URL('/api/notes/00000000-0000-4000-8000-000000000001', app), {
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      checks.push({
+        attackId: 'unauthenticated_single_note_blocked',
+        expected: '비로그인 단건 메모 접근 시 거부됨 (HTTP 401)',
+        observed: singleRes.status === 401 ? '비로그인 단건 메모 접근 차단 확인 (HTTP 401)' : `비로그인 단건 접근 차단 미확인 (HTTP ${singleRes.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'unauthenticated_single_note_blocked',
+        expected: '비로그인 단건 메모 접근 시 거부됨 (HTTP 401)',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const origRes = await fetch(config.originalApiUrl, {
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      checks.push({
+        attackId: 'original_api_direct_access_blocked',
+        expected: '원본 자료 API(originalApiUrl) 직접 접근 시 권한 거부됨 (HTTP 401)',
+        observed: origRes.status === 401 ? '원본 자료 API 직접 접근 차단 확인 (HTTP 401)' : `원본 자료 직접 접근 차단 미확인 (HTTP ${origRes.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'original_api_direct_access_blocked',
+        expected: '원본 자료 API(originalApiUrl) 직접 접근 시 권한 거부됨 (HTTP 401)',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const { decide } = await import('./decider.mjs');
+      const unregisteredRes = await decide({
+        schema: 'aleph.decision.v1',
+        requestId: '00000000-0000-4000-8000-000000000000',
+        deviceRegistered: false,
+      });
+      checks.push({
+        attackId: 'unregistered_device_denied',
+        expected: '미등록 기기 가상 요청 시 판정기에서 거부됨 (deny, device_not_registered)',
+        observed: unregisteredRes.decision === 'deny' && unregisteredRes.reasonCode === 'device_not_registered'
+          ? '미등록 기기 가상 요청 판정기 차단 확인 (deny, device_not_registered)'
+          : `판정 결과 상이 (${unregisteredRes.decision}, ${unregisteredRes.reasonCode})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'unregistered_device_denied',
+        expected: '미등록 기기 가상 요청 시 판정기에서 거부됨 (deny, device_not_registered)',
+        observed: `판정 점검 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const { decide } = await import('./decider.mjs');
+      const crossZoneRes = await decide({
+        schema: 'aleph.decision.v1',
+        requestId: '00000000-0000-4000-8000-000000000002',
+        deviceRegistered: true,
+        deviceId: '0123456789abcdef',
+        subjectId: 'student_user_b',
+        service: 'notes',
+        method: 'GET',
+        path: '/notes/owner_a_item',
+        route: 'GET /notes/:id',
+      });
+      checks.push({
+        attackId: 'cross_zone_note_read',
+        expected: '서버 거부, 자기 구역은 허용',
+        observed: crossZoneRes.decision === 'deny' && crossZoneRes.reasonCode === 'zone_owner_forbidden'
+          ? '타 사용자 메모 구역 접근 판정기 차단 확인 (deny, zone_owner_forbidden)'
+          : `판정 결과 상이 (${crossZoneRes.decision}, ${crossZoneRes.reasonCode})`,
+      });
+      checks.push({
+        attackId: 'cross_zone_note_denied',
+        expected: '타인 소유 메모 구역 접근 시 판정기에서 거부됨 (deny, zone_owner_forbidden)',
+        observed: crossZoneRes.decision === 'deny' && crossZoneRes.reasonCode === 'zone_owner_forbidden'
+          ? '타 사용자 메모 구역 접근 판정기 차단 확인 (deny, zone_owner_forbidden)'
+          : `판정 결과 상이 (${crossZoneRes.decision}, ${crossZoneRes.reasonCode})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'cross_zone_note_read',
+        expected: '서버 거부, 자기 구역은 허용',
+        observed: `구역 판정 점검 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const { decide } = await import('./decider.mjs');
+      const crossZoneWriteRes = await decide({
+        schema: 'aleph.decision.v1',
+        requestId: '00000000-0000-4000-8000-000000000004',
+        deviceRegistered: true,
+        deviceId: '0123456789abcdef',
+        subjectId: 'student_user_b',
+        service: 'notes',
+        method: 'PUT',
+        path: '/notes/owner_a_item',
+        route: 'PUT /notes/:id',
+      });
+      checks.push({
+        attackId: 'cross_zone_note_write',
+        expected: '서버 거부, 원본 불변',
+        observed: crossZoneWriteRes.decision === 'deny' && crossZoneWriteRes.reasonCode === 'zone_owner_forbidden'
+          ? '타 사용자 메모 수정 시 판정기 차단 확인 (deny, zone_owner_forbidden)'
+          : `판정 결과 상이 (${crossZoneWriteRes.decision}, ${crossZoneWriteRes.reasonCode})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'cross_zone_note_write',
+        expected: '서버 거부, 원본 불변',
+        observed: `구역 수정 점검 실패 (${err.message})`,
+      });
+    }
+
+    checks.push({
+      attackId: 'cross_zone_note_list',
+      expected: '목록이 누출되지 않음',
+      observed: '미실행 (로그인한 두 계정의 목록 요청을 이 점검에서 보내지 않음)',
+    });
+
+    try {
+      const { decide } = await import('./decider.mjs');
+      const noticeModRes = await decide({
+        schema: 'aleph.decision.v1',
+        requestId: '00000000-0000-4000-8000-000000000003',
+        deviceRegistered: true,
+        deviceId: '0123456789abcdef',
+        subjectId: 'learner_normal',
+        service: 'notes',
+        method: 'PUT',
+        path: '/notices/notice-01',
+        route: 'PUT /notices/:id',
+      });
+      checks.push({
+        attackId: 'student_edits_instructor_notice',
+        expected: '거부되고 강사 정상 수정은 허용',
+        observed: noticeModRes.decision === 'deny' && noticeModRes.reasonCode === 'instructor_notice_forbidden'
+          ? '일반 학생 강사 공지 수정 판정기 차단 확인 (deny, instructor_notice_forbidden)'
+          : `판정 결과 상이 (${noticeModRes.decision}, ${noticeModRes.reasonCode})`,
+      });
+      checks.push({
+        attackId: 'student_notice_mod_denied',
+        expected: '일반 학생의 강사 공지 수정 시 판정기에서 거부됨 (deny, instructor_notice_forbidden)',
+        observed: noticeModRes.decision === 'deny' && noticeModRes.reasonCode === 'instructor_notice_forbidden'
+          ? '일반 학생 강사 공지 수정 판정기 차단 확인 (deny, instructor_notice_forbidden)'
+          : `판정 결과 상이 (${noticeModRes.decision}, ${noticeModRes.reasonCode})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'student_edits_instructor_notice',
+        expected: '거부되고 강사 정상 수정은 허용',
+        observed: `공지 수정 점검 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const exportRes = await fetch(new URL('/api/notes/export', app), {
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      checks.push({
+        attackId: 'id_depth_feature_route_blocked',
+        expected: '자원 ID 깊이에 기능 경로(export) 요청 시 거부됨 (HTTP 401 또는 404)',
+        observed: (exportRes.status === 401 || exportRes.status === 404)
+          ? `기능 경로 export 직접 요청 차단 확인 (HTTP ${exportRes.status})`
+          : `기능 경로 응답 확인 (HTTP ${exportRes.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'id_depth_feature_route_blocked',
+        expected: '자원 ID 깊이에 기능 경로(export) 요청 시 거부됨 (HTTP 401 또는 404)',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+
+    return checks;
+  }
+
+  if (config.step === 9) {
+    const checks = [];
+    try {
+      const dataRes = await fetch(new URL('/data.json', app), {
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      let notesEmpty = false;
+      if (dataRes.ok) {
+        try {
+          const data = await dataRes.json();
+          notesEmpty = Array.isArray(data.notes) && data.notes.length === 0 && !data.sampleMarker;
+        } catch {}
+      }
+      checks.push({
+        attackId: 'data_json_notes_cleared',
+        expected: '공개 data.json에서 가상 메모 문장과 확인 표시가 제거되고 비어 있음',
+        observed: notesEmpty ? '정적 data.json에 메모 본문 및 확인 표시가 제거되어 있음 확인' : `정적 data.json 비우기 미확인 (HTTP ${dataRes.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'data_json_notes_cleared',
+        expected: '공개 data.json에서 가상 메모 문장이 제거되고 비어 있음',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const apiRes = await fetch(new URL('/api/notes', app), {
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      checks.push({
+        attackId: 'unauthenticated_api_blocked',
+        expected: '비로그인 요청에서 /api/notes 접근이 거부됨 (HTTP 401)',
+        observed: apiRes.status === 401 ? '비로그인 요청에서 /api/notes 접근 차단 확인 (HTTP 401)' : `비로그인 접근 차단 미확인 (HTTP ${apiRes.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'unauthenticated_api_blocked',
+        expected: '비로그인 요청에서 /api/notes 접근이 거부됨 (HTTP 401)',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const singleRes = await fetch(new URL('/api/notes/00000000-0000-4000-8000-000000000001', app), {
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      checks.push({
+        attackId: 'unauthenticated_single_note_blocked',
+        expected: '비로그인 단건 메모 접근 시 거부됨 (HTTP 401)',
+        observed: singleRes.status === 401 ? '비로그인 단건 메모 접근 차단 확인 (HTTP 401)' : `비로그인 단건 접근 차단 미확인 (HTTP ${singleRes.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'unauthenticated_single_note_blocked',
+        expected: '비로그인 단건 메모 접근 시 거부됨 (HTTP 401)',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const origRes = await fetch(config.originalApiUrl, {
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      checks.push({
+        attackId: 'original_api_direct_access_blocked',
+        expected: '원본 자료 API(originalApiUrl) 직접 접근 시 권한 거부됨 (HTTP 401)',
+        observed: origRes.status === 401 ? '원본 자료 API 직접 접근 차단 확인 (HTTP 401)' : `원본 자료 직접 접근 차단 미확인 (HTTP ${origRes.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'original_api_direct_access_blocked',
+        expected: '원본 자료 API(originalApiUrl) 직접 접근 시 권한 거부됨 (HTTP 401)',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const { decide } = await import('./decider.mjs');
+      const unregisteredRes = await decide({
+        schema: 'aleph.decision.v1',
+        requestId: '00000000-0000-4000-8000-000000000000',
+        deviceRegistered: false,
+      });
+      checks.push({
+        attackId: 'unregistered_device_denied',
+        expected: '미등록 기기 가상 요청 시 판정기에서 거부됨 (deny, device_not_registered)',
+        observed: unregisteredRes.decision === 'deny' && unregisteredRes.reasonCode === 'device_not_registered'
+          ? '미등록 기기 가상 요청 판정기 차단 확인 (deny, device_not_registered)'
+          : `판정 결과 상이 (${unregisteredRes.decision}, ${unregisteredRes.reasonCode})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'unregistered_device_denied',
+        expected: '미등록 기기 가상 요청 시 판정기에서 거부됨 (deny, device_not_registered)',
+        observed: `판정 점검 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const { decide } = await import('./decider.mjs');
+      const crossZoneRes = await decide({
+        schema: 'aleph.decision.v1',
+        requestId: '00000000-0000-4000-8000-000000000002',
+        deviceRegistered: true,
+        deviceId: '0123456789abcdef',
+        subjectId: 'student_user_b',
+        service: 'notes',
+        method: 'GET',
+        path: '/notes/owner_a_item',
+        route: 'GET /notes/:id',
+      });
+      checks.push({
+        attackId: 'cross_zone_note_denied',
+        expected: '타인 소유 메모 구역 접근 시 판정기에서 거부됨 (deny, zone_owner_forbidden)',
+        observed: crossZoneRes.decision === 'deny' && crossZoneRes.reasonCode === 'zone_owner_forbidden'
+          ? '타 사용자 메모 구역 접근 판정기 차단 확인 (deny, zone_owner_forbidden)'
+          : `판정 결과 상이 (${crossZoneRes.decision}, ${crossZoneRes.reasonCode})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'cross_zone_note_denied',
+        expected: '타인 소유 메모 구역 접근 시 판정기에서 거부됨 (deny, zone_owner_forbidden)',
+        observed: `구역 판정 점검 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const { decide } = await import('./decider.mjs');
+      const noticeModRes = await decide({
+        schema: 'aleph.decision.v1',
+        requestId: '00000000-0000-4000-8000-000000000003',
+        deviceRegistered: true,
+        deviceId: '0123456789abcdef',
+        subjectId: 'learner_normal',
+        service: 'notes',
+        method: 'PUT',
+        path: '/notices/notice-01',
+        route: 'PUT /notices/:id',
+      });
+      checks.push({
+        attackId: 'student_notice_mod_denied',
+        expected: '일반 학생의 강사 공지 수정 시 판정기에서 거부됨 (deny, instructor_notice_forbidden)',
+        observed: noticeModRes.decision === 'deny' && noticeModRes.reasonCode === 'instructor_notice_forbidden'
+          ? '일반 학생 강사 공지 수정 판정기 차단 확인 (deny, instructor_notice_forbidden)'
+          : `판정 결과 상이 (${noticeModRes.decision}, ${noticeModRes.reasonCode})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'student_notice_mod_denied',
+        expected: '일반 학생의 강사 공지 수정 시 판정기에서 거부됨 (deny, instructor_notice_forbidden)',
+        observed: `공지 수정 점검 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const exportRes = await fetch(new URL('/api/notes/export', app), {
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      checks.push({
+        attackId: 'id_depth_feature_route_blocked',
+        expected: '자원 ID 깊이에 기능 경로(export) 요청 시 거부됨 (HTTP 401 또는 404)',
+        observed: (exportRes.status === 401 || exportRes.status === 404)
+          ? `기능 경로 export 직접 요청 차단 확인 (HTTP ${exportRes.status})`
+          : `기능 경로 응답 확인 (HTTP ${exportRes.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'id_depth_feature_route_blocked',
+        expected: '자원 ID 깊이에 기능 경로(export) 요청 시 거부됨 (HTTP 401 또는 404)',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const { detect } = await import('./detect.mjs');
+      const burstEvents = Array.from({ length: 125 }, (_, i) => ({
+        at: new Date(Date.UTC(2026, 9, 1, 0, 0, 0) + i * 2000).toISOString(),
+        method: 'GET',
+        identity: { sub: 'learner_fixture' },
+      }));
+      const burstResult = detect(burstEvents);
+      checks.push({
+        attackId: 'detect_burst_read_propose_revocation',
+        expected: '10분 내 120건 초과 폭주 조회 시 propose_revocation 및 burst_read 제안 생성',
+        observed: burstResult.action === 'propose_revocation' && burstResult.reasonCode === 'burst_read' && burstResult.subject === 'learner_fixture'
+          ? '도플갱어 폭주 조회 탐지 및 회수 제안 생성 확인 (propose_revocation)'
+          : `탐지 결과 상이 (${burstResult.action}, ${burstResult.reasonCode})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'detect_burst_read_propose_revocation',
+        expected: '10분 내 120건 초과 폭주 조회 시 propose_revocation 및 burst_read 제안 생성',
+        observed: `탐지 점검 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const { detect } = await import('./detect.mjs');
+      const normalEvents = Array.from({ length: 30 }, (_, i) => ({
+        at: new Date(Date.UTC(2026, 9, 1, 0, 0, 0) + i * 2000).toISOString(),
+        method: 'GET',
+        identity: { sub: 'learner_fixture' },
+      }));
+      const normalResult = detect(normalEvents);
+      checks.push({
+        attackId: 'detect_normal_read_observe',
+        expected: '정상 범위(30건) 조회 시 observe 유지',
+        observed: normalResult.action === 'observe'
+          ? '정상 조회 관찰 상태 유지 확인 (observe)'
+          : `탐지 결과 상이 (${normalResult.action})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'detect_normal_read_observe',
+        expected: '정상 범위(30건) 조회 시 observe 유지',
+        observed: `정상 탐지 점검 실패 (${err.message})`,
+      });
+    }
+
+    const virtualReads = (count, extra) => Array.from({ length: count }, (_, i) => ({
+      at: new Date(Date.UTC(2026, 9, 1, 0, 0, 0) + i * 2000).toISOString(),
+      method: 'GET', identity: { sub: 'doppel_fixture' }, deviceId: 'bbbbbbbbbbbbbbbb', ...extra,
+    }));
+
+    try {
+      const { detect } = await import('./detect.mjs');
+      const result = detect(virtualReads(150, { network: 'unusual' }));
+      checks.push({
+        attackId: 'detect_combined_propose_device',
+        expected: '평소와 다른 네트워크와 다량 조회가 함께인 가상 사건은 기기 한 개 대상 회수 제안',
+        observed: result.action === 'propose_revocation' && result.deviceId === 'bbbbbbbbbbbbbbbb' && result.reasonCode
+          ? `가상 기기 한 개 대상 회수 제안 확인 (${result.action}, ${result.reasonCode})`
+          : `탐지 결과 상이 (${result.action}, ${result.reasonCode ?? '-'})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'detect_combined_propose_device',
+        expected: '평소와 다른 네트워크와 다량 조회가 함께인 가상 사건은 기기 한 개 대상 회수 제안',
+        observed: `복합 탐지 점검 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const { detect } = await import('./detect.mjs');
+      const result = detect(virtualReads(150, { network: 'usual', region: 'foreign' }));
+      checks.push({
+        attackId: 'detect_region_only_observe',
+        expected: '지역만 다르고 네트워크는 평소와 같은 가상 사건은 회수 제안 없이 observe',
+        observed: result.action === 'observe'
+          ? '지역 단독 사건 회수 제안 없음 확인 (observe)'
+          : `탐지 결과 상이 (${result.action})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'detect_region_only_observe',
+        expected: '지역만 다르고 네트워크는 평소와 같은 가상 사건은 회수 제안 없이 observe',
+        observed: `지역 단독 점검 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const { decide } = await import('./decider.mjs');
+      const { fixtureRequests } = await import('../scripts/fixture-7.mjs');
+      const { normal } = fixtureRequests();
+      const res = await decide(normal);
+      checks.push({
+        attackId: 'normal_device_kept',
+        expected: '탐지 규칙을 넣은 뒤에도 정상 기기의 가상 요청은 기존 응답 형식으로 허용',
+        observed: res.decision === 'allow' && Object.keys(res).sort().join(',') === 'decision,reasonCode,requestId,ruleIds,schema'
+          ? '정상 기기 허용 유지 확인 (allow, 응답 5항목)'
+          : `판정 결과 상이 (${res.decision}, ${res.reasonCode})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'normal_device_kept',
+        expected: '탐지 규칙을 넣은 뒤에도 정상 기기의 가상 요청은 기존 응답 형식으로 허용',
+        observed: `정상 기기 점검 실패 (${err.message})`,
+      });
+    }
+
+    return checks;
+  }
+
+  if (config.step === 10) {
+    // 복구 뒤 1~9단계 정상·금지 요청 재시험: 9단계 점검을 그대로 다시 실행한 결과를 먼저 담습니다.
+    const checks = await runAttackChecks({ ...config, step: 9 });
+
+    try {
+      const res = await fetch(new URL('/api/restore', app), {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id: '00000000-0000-4000-8000-000000000000' }),
+        redirect: 'error', signal: AbortSignal.timeout(10000),
+      });
+      checks.push({
+        attackId: 'restore_unauthenticated_blocked',
+        expected: '로그인 없이 복구 경로(POST /api/restore) 호출 시 복원 없이 거부됨 (HTTP 401)',
+        observed: res.status === 401
+          ? '비로그인 복구 요청 차단 확인 (HTTP 401)'
+          : `복구 경로 응답 확인 (HTTP ${res.status})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'restore_unauthenticated_blocked',
+        expected: '로그인 없이 복구 경로(POST /api/restore) 호출 시 복원 없이 거부됨 (HTTP 401)',
+        observed: `요청 실패 (${err.message})`,
+      });
+    }
+
+    try {
+      const { loadVerifiedBackup, evaluateTestPolicy } = await import('../scripts/policy-restore.mjs');
+      const { readFile } = await import('node:fs/promises');
+      const { manifest } = loadVerifiedBackup();
+      checks.push({
+        attackId: 'policy_backup_reverified',
+        expected: '침해 전 시험 정책 사본을 다시 읽어 SHA-256·버전 검증 통과',
+        observed: `사본 ${manifest.version} 재검증 통과 (SHA-256 ${manifest.sha256.slice(0, 12)}…)`,
+      });
+      const policy = JSON.parse(await readFile(new URL('../policy/test-policy.json', import.meta.url), 'utf8'));
+      const cross = evaluateTestPolicy(policy, { method: 'GET', route: '/notes/:id', subjectOwner: 'b', targetOwner: 'a' });
+      const own = evaluateTestPolicy(policy, { method: 'GET', route: '/notes/:id', subjectOwner: 'a', targetOwner: 'a' });
+      checks.push({
+        attackId: 'policy_restored_cross_owner_denied',
+        expected: '되돌린 시험 정책에서 B의 A 메모 요청은 거부, A의 자기 메모 요청은 허용',
+        observed: `시험 정책 재판정 결과 (B→A ${cross}, A→A ${own})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'policy_backup_reverified',
+        expected: '침해 전 시험 정책 사본을 다시 읽어 SHA-256·버전 검증 통과',
+        observed: `중단 (${err.message})`,
+      });
+    }
+
+    checks.push({
+      attackId: 'restore_single_note_live',
+      expected: '시험 계정 B의 메모 한 건을 바꾸거나 지운 뒤 복구하면 ID·소유자·내용 해시가 사본과 같음',
+      observed: '미실행 (이 점검은 시험 계정 B 토큰으로 배포된 복구 경로를 호출하지 않음)',
+    });
+
+    return checks;
+  }
+
+  if (config.step === 11) {
+    // 새 화면에서도 1~10단계 정상·금지 결과가 유지되는지 10단계 점검을 그대로 다시 실행합니다.
+    const checks = await runAttackChecks({ ...config, step: 10 });
+
+    try {
+      const res = await fetch(new URL('/manifest.webmanifest', app), { redirect: 'error', signal: AbortSignal.timeout(10000) });
+      const manifest = res.ok ? await res.json().catch(() => null) : null;
+      checks.push({
+        attackId: 'pwa_manifest_served',
+        expected: '설치형 웹앱 설정(manifest)에 앱 이름이 있고, 설치 표시는 기기 확인으로 쓰지 않음',
+        observed: manifest?.name
+          ? `manifest 제공 확인 (HTTP ${res.status}, 이름 있음, display ${manifest.display ?? '-'})`
+          : `manifest 미확인 (HTTP ${res.status})`,
+      });
+    } catch (err) {
+      checks.push({ attackId: 'pwa_manifest_served', expected: '설치형 웹앱 설정(manifest) 제공', observed: `요청 실패 (${err.message})` });
+    }
+
+    try {
+      const res = await fetch(new URL('/api/device', app), { redirect: 'error', signal: AbortSignal.timeout(10000) });
+      checks.push({
+        attackId: 'device_status_unsigned_blocked',
+        expected: '로그인·기기 서명 없이 기기 승인 상태를 물으면 승인으로 처리하지 않고 거부 (HTTP 401)',
+        observed: res.status === 401 ? '서명 없는 기기 상태 요청 거부 확인 (HTTP 401)' : `기기 상태 응답 확인 (HTTP ${res.status})`,
+      });
+    } catch (err) {
+      checks.push({ attackId: 'device_status_unsigned_blocked', expected: '서명 없는 기기 상태 요청 거부 (HTTP 401)', observed: `요청 실패 (${err.message})` });
+    }
+
+    try {
+      const res = await fetch(new URL('/', app), { redirect: 'error', signal: AbortSignal.timeout(10000) });
+      const html = res.ok ? await res.text() : '';
+      const storesSecrets = /localStorage\.|sessionStorage\.setItem|indexedDB\.open|extractable\s*:\s*true/u.test(html);
+      const nonExtractable = /generateKey\([^)]*false/u.test(html);
+      checks.push({
+        attackId: 'device_key_not_in_storage',
+        expected: '접속 화면 코드가 기기 키·토큰을 브라우저 저장소에 넣지 않고, 기기 키를 꺼낼 수 없게 만듦',
+        observed: !html ? `접속 화면 미확인 (HTTP ${res.status})`
+          : (!storesSecrets && nonExtractable ? '배포 화면에 저장소 저장 코드 없음, 꺼낼 수 없는 기기 키 생성 확인'
+            : `배포 화면 확인 필요 (저장소 사용 ${storesSecrets ? '있음' : '없음'}, 꺼낼 수 없는 키 ${nonExtractable ? '확인' : '미확인'})`),
+      });
+    } catch (err) {
+      checks.push({ attackId: 'device_key_not_in_storage', expected: '기기 키·토큰을 브라우저 저장소에 넣지 않음', observed: `요청 실패 (${err.message})` });
+    }
+
+    return checks;
+  }
+
+  throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
 }

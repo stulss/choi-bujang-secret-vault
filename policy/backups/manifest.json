@@ -1,0 +1,8 @@
+{
+  "schema": "aleph.policy-backup-manifest.v1",
+  "version": "v9-9f13368",
+  "file": "policy-v9-9f13368.json",
+  "sha256": "aa126c966da386fc9c64990816f66d927d115d46e18b92124a1d1722eb1fb324",
+  "sourceCommit": "9f13368",
+  "verifiedAt": "2026-10-13"
+}

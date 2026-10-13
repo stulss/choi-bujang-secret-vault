@@ -7,7 +7,9 @@ export function deploymentIdentity(env, config) {
   const owner = env.VERCEL_GIT_REPO_OWNER;
   const repo = env.VERCEL_GIT_REPO_SLUG;
   const commit = env.VERCEL_GIT_COMMIT_SHA;
-  const host = env.VERCEL_URL;
+  const host = (env.VERCEL_PROJECT_PRODUCTION_URL && HOST.test(env.VERCEL_PROJECT_PRODUCTION_URL))
+    ? env.VERCEL_PROJECT_PRODUCTION_URL
+    : env.VERCEL_URL;
   if (env.VERCEL_GIT_PROVIDER !== 'github' || !OWNER.test(owner || '')
       || !REPO.test(repo || '') || repo === '.' || repo === '..'
       || repo.toLowerCase().endsWith('.git') || !SHA.test(commit || '')
@@ -16,9 +18,9 @@ export function deploymentIdentity(env, config) {
       || !/^https:\/\/[a-z0-9-]+\.up\.railway\.app\/defense\/judge$/iu.test(config.judgeIssuer)
       || typeof config.sampleMarker !== 'string'
       || !/^[A-Z0-9_]{1,80}$/u.test(config.sampleMarker)) {
-    throw new Error('배포 식별 정보를 확인할 수 없습니다. Vercel 시스템 환경변수와 aleph.config.json의 step을 확인하세요.');
+    throw new Error('배포 식별 정보를 확인할 수 없습니다. Vercel 시스템 환경변수와 1단계 시작 틀을 확인하세요.');
   }
-  return {
+  const identity = {
     schema: 'aleph.defense.deployment.v1',
     step: config.step,
     repoUrl: `https://github.com/${owner.toLowerCase()}/${repo.toLowerCase()}`,
@@ -27,4 +29,20 @@ export function deploymentIdentity(env, config) {
     judgeIssuer: config.judgeIssuer,
     sampleMarker: config.sampleMarker,
   };
+  if (config.step >= 3 && Array.isArray(config.allowedRoutes)) {
+    identity.allowedRoutes = config.allowedRoutes;
+  }
+  if (config.step >= 3 && config.identityProvider) {
+    identity.identityProvider = config.identityProvider;
+  }
+  if (config.step >= 5 && typeof config.originalApiUrl === 'string') {
+    identity.originalApiUrl = config.originalApiUrl;
+  }
+  if (config.anonKey) {
+    identity.anonKey = config.anonKey;
+  }
+  if (config.publishableKey) {
+    identity.publishableKey = config.publishableKey;
+  }
+  return identity;
 }

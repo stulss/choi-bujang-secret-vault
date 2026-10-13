@@ -38,6 +38,19 @@ export async function checkDecider({ decide, ruleIds }) {
       decision: 'allow' },
     );
   }
+  if (ruleIds.includes('zone_partitioning')) {
+    checks.push(
+      { name: '자기 메모의 정상 읽기', request: { ...normal, requestId: randomUUID(),
+        subjectId: 'student_user_a', path: '/notes/owner_a_item', route: 'GET /notes/:id' },
+        decision: 'allow', reasonCode: 'approved' },
+      { name: '학생의 공지 정상 조회', request: { ...normal, requestId: randomUUID(),
+        subjectId: 'student_user_a', path: '/notices/1', route: 'GET /notices/:id' },
+        decision: 'allow', reasonCode: 'approved' },
+      { name: '강사 자료 접근 차단', request: { ...normal, requestId: randomUUID(),
+        subjectId: 'student_user_a', path: '/materials/1', route: 'GET /materials/:id' },
+        decision: 'deny' },
+    );
+  }
   const results = [];
   for (const item of checks) {
     const response = await decide(item.request);

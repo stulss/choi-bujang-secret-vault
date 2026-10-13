@@ -1,41 +1,52 @@
-// XDR 보너스 xdr-02 「웹 입력 조작」 제작 1: 경보 읽기 모듈(확인용, 학생 작성). decide.mjs 는 이 파일을 불러오지 않습니다.
-// xdr/fixtures/web-injection.json 의 Wazuh 경보에서 시각·출발 주소·계정·규칙 수준·설명만 뽑습니다. 원본 경보는 고치지 않습니다.
-// 비밀값처럼 보이는 값(토큰·키·개인키·메일 주소·비밀번호=값)은 [가림] 으로 바꿔 출력합니다.
-// 사용법: node xdr/web-injection/read-alerts.mjs
 import { readFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const MODULE_KEY = 'web-injection';
-const here = dirname(fileURLToPath(import.meta.url));
-export const FIXTURE = join(here, '..', 'fixtures', `${MODULE_KEY}.json`);
+// 비밀값처럼 보이는 조각은 출력 전에 가립니다. 원본 경보 객체는 고치지 않습니다.
+const SECRET_PATTERNS = [
+  /\b(?:pass(?:word)?|passwd|pwd|token|secret|api[_-]?key|authorization|bearer)\b\s*[=:]\s*\S+/gi,
+  /\beyJ[\w-]{8,}\.[\w-]{8,}\.[\w-]*/g,
+  /\b(?:sk|pk|ghp|xox[a-z])[-_][\w-]{16,}/gi,
+  /\b[A-Za-z0-9+/_-]{32,}={0,2}/g,
+];
 
-const SECRET = /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?(-----END [A-Z ]*PRIVATE KEY-----|$)|\bBearer\s+[A-Za-z0-9._~+/-]{8,}|\b(sb_secret|sb_publishable|sk|ghp|github_pat|xox[abp])[-_][A-Za-z0-9_-]{8,}|\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{4,}|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\b(password|passwd|pwd|secret|token|api[_-]?key)\s*[=:]\s*\S+/giu;
-export const maskSecrets = (text) => String(text ?? '').replace(SECRET, '[가림]');
+export function redact(value) {
+  if (typeof value !== 'string') return '';
+  return SECRET_PATTERNS.reduce((text, pattern) => text.replace(pattern, '[가림]'), value);
+}
 
-// 경보 하나에서 다섯 값만 뽑습니다.
-export function pickAlert(alert) {
-  const level = Number(alert?.rule?.level);
+// 시각·출발 주소·계정·규칙 수준·설명만 뽑습니다. id 는 줄을 경보와 맞추는 번호입니다.
+export function extractAlert(alert) {
   return {
-    time: maskSecrets(alert?.timestamp ?? '-'),
-    srcip: maskSecrets(alert?.data?.srcip ?? '-'),
-    user: maskSecrets(alert?.data?.srcuser ?? '-'),
-    level: Number.isFinite(level) ? level : null,
-    description: maskSecrets(alert?.rule?.description ?? '-'),
+    id: redact(String(alert?.id ?? '')),
+    time: redact(String(alert?.timestamp ?? '')),
+    srcip: redact(String(alert?.data?.srcip ?? '')),
+    account: redact(String(alert?.data?.srcuser ?? '')),
+    level: Number.isFinite(alert?.rule?.level) ? alert.rule.level : 0,
+    description: redact(String(alert?.rule?.description ?? '')),
   };
 }
 
-export async function readAlerts(file = FIXTURE) {
-  const fixture = JSON.parse(await readFile(file, 'utf8'));
-  if (fixture?.schema !== 'aleph.xdr.fixture.v1' || fixture.moduleKey !== MODULE_KEY || !Array.isArray(fixture.alerts)) {
-    throw new Error('경보 묶음 형식이 아닙니다.');
-  }
-  return { total: fixture.alerts.length, rows: fixture.alerts.map(pickAlert) };
+export async function readAlerts(path) {
+  const fixture = JSON.parse(await readFile(path, 'utf8'));
+  if (!Array.isArray(fixture?.alerts)) throw new Error('경보 묶음 형식이 아닙니다.');
+  const rows = fixture.alerts.map(extractAlert);
+  if (rows.length !== fixture.alerts.length) throw new Error('경보 건수와 뽑은 줄 수가 다릅니다.');
+  return rows;
 }
 
 const isMain = process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url));
 if (isMain) {
-  const { total, rows } = await readAlerts();
-  for (const row of rows) console.log([row.time, row.srcip, row.user, `수준 ${row.level ?? '-'}`, row.description].join(' | '));
-  console.log(`경보 ${total}건 · 뽑은 줄 ${rows.length}줄${total === rows.length ? '' : ' (건수가 다릅니다)'}`);
+  const here = dirname(fileURLToPath(import.meta.url));
+  try {
+    const path = join(here, '..', 'fixtures', 'web-injection.json');
+    const total = JSON.parse(await readFile(path, 'utf8')).alerts.length;
+    const rows = await readAlerts(path);
+    for (const row of rows) console.log(JSON.stringify(row));
+    console.error(`경보 ${total}건, 뽑은 줄 ${rows.length}줄`);
+    if (total !== rows.length) process.exitCode = 1;
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : '읽기 오류');
+    process.exitCode = 1;
+  }
 }

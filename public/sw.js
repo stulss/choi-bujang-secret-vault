@@ -1,20 +1,22 @@
-// 11단계 서비스 워커: 오프라인 안내 화면만 저장합니다. 메모·API 응답·토큰은 저장하지 않습니다.
-const CACHE = 'offline-v1';
-const OFFLINE = '/offline.html';
+// 11단계 설치형 웹앱 서비스 워커: 오프라인 안내 화면만 저장합니다.
+// /api/* 응답, 메모, 토큰, 기기 키는 저장하지 않습니다. 오프라인일 때 화면 이동만 offline.html로 보냅니다.
+const CACHE = 'vault-shell-v1';
+const SHELL = ['/offline.html', '/manifest.webmanifest', '/icon.svg'];
 
-self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.add(OFFLINE)));
-  self.skipWaiting();
+self.addEventListener('install', event => {
+  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting()));
 });
 
-self.addEventListener('activate', (event) => {
-  event.waitUntil(caches.keys().then((keys) => Promise.all(
-    keys.filter((key) => key !== CACHE).map((key) => caches.delete(key)))));
-  self.clients.claim();
+self.addEventListener('activate', event => {
+  event.waitUntil(caches.keys()
+    .then(keys => Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key))))
+    .then(() => self.clients.claim()));
 });
 
-// 화면 이동 요청이 네트워크에서 실패할 때만 오프라인 안내를 보여 줍니다. /api 요청은 손대지 않습니다.
-self.addEventListener('fetch', (event) => {
-  if (event.request.mode !== 'navigate') return;
-  event.respondWith(fetch(event.request).catch(() => caches.match(OFFLINE)));
+self.addEventListener('fetch', event => {
+  const url = new URL(event.request.url);
+  if (url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
+  if (event.request.mode === 'navigate') {
+    event.respondWith(fetch(event.request).catch(() => caches.match('/offline.html')));
+  }
 });
