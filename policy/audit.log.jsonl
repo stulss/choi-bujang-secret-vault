@@ -1,2 +1,0 @@
-{"at":"2026-10-13T00:00:00.000Z","action":"incident_recorded","service":"notes","note":"3차 침공으로 시험 정책 notes 규칙 변경 (가상 사건)"}
-{"at":"2026-10-13T03:57:47.866Z","action":"policy_restore","service":"notes","fromVersion":"v9-9f13368","changedKeys":["crossOwner","listRead","routes"],"sha256Before":"47165a677afa391f62ce397172bbc7d18bb617f5671d93e6a11e2c41623aca79","sha256After":"a3601b25dc48a73ab3ac713d7a4149fee132d6f37fe3f7273ed86e9e7098df27"}

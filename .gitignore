@@ -1,9 +1,4 @@
-artifacts/
 bundle-notes.json
-.env
-.env.*
+.vercel/
 node_modules/
-public/aleph.json
-.vercel
-.env*
 scratch/

@@ -1,0 +1,144 @@
+{
+  "schema": "aleph.defense.submission.v2",
+  "step": 12,
+  "commit": "507c8c06f8648773bb25cc6c47c6d9cf563cbab0",
+  "repoUrl": "https://github.com/stulss/choi-bujang-secret-vault",
+  "changedFiles": [
+    "README.md",
+    "docs/EVIDENCE.md",
+    "public/ops-evidence.json"
+  ],
+  "policyRules": [
+    "device_registered",
+    "step_up_required",
+    "zone_partitioning"
+  ],
+  "attackAttempts": [
+    {
+      "attackId": "anonymous_note_list",
+      "expected": "토큰 없이 메모 목록 조회 → HTTP 401, 메모 없음",
+      "observed": "GET https://stulss-choi-bujang-secret-vault.vercel.app/api/notes → HTTP 401 · 요청 ID icn1::iad1::wb2vz-1791873988950-8d16adb3c7ff · 막음"
+    },
+    {
+      "attackId": "anonymous_note_read",
+      "expected": "토큰 없이 메모 한 건 조회 → HTTP 401",
+      "observed": "GET https://stulss-choi-bujang-secret-vault.vercel.app/api/notes?id=00000000-0000-4000-8000-000000000001 → HTTP 401 · 요청 ID icn1::iad1::z4xsd-1791873989489-eef88932d9b7 · 막음"
+    },
+    {
+      "attackId": "missing_login_token",
+      "expected": "로그인 토큰 없이 보호 API(공지) 조회 → HTTP 401",
+      "observed": "GET https://stulss-choi-bujang-secret-vault.vercel.app/api/notices?id=notice-01 → HTTP 401 · 요청 ID icn1::iad1::tjrvz-1791873989927-d81a99af708b · 막음"
+    },
+    {
+      "attackId": "forged_login_token",
+      "expected": "서명이 위조된 로그인 토큰으로 메모 조회 → HTTP 401",
+      "observed": "GET https://stulss-choi-bujang-secret-vault.vercel.app/api/notes → HTTP 401 · 요청 ID icn1::iad1::flxdk-1791873990472-89e04862a6ee · 막음"
+    },
+    {
+      "attackId": "static_seed_data_scan",
+      "expected": "공개 정적 파일(data.json)에 개인 메모 시드·표식 없음",
+      "observed": "GET https://stulss-choi-bujang-secret-vault.vercel.app/data.json → HTTP 200 · 요청 ID icn1::qfqt8-1791873990925-b10d630a6878 · 메모 0건·표식 없음 · 막음"
+    },
+    {
+      "attackId": "built_bundle_secret_scan",
+      "expected": "배포 화면 묶음(/)에 시험 비밀값 없음",
+      "observed": "GET https://stulss-choi-bujang-secret-vault.vercel.app/ → HTTP 200 · 요청 ID icn1::5xgr4-1791873991212-0079a809f062 · 비밀값 없음 · 막음"
+    },
+    {
+      "attackId": "origin_alias_bypass",
+      "expected": "공개 정적 파일(aleph.config.json)에 서버 전용 키·시드 표식 없음",
+      "observed": "GET https://stulss-choi-bujang-secret-vault.vercel.app/aleph.config.json → HTTP 200 · 요청 ID icn1::wqqsj-1791873991818-eb409d5d82e3 · 비밀값 없음·표식 없음 · 막음"
+    },
+    {
+      "attackId": "anonymous_note_write",
+      "expected": "인증 없이 개인 메모 추가 (쓰기 요청, 격리 환경은 GET·HEAD만)",
+      "observed": "not_run"
+    },
+    {
+      "attackId": "cross_zone_note_list",
+      "expected": "다른 구역 메모 목록 조회 (시험 계정 토큰 필요)",
+      "observed": "not_run"
+    },
+    {
+      "attackId": "cross_zone_note_read",
+      "expected": "다른 구역 메모 조회 (시험 계정 토큰 필요)",
+      "observed": "not_run"
+    },
+    {
+      "attackId": "cross_zone_note_write",
+      "expected": "다른 구역 메모 수정 (토큰·쓰기 요청 필요)",
+      "observed": "not_run"
+    },
+    {
+      "attackId": "student_edits_instructor_notice",
+      "expected": "학생 계정으로 강사 공지 수정 (토큰·쓰기 요청 필요)",
+      "observed": "not_run"
+    },
+    {
+      "attackId": "restore_changed_note",
+      "expected": "변조한 B 메모를 복구 경로로 복원 (토큰·쓰기 요청 필요)",
+      "observed": "not_run"
+    },
+    {
+      "attackId": "restore_deleted_note",
+      "expected": "삭제한 B 메모를 복구 경로로 복원 (토큰·쓰기 요청 필요)",
+      "observed": "not_run"
+    },
+    {
+      "attackId": "unsigned_client_request",
+      "expected": "설치형 앱 서명 없이 보호 요청 (승인 기기 계정 토큰 필요)",
+      "observed": "not_run"
+    },
+    {
+      "attackId": "signed_path_tamper",
+      "expected": "서명 뒤 요청 경로 변경 (기기 서명 필요)",
+      "observed": "not_run"
+    },
+    {
+      "attackId": "signed_body_tamper",
+      "expected": "서명 뒤 수정 본문 변경 (기기 서명·쓰기 요청 필요)",
+      "observed": "not_run"
+    },
+    {
+      "attackId": "combined_anonymous_owner_attack",
+      "expected": "무인증 조회와 타인 메모 조회 연속 전송 (타인 메모 조회에 토큰 필요)",
+      "observed": "not_run"
+    },
+    {
+      "attackId": "combined_device_revocation_attack",
+      "expected": "미등록 기기 요청 뒤 회수된 신원으로 재전송 (기기·토큰 필요)",
+      "observed": "not_run"
+    },
+    {
+      "attackId": "combined_restore_signature_attack",
+      "expected": "복구 뒤 서명 없는 변경 요청과 구역 밖 조회 (토큰·쓰기 요청 필요)",
+      "observed": "not_run"
+    }
+  ],
+  "explanation": "12단계 탈환 작전실은 서명한 GET /api/ops의 가린 서버 기록을 화면이 다시 세어 서버 수치와 대조하고, 증거 표는 실제 API 응답과 로컬 함수 실행을 나눠 셉니다.\n제출 묶음 점검은 41종 공격 코드를 이름으로 쓰고 각 점검이 직접 보낸 GET 요청의 상태 코드와 요청 ID만 적으며, 토큰·서명·쓰기 요청이 필요한 13종은 not_run입니다.\n41종 중 실제 HTTP 요청으로 막힌 4종(ANONYMOUS_NOTE_LIST·ANONYMOUS_NOTE_READ·FORGED_LOGIN_TOKEN·MISSING_LOGIN_TOKEN)만 실측 막음으로 세고 나머지는 미실행(37종)으로 두며, README에 ALEPH SDP 엔진과 학생 작업의 출처와 재현 순서를 적었습니다.",
+  "blockedAt": null,
+  "identityProvider": {
+    "issuer": "https://kolzruwueiachnjjkcya.supabase.co/auth/v1",
+    "jwksUrl": "https://kolzruwueiachnjjkcya.supabase.co/auth/v1/.well-known/jwks.json",
+    "audience": "authenticated",
+    "anonKey": "sb_publishable_3D_1RN4Dd6nO8BeqsEgpLQ_6zwwEInV"
+  },
+  "allowedRoutes": [
+    "GET /api/notes",
+    "POST /api/notes",
+    "GET /api/notes/:id",
+    "PUT /api/notes/:id",
+    "DELETE /api/notes/:id",
+    "GET /api/notices",
+    "GET /api/notices/:id",
+    "POST /api/notices",
+    "PUT /api/notices/:id",
+    "DELETE /api/notices/:id",
+    "POST /api/restore",
+    "GET /api/device",
+    "POST /api/device",
+    "GET /api/ops"
+  ],
+  "originalApiUrl": "https://kolzruwueiachnjjkcya.supabase.co/rest/v1/notes",
+  "restoreRoute": "POST /api/restore"
+}
