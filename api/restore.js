@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { checkDeviceSignature } from '../src/device-auth.mjs';
 import { NOTE_ID, noteContentHash, ownerIdFor } from '../src/note-owner.mjs';
 import { createLoginVerifier } from '../src/verify-login.mjs';
 
@@ -71,6 +72,12 @@ export default async function handler(request, response) {
   const supabase = createClient(supabaseUrl, supabaseSecretKey, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   });
+
+  // 11단계: 승인 기기의 서명 확인 (복구 요청도 서명 뒤 경로·본문을 바꾸면 거부)
+  const deviceCheck = await checkDeviceSignature(request, ownerId, supabase);
+  if (!deviceCheck.ok) {
+    return response.status(deviceCheck.status).json({ error: deviceCheck.error });
+  }
 
   // 감사 기록은 추가만 합니다. 기록을 남길 수 없으면 복원하지 않습니다.
   async function audit(stage, result, extra = {}) {

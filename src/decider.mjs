@@ -30,6 +30,8 @@ const ALLOWED_ROUTES = new Set([
   'GET /notices', 'GET /notices/:id', 'POST /notices', 'PUT /notices/:id', 'DELETE /notices/:id',
   // 10단계 복구 경로: 한 건 복원만 허용합니다. 주인·사본 대조는 api/restore.js가 합니다.
   'POST /restore',
+  // 11단계 기기 승인 경로: 승인 여부는 api/device.js가 개인키 보유 증명과 서명으로 정합니다.
+  'GET /device', 'POST /device',
 ]);
 
 // 공지 구역의 자료 ID 모양 (메모 ID로 공지 구역을, 공지 ID로 메모 구역을 열 수 없음)

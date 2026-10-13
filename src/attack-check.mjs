@@ -1071,5 +1071,53 @@ export async function runAttackChecks(config) {
     return checks;
   }
 
+  if (config.step === 11) {
+    // 새 화면에서도 1~10단계 정상·금지 결과가 유지되는지 10단계 점검을 그대로 다시 실행합니다.
+    const checks = await runAttackChecks({ ...config, step: 10 });
+
+    try {
+      const res = await fetch(new URL('/manifest.webmanifest', app), { redirect: 'error', signal: AbortSignal.timeout(10000) });
+      const manifest = res.ok ? await res.json().catch(() => null) : null;
+      checks.push({
+        attackId: 'pwa_manifest_served',
+        expected: '설치형 웹앱 설정(manifest)에 앱 이름이 있고, 설치 표시는 기기 확인으로 쓰지 않음',
+        observed: manifest?.name
+          ? `manifest 제공 확인 (HTTP ${res.status}, 이름 있음, display ${manifest.display ?? '-'})`
+          : `manifest 미확인 (HTTP ${res.status})`,
+      });
+    } catch (err) {
+      checks.push({ attackId: 'pwa_manifest_served', expected: '설치형 웹앱 설정(manifest) 제공', observed: `요청 실패 (${err.message})` });
+    }
+
+    try {
+      const res = await fetch(new URL('/api/device', app), { redirect: 'error', signal: AbortSignal.timeout(10000) });
+      checks.push({
+        attackId: 'device_status_unsigned_blocked',
+        expected: '로그인·기기 서명 없이 기기 승인 상태를 물으면 승인으로 처리하지 않고 거부 (HTTP 401)',
+        observed: res.status === 401 ? '서명 없는 기기 상태 요청 거부 확인 (HTTP 401)' : `기기 상태 응답 확인 (HTTP ${res.status})`,
+      });
+    } catch (err) {
+      checks.push({ attackId: 'device_status_unsigned_blocked', expected: '서명 없는 기기 상태 요청 거부 (HTTP 401)', observed: `요청 실패 (${err.message})` });
+    }
+
+    try {
+      const res = await fetch(new URL('/', app), { redirect: 'error', signal: AbortSignal.timeout(10000) });
+      const html = res.ok ? await res.text() : '';
+      const storesSecrets = /localStorage\.|sessionStorage\.setItem|indexedDB\.open|extractable\s*:\s*true/u.test(html);
+      const nonExtractable = /generateKey\([^)]*false/u.test(html);
+      checks.push({
+        attackId: 'device_key_not_in_storage',
+        expected: '접속 화면 코드가 기기 키·토큰을 브라우저 저장소에 넣지 않고, 기기 키를 꺼낼 수 없게 만듦',
+        observed: !html ? `접속 화면 미확인 (HTTP ${res.status})`
+          : (!storesSecrets && nonExtractable ? '배포 화면에 저장소 저장 코드 없음, 꺼낼 수 없는 기기 키 생성 확인'
+            : `배포 화면 확인 필요 (저장소 사용 ${storesSecrets ? '있음' : '없음'}, 꺼낼 수 없는 키 ${nonExtractable ? '확인' : '미확인'})`),
+      });
+    } catch (err) {
+      checks.push({ attackId: 'device_key_not_in_storage', expected: '기기 키·토큰을 브라우저 저장소에 넣지 않음', observed: `요청 실패 (${err.message})` });
+    }
+
+    return checks;
+  }
+
   throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
 }

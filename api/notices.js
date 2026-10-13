@@ -1,5 +1,8 @@
+import { createClient } from '@supabase/supabase-js';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { checkDeviceSignature } from '../src/device-auth.mjs';
+import { ownerIdFor } from '../src/note-owner.mjs';
 import { createLoginVerifier } from '../src/verify-login.mjs';
 
 let verifierInstance = null;
@@ -41,6 +44,18 @@ export default async function handler(request, response) {
   if (!verified || !verified.userId) {
     response.setHeader('WWW-Authenticate', 'Bearer');
     return response.status(401).json({ error: 'UNAUTHORIZED' });
+  }
+
+  // 11단계: 승인 기기의 서명 확인 (서명 뒤 경로·본문을 바꾸면 거부, 승인 기기가 있는 계정은 서명 필수)
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SECRET_KEY) {
+    return response.status(500).json({ error: 'SERVER_CONFIGURATION_ERROR' });
+  }
+  const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SECRET_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+  const deviceCheck = await checkDeviceSignature(request, ownerIdFor(verified), supabase);
+  if (!deviceCheck.ok) {
+    return response.status(deviceCheck.status).json({ error: deviceCheck.error });
   }
 
   const url = new URL(request.url, 'http://localhost');

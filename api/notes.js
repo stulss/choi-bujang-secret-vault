@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { checkDeviceSignature } from '../src/device-auth.mjs';
 import { NOTE_ID, noteContentHash, ownerIdFor } from '../src/note-owner.mjs';
 import { createLoginVerifier } from '../src/verify-login.mjs';
 
@@ -87,6 +88,12 @@ export default async function handler(request, response) {
   }
 
   const ownerId = ownerIdFor(verified);
+
+  // 11단계: 승인 기기의 서명 확인 (서명 뒤 경로·본문을 바꾸면 거부, 승인 기기가 있는 계정은 서명 필수)
+  const deviceCheck = await checkDeviceSignature(request, ownerId, supabase);
+  if (!deviceCheck.ok) {
+    return response.status(deviceCheck.status).json({ error: deviceCheck.error });
+  }
 
   try {
     if (method === 'GET') {

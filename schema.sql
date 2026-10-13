@@ -99,3 +99,22 @@ CREATE TRIGGER restore_audit_append_only BEFORE UPDATE OR DELETE ON public.resto
 REVOKE ALL ON TABLE public.note_backups, public.restore_audit FROM PUBLIC, anon, authenticated;
 ALTER TABLE public.note_backups ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.restore_audit ENABLE ROW LEVEL SECURITY;
+
+-- ==============================================================================
+-- 11단계: 승인 기기 등록부 (기기 공개키만 저장, 개인키는 저장하지 않음)
+-- Supabase SQL Editor에서 이 아래 부분만 한 번 실행합니다. 기존 자료와 10단계 테이블은 바꾸지 않습니다.
+-- ==============================================================================
+
+-- 11. 서버가 개인키 보유 증명을 확인한 기기만 approved로 기록합니다
+CREATE TABLE IF NOT EXISTS public.devices (
+    owner_id UUID NOT NULL,
+    device_id TEXT NOT NULL CHECK (device_id ~ '^[0-9a-f]{16}$'),
+    public_key JSONB NOT NULL CHECK (NOT (public_key ? 'd')),
+    status TEXT NOT NULL DEFAULT 'approved' CHECK (status IN ('approved', 'revoked')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (owner_id, device_id)
+);
+
+-- 12. 브라우저 키(anon)와 로그인 사용자(authenticated)의 직접 접근 권한 회수
+REVOKE ALL ON TABLE public.devices FROM PUBLIC, anon, authenticated;
+ALTER TABLE public.devices ENABLE ROW LEVEL SECURITY;
