@@ -30,6 +30,9 @@ const ALLOWED_ROUTES = new Set([
   'GET /notices', 'GET /notices/:id', 'POST /notices', 'PUT /notices/:id', 'DELETE /notices/:id',
 ]);
 
+// 공지 구역의 자료 ID 모양 (메모 ID로 공지 구역을, 공지 ID로 메모 구역을 열 수 없음)
+const NOTICE_ID = /^(?:notice-[a-z0-9_-]{1,64}|\d{1,9})$/iu;
+
 // 자료 ID 자리에 올 수 없는 기능 이름 (쿼리로 기능을 고르는 요청도 거부)
 const FORBIDDEN_ID_ACTIONS = new Set([
   'export', 'import', 'admin', 'dump', 'backup', 'all', 'download', 'upload',
@@ -131,11 +134,15 @@ export async function decide(request) {
   // 4. 강사 공지 구역: 계약에 강사 역할이 없으므로 학생 주체는 읽기만 허용합니다.
   if (zone === 'notices') {
     if (method !== 'GET') return respond(requestId, 'deny', 'instructor_notice_forbidden', 'zone_partitioning');
+    if (resourceId && !NOTICE_ID.test(safeDecode(resourceId))) {
+      return respond(requestId, 'deny', 'zone_owner_forbidden', 'zone_partitioning');
+    }
     return respond(requestId, 'allow', 'approved', 'zone_partitioning');
   }
 
   // 5. 개인 메모 구역: 목록·새 메모는 서버가 본인 것으로 묶고, 다른 주인의 메모는 읽기·수정·삭제를 막습니다.
-  if (resourceId && isOtherOwnersNote(subjectId, safeDecode(resourceId))) {
+  if (resourceId && (/^notice-/iu.test(safeDecode(resourceId))
+      || isOtherOwnersNote(subjectId, safeDecode(resourceId)))) {
     return respond(requestId, 'deny', 'zone_owner_forbidden', 'zone_partitioning');
   }
 

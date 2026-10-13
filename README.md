@@ -159,7 +159,10 @@
   - 메모 ID에 주인이 드러나면(`owner_a_item`, `b-note-1`) 요청한 주체와 같을 때만 허용하고, 다르면 `deny`(`zone_owner_forbidden`)입니다. 주인 표시가 없는 ID(UUID 등)는 서버 API의 owner_id 대조가 막습니다.
   - 7단계 재인증을 마친 요청에도 구역 규칙을 그대로 적용합니다.
   - `RULE_IDS`: `['device_registered', 'step_up_required', 'zone_partitioning']`
-- **자료 API 권한 대조 (`api/notes.js`, `api/notices.js`)**: 본문의 `role`, `owner_id`를 믿지 않고 토큰 검증 신원과 대조합니다. 다른 사람 메모는 HTTP 403/404, 학생의 공지 수정은 HTTP 403입니다.
+- **자료 API 구역 분리 (`api/notes.js`, `api/notices.js`)**:
+  - 메모 구역은 메모 ID(UUID)만, 공지 구역은 공지 ID(`notice-…` 또는 번호)만 받습니다. 다른 구역의 ID로 요청하면 HTTP 404입니다. 판정기도 같은 기준으로 거부합니다.
+  - 메모 주인은 토큰 검증 신원으로 정합니다. 심판 토큰은 `sub`에 실행 ID와 a/b 신원까지 묶어 A·B 구역이 섞이지 않습니다. 새 메모 ID는 서버가 만들고, 본문의 `id`·`owner_id`·`role`은 믿지 않습니다.
+  - 다른 사람 메모는 HTTP 403/404, 학생의 공지 수정은 HTTP 403입니다.
 
 ### 8단계 확인 순서
 1. `npm run decider:test` — 7개 모두 `통과` (가상 요청 연습이며 심판 판정이 아님)

@@ -4,6 +4,8 @@ import { createLoginVerifier } from '../src/verify-login.mjs';
 
 let verifierInstance = null;
 
+const NOTICE_ID = /^(?:notice-[a-z0-9_-]{1,64}|\d{1,9})$/iu;
+
 async function getVerifier() {
   if (!verifierInstance) {
     const root = resolve(process.cwd());
@@ -45,7 +47,8 @@ export default async function handler(request, response) {
   const pathParts = url.pathname.replace(/\/+$/, '').split('/');
   const lastPart = pathParts[pathParts.length - 1];
   const isIdInPath = lastPart !== 'notices' && lastPart !== 'api' && lastPart !== '';
-  const noticeId = request.query?.id || (isIdInPath ? lastPart : 'notice-default');
+  const requestedId = request.query?.id || (isIdInPath ? lastPart : null);
+  const noticeId = requestedId || 'notice-default';
 
   // 8단계: 자원 ID 깊이에 기능 경로(export) 거부
   if (lastPart === 'export' || url.searchParams.get('action') === 'export') {
@@ -69,6 +72,11 @@ export default async function handler(request, response) {
       status: 'success',
       message: '공지가 수정되었습니다.',
     });
+  }
+
+  // 8단계: 공지 구역은 공지 ID(notice-… 또는 번호)만 받습니다. 메모 ID는 이 구역에 없는 자료입니다.
+  if (requestedId && !NOTICE_ID.test(requestedId)) {
+    return response.status(404).json({ error: 'NOTICE_NOT_FOUND', message: '공지를 찾을 수 없습니다.' });
   }
 
   // GET: 공지 조회 반환

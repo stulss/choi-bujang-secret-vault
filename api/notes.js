@@ -1,10 +1,22 @@
 import { createClient } from '@supabase/supabase-js';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { createLoginVerifier } from '../src/verify-login.mjs';
 
 let verifierInstance = null;
+
+const NOTE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
+
+// 메모 구역의 주인 ID. 심판 토큰은 실행 ID와 a/b 신원까지 묶어 A·B 구역이 섞이지 않게 합니다.
+function ownerIdFor(verified) {
+  if (verified.kind !== 'judge') return verified.userId;
+  const hex = createHash('sha256')
+    .update(`aleph-judge-owner:${verified.runId}:${verified.identity}:${verified.userId}`)
+    .digest('hex');
+  const variant = ((parseInt(hex[16], 16) & 3) | 8).toString(16);
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-${variant}${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+}
 
 async function getVerifier() {
   if (!verifierInstance) {
@@ -77,29 +89,15 @@ export default async function handler(request, response) {
     });
   }
 
-  // 8단계: 강사 공지 구역 분리 (자원 ID가 notice- 로 시작하거나 경로에 notices 포함)
-  const isNotice = (typeof noteId === 'string' && noteId.startsWith('notice-')) || url.pathname.includes('/notices');
-  if (isNotice) {
-    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
-      // 클라이언트 요청 본문이나 헤더의 role은 절대 신뢰하지 않고 서버 토큰 검증 권한만 판정
-      const isInstructor = verified.role === 'instructor' || verified.app_metadata?.role === 'instructor';
-      if (!isInstructor) {
-        return response.status(403).json({
-          error: 'FORBIDDEN_ZONE_ACCESS',
-          message: '강사 공지 수정은 강사 권한이 필요합니다.',
-        });
-      }
-    }
-    if (method === 'GET') {
-      return response.status(200).json({
-        id: noteId || 'notice-default',
-        type: 'notice',
-        title: '훈련 공지사항',
-        content: '등록된 공식 훈련 공지 구역입니다.',
-        body: '등록된 공식 훈련 공지 구역입니다.',
-      });
-    }
+  // 8단계: 메모 구역은 메모 ID(UUID)만 받습니다. 공지 ID나 다른 모양의 ID는 이 구역에 없는 자료입니다.
+  if (noteId && !NOTE_ID.test(noteId)) {
+    return response.status(404).json({
+      error: 'NOTE_NOT_FOUND',
+      message: '자료를 찾을 수 없습니다.',
+    });
   }
+
+  const ownerId = ownerIdFor(verified);
 
   try {
     if (method === 'GET') {
@@ -118,7 +116,7 @@ export default async function handler(request, response) {
           });
         }
 
-        if (data.owner_id !== verified.userId) {
+        if (data.owner_id !== ownerId) {
           return response.status(403).json({
             error: 'FORBIDDEN_ZONE_ACCESS',
             message: '다른 구역의 자료입니다.',
@@ -137,7 +135,7 @@ export default async function handler(request, response) {
       const { data, error } = await supabase
         .from('notes')
         .select('id, owner_id, title, content, body, created_at')
-        .eq('owner_id', verified.userId)
+        .eq('owner_id', ownerId)
         .order('created_at', { ascending: true });
 
       if (error) {
@@ -159,17 +157,17 @@ export default async function handler(request, response) {
       if (typeof bodyData === 'string') {
         try { bodyData = JSON.parse(bodyData); } catch {}
       }
-      const id = bodyData?.id || randomUUID();
+      const id = randomUUID();
       const title = bodyData?.title || '';
       const bodyText = bodyData?.body ?? bodyData?.content ?? '';
 
-      // Do NOT trust any owner_id from request body or url; always bind to verified.userId
+      // Do NOT trust any owner_id from request body or url; always bind to ownerId
       const { error } = await supabase.from('notes').insert({
         id,
         title,
         content: bodyText,
         body: bodyText,
-        owner_id: verified.userId,
+        owner_id: ownerId,
       });
 
       if (error) {
@@ -207,20 +205,20 @@ export default async function handler(request, response) {
         });
       }
 
-      if (existing.owner_id !== verified.userId) {
+      if (existing.owner_id !== ownerId) {
         return response.status(403).json({
           error: 'FORBIDDEN_ZONE_ACCESS',
           message: '다른 구역의 자료입니다.',
         });
       }
 
-      if (bodyData?.owner_id && bodyData.owner_id !== verified.userId) {
+      if (bodyData?.owner_id && bodyData.owner_id !== ownerId) {
         return response.status(403).json({
           error: 'FORBIDDEN',
           message: '타 사용자의 소유권을 지정할 수 없습니다.',
         });
       }
-      if (request.query?.owner_id && request.query.owner_id !== verified.userId) {
+      if (request.query?.owner_id && request.query.owner_id !== ownerId) {
         return response.status(403).json({
           error: 'FORBIDDEN',
           message: '타 사용자의 소유권을 지정할 수 없습니다.',
@@ -231,7 +229,7 @@ export default async function handler(request, response) {
       const bodyText = bodyData?.body ?? bodyData?.content;
 
       const updatePayload = {
-        owner_id: verified.userId,
+        owner_id: ownerId,
       };
       if (title !== undefined) updatePayload.title = title;
       if (bodyText !== undefined) {
@@ -243,7 +241,7 @@ export default async function handler(request, response) {
         .from('notes')
         .update(updatePayload)
         .eq('id', noteId)
-        .eq('owner_id', verified.userId)
+        .eq('owner_id', ownerId)
         .select('id, title, content, body')
         .maybeSingle();
 
@@ -281,7 +279,7 @@ export default async function handler(request, response) {
         });
       }
 
-      if (existing.owner_id !== verified.userId) {
+      if (existing.owner_id !== ownerId) {
         return response.status(403).json({
           error: 'FORBIDDEN_ZONE_ACCESS',
           message: '다른 구역의 자료입니다.',
@@ -292,7 +290,7 @@ export default async function handler(request, response) {
         .from('notes')
         .delete()
         .eq('id', noteId)
-        .eq('owner_id', verified.userId);
+        .eq('owner_id', ownerId);
 
       if (error) {
         return response.status(500).json({ error: 'DATABASE_DELETE_ERROR' });
