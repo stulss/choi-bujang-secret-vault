@@ -10,7 +10,8 @@ const git = (...args) => execFileSync('git', ['-C', root, ...args], {
 }).trim();
 const fromCommit = (path) => JSON.parse(git('show', `HEAD:${path}`));
 const fail = (message) => { throw new Error(message); };
-const secretPattern = /-----BEGIN [A-Z ]*PRIVATE KEY-----|\bBearer\s+[A-Za-z0-9._~+/-]{16,}|\bsb_secret_[A-Za-z0-9_-]{12,}|\bsk-[A-Za-z0-9_-]{20,}|\beyJ[A-Za-z0-9_-]{12,}\.eyJ[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{8,}|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/iu;
+const withoutKeys = ({ anonKey, publishableKey, ...rest }) => rest;
+const secretPattern = /-----BEGIN [A-Z ]*PRIVATE KEY-----|\bBearer\s+[A-Za-z0-9._~+/-]{16,}|\bsb_secret_[A-Za-z0-9_-]{12,}|\bsb_publishable_[A-Za-z0-9_-]{12,}|\bsk-[A-Za-z0-9_-]{20,}|\beyJ[A-Za-z0-9_-]{12,}\.eyJ[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{8,}|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/iu;
 const repository = /^https:\/\/github\.com\/([A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?)\/([A-Za-z0-9._-]{1,100})\/?$/iu;
 const normalizedRepo = value => {
   const match = typeof value === 'string' && value.length <= 250 && repository.exec(value);
@@ -91,7 +92,8 @@ try {
     schema: 'aleph.defense.submission.v2', step: config.step, commit, repoUrl,
     changedFiles, policyRules,
     attackAttempts, explanation: notes.explanation.trim(), blockedAt: notes.blockedAt ?? null,
-    identityProvider: config.identityProvider ?? null, allowedRoutes: config.allowedRoutes ?? [],
+    // 공개 키(anonKey·publishableKey)도 묶음에 넣지 않고 발급자·대상·공개키 주소만 남깁니다.
+    identityProvider: config.identityProvider ? withoutKeys(config.identityProvider) : null, allowedRoutes: config.allowedRoutes ?? [],
     originalApiUrl: config.originalApiUrl ?? null, restoreRoute: config.restoreRoute ?? null,
   };
   if (secretPattern.test(JSON.stringify(bundle))) fail('제출 묶음에 비밀값 또는 연락처로 보이는 내용이 있습니다.');
