@@ -11,7 +11,7 @@ import { collectEvidence, evidenceDigest } from '../src/evidence.mjs';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const config = JSON.parse(readFileSync(join(root, 'aleph.config.json'), 'utf8'));
 const evidence = await collectEvidence(config, { allowWrites: true });
-evidence.digest = evidenceDigest(evidence);
+evidence.digest = await evidenceDigest(evidence);
 writeFileSync(join(root, 'public', 'ops-evidence.json'), `${JSON.stringify(evidence, null, 2)}\n`, 'utf8');
 
 const label = { pass: '기대와 같음', fail: '기대와 다름', not_run: '미실행' };
