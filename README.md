@@ -2,8 +2,8 @@
 
 BYTE BACK 방어전 1~12단계에서 학생이 만든 가상 자료실입니다. 로그인한 사용자가 승인된 기기에서 자기 메모만 다루고, 판정기·탐지 규칙·복구·탈환 작전실로 공격을 막습니다. 메모는 모두 실습용 가상 자료이며 실제 학생 자료, 토큰, 비밀키는 넣지 않습니다.
 
-- 배포 주소: https://choi-bujang-secret-vault-delta.vercel.app
-- 저장소: https://github.com/chacha1650a/choi-bujang-secret-vault
+- 배포 주소: https://stulss-choi-bujang-secret-vault.vercel.app
+- 저장소: https://github.com/stulss/choi-bujang-secret-vault
 
 이 저장소는 교육용 실습 결과물입니다. 상용 제품이 아니고, 운영 방어가 끝났다는 뜻도 아닙니다. 단계별 작업 기록은 [records/STAGES.md](records/STAGES.md)에 있습니다.
 
@@ -22,7 +22,7 @@ BYTE BACK 방어전 1~12단계에서 학생이 만든 가상 자료실입니다.
 
 모든 절차는 검사한 커밋을 기준으로 합니다. 검사한 커밋은 `npm run bundle` 결과(`artifacts/submission.json`)의 `commit` 값입니다.
 
-1. 설치: `git clone https://github.com/chacha1650a/choi-bujang-secret-vault && cd choi-bujang-secret-vault && git checkout <검사한 커밋> && npm ci` (Node.js 22 이상).
+1. 설치: `git clone https://github.com/stulss/choi-bujang-secret-vault && cd choi-bujang-secret-vault && git checkout <검사한 커밋> && npm ci` (Node.js 22 이상).
 2. DB 준비: Supabase SQL Editor에서 `supabase/schema.sql` → `migrate-step3.sql` → `rls-step4.sql` → `rls-step5.sql` → `step8-notices.sql` → `step10-backup.sql` → `step11-devices.sql`을 순서대로 실행합니다. 시험 계정 SQL은 저장소에 넣지 않습니다.
 3. 실행: Vercel 새 프로젝트에 이 저장소를 연결하고, 환경변수 `SUPABASE_URL`, `SUPABASE_SECRET_KEY`(서버 전용 키)의 값은 Vercel 비밀 입력란에만 넣은 뒤 배포합니다(빌드 `npm run build`, 공개 폴더 `public`). 화면은 `public/`, 서버 함수는 `api/`입니다.
 4. 점검: 작업을 커밋한 뒤, 커밋하지 않는 `bundle-notes.json`에 이번에 한 일을 적고 `npm run bundle` → `npm run checks:table`을 실행합니다. 로컬 시험은 `node --test test/*.test.mjs`, 판정기·탐지 규칙 연습은 `npm run decider:test`, `npm run detect:test`입니다(가상 요청 연습이며 심판 판정이 아닙니다).
