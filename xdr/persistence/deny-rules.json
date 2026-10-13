@@ -1,0 +1,75 @@
+{
+  "schema": "aleph.xdr.deny-rules.v1",
+  "rules": [
+    {
+      "ruleId": "xdr.persistence.deny",
+      "srcip": "203.0.113.12",
+      "account": "user01",
+      "sourceAlertId": "ps-01",
+      "reason": "서명 없는 새 서비스가 임시 폴더 실행 파일을 가리킴",
+      "confidence": 0.95,
+      "createdAt": "2026-09-27T00:18:04.000Z",
+      "expiresAt": "2026-09-28T00:18:04.000Z"
+    },
+    {
+      "ruleId": "xdr.persistence.deny",
+      "srcip": "198.51.100.12",
+      "account": "user02",
+      "sourceAlertId": "ps-03",
+      "reason": "시작 폴더에 평소 목록에 없는 프로그램 추가",
+      "confidence": 0.9,
+      "createdAt": "2026-09-27T01:06:28.000Z",
+      "expiresAt": "2026-09-28T01:06:28.000Z"
+    },
+    {
+      "ruleId": "xdr.persistence.deny",
+      "srcip": "192.0.2.12",
+      "account": "user03",
+      "sourceAlertId": "ps-04",
+      "reason": "서명 없는 서비스 등록 연속 반복",
+      "confidence": 0.9,
+      "createdAt": "2026-09-27T01:22:03.000Z",
+      "expiresAt": "2026-09-28T01:22:03.000Z"
+    },
+    {
+      "ruleId": "xdr.persistence.deny",
+      "srcip": "203.0.113.19",
+      "account": "user04",
+      "sourceAlertId": "ps-05",
+      "reason": "낯선 예약 작업이 임시 폴더 프로그램을 실행",
+      "confidence": 0.92,
+      "createdAt": "2026-09-27T02:09:17.000Z",
+      "expiresAt": "2026-09-28T02:09:17.000Z"
+    },
+    {
+      "ruleId": "xdr.persistence.deny",
+      "srcip": "198.51.100.19",
+      "account": "user05",
+      "sourceAlertId": "ps-06",
+      "reason": "서명 없는 새 서비스가 임시 폴더 실행 파일을 가리킴",
+      "confidence": 0.95,
+      "createdAt": "2026-09-27T04:07:45.000Z",
+      "expiresAt": "2026-09-28T04:07:45.000Z"
+    },
+    {
+      "ruleId": "xdr.persistence.deny",
+      "srcip": "192.0.2.19",
+      "account": "user06",
+      "sourceAlertId": "ps-07",
+      "reason": "시작 프로그램과 예약 작업이 같은 임시 파일을 가리킴",
+      "confidence": 0.97,
+      "createdAt": "2026-09-27T05:14:08.000Z",
+      "expiresAt": "2026-09-28T05:14:08.000Z"
+    },
+    {
+      "ruleId": "xdr.persistence.deny",
+      "srcip": "203.0.113.33",
+      "account": "user07",
+      "sourceAlertId": "ps-08",
+      "reason": "서명 없는 새 서비스가 임시 폴더 실행 파일을 가리킴",
+      "confidence": 0.95,
+      "createdAt": "2026-09-27T06:28:31.000Z",
+      "expiresAt": "2026-09-28T06:28:31.000Z"
+    }
+  ]
+}

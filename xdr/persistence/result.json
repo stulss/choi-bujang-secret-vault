@@ -1,0 +1,155 @@
+{
+  "schema": "aleph.xdr.result.v1",
+  "moduleKey": "persistence",
+  "decisions": [
+    {
+      "alertId": "ps-01",
+      "action": "block",
+      "confidence": 0.95,
+      "reason": "서명 없는 새 서비스가 임시 폴더 실행 파일을 가리킴"
+    },
+    {
+      "alertId": "ps-02",
+      "action": "block",
+      "confidence": 0.92,
+      "reason": "낯선 예약 작업이 임시 폴더 프로그램을 실행"
+    },
+    {
+      "alertId": "ps-03",
+      "action": "block",
+      "confidence": 0.9,
+      "reason": "시작 폴더에 평소 목록에 없는 프로그램 추가"
+    },
+    {
+      "alertId": "ps-04",
+      "action": "block",
+      "confidence": 0.9,
+      "reason": "서명 없는 서비스 등록 연속 반복"
+    },
+    {
+      "alertId": "ps-05",
+      "action": "block",
+      "confidence": 0.92,
+      "reason": "낯선 예약 작업이 임시 폴더 프로그램을 실행"
+    },
+    {
+      "alertId": "ps-06",
+      "action": "block",
+      "confidence": 0.95,
+      "reason": "서명 없는 새 서비스가 임시 폴더 실행 파일을 가리킴"
+    },
+    {
+      "alertId": "ps-07",
+      "action": "block",
+      "confidence": 0.97,
+      "reason": "시작 프로그램과 예약 작업이 같은 임시 파일을 가리킴"
+    },
+    {
+      "alertId": "ps-08",
+      "action": "block",
+      "confidence": 0.95,
+      "reason": "서명 없는 새 서비스가 임시 폴더 실행 파일을 가리킴"
+    },
+    {
+      "alertId": "ps-09",
+      "action": "alert",
+      "confidence": 0.65,
+      "reason": "서명이 확인되지 않은 새 예약 작업이나 시작 항목"
+    },
+    {
+      "alertId": "ps-10",
+      "action": "alert",
+      "confidence": 0.65,
+      "reason": "서명이 확인되지 않은 새 예약 작업이나 시작 항목"
+    },
+    {
+      "alertId": "ps-11",
+      "action": "alert",
+      "confidence": 0.55,
+      "reason": "서비스나 시작 폴더 변경만 있고 이어진 실행은 없음"
+    },
+    {
+      "alertId": "ps-12",
+      "action": "alert",
+      "confidence": 0.5,
+      "reason": "지속성 기법 표시만 있는 약한 신호"
+    },
+    {
+      "alertId": "ps-13",
+      "action": "alert",
+      "confidence": 0.6,
+      "reason": "임시 폴더 실행 파일만 있고 등록은 없음"
+    },
+    {
+      "alertId": "ps-14",
+      "action": "alert",
+      "confidence": 0.55,
+      "reason": "서비스나 시작 폴더 변경만 있고 이어진 실행은 없음"
+    },
+    {
+      "alertId": "ps-15",
+      "action": "alert",
+      "confidence": 0.5,
+      "reason": "지속성 기법 표시만 있는 약한 신호"
+    },
+    {
+      "alertId": "ps-16",
+      "action": "alert",
+      "confidence": 0.5,
+      "reason": "지속성 기법 표시만 있는 약한 신호"
+    },
+    {
+      "alertId": "ps-17",
+      "action": "record",
+      "confidence": 0.05,
+      "reason": "알려진 패턴 없음, 정상 이벤트로 기록"
+    },
+    {
+      "alertId": "ps-18",
+      "action": "record",
+      "confidence": 0.05,
+      "reason": "알려진 패턴 없음, 정상 이벤트로 기록"
+    },
+    {
+      "alertId": "ps-19",
+      "action": "record",
+      "confidence": 0.05,
+      "reason": "알려진 패턴 없음, 정상 이벤트로 기록"
+    },
+    {
+      "alertId": "ps-20",
+      "action": "record",
+      "confidence": 0.05,
+      "reason": "알려진 패턴 없음, 정상 이벤트로 기록"
+    },
+    {
+      "alertId": "ps-21",
+      "action": "record",
+      "confidence": 0.05,
+      "reason": "알려진 패턴 없음, 정상 이벤트로 기록"
+    },
+    {
+      "alertId": "ps-22",
+      "action": "record",
+      "confidence": 0.05,
+      "reason": "알려진 패턴 없음, 정상 이벤트로 기록"
+    },
+    {
+      "alertId": "ps-23",
+      "action": "record",
+      "confidence": 0.05,
+      "reason": "알려진 패턴 없음, 정상 이벤트로 기록"
+    },
+    {
+      "alertId": "ps-24",
+      "action": "record",
+      "confidence": 0.05,
+      "reason": "알려진 패턴 없음, 정상 이벤트로 기록"
+    }
+  ],
+  "counts": {
+    "block": 8,
+    "alert": 8,
+    "record": 8
+  }
+}

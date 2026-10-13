@@ -1,0 +1,80 @@
+{
+  "schema": "aleph.xdr.patterns.v1",
+  "moduleKey": "persistence",
+  "source": "MITRE ATT&CK T1543 Create or Modify System Process (https://attack.mitre.org/techniques/T1543/) · T1053 Scheduled Task/Job (https://attack.mitre.org/techniques/T1053/) · 시작 폴더는 T1547.001 Boot or Logon Autostart Execution: Startup Folder",
+  "note": "confidence 숫자와 count 기준은 이 과제의 시험 경보에 맞춘 값이며 ATT&CK 이 정한 값이 아닙니다. 시험 경보는 시작 폴더 변경도 T1543 으로 표시했지만 ATT&CK 에서 시작 폴더는 T1547.001 입니다. 서비스 계정(svc-)과 서명된 기존 항목은 정상 운영으로 보고 패턴에 넣지 않았습니다.",
+  "patterns": [
+    {
+      "id": "startup-and-task-same-temp-file",
+      "name": "시작 프로그램과 예약 작업이 같은 임시 파일을 가리킴",
+      "tier": "clear",
+      "baseConfidence": 0.97,
+      "condition": { "context": "T1543·T1053·T1547 표시", "signal": "시작 프로그램(시작 폴더)과 예약 작업이 함께 같은 임시 폴더 파일을 가리킴" },
+      "evidence": "ATT&CK T1053·T1547.001: 한 파일을 시작 폴더와 예약 작업 두 곳에 걸어 두는 것은 재부팅 뒤에도 실행을 이어 가려는 지속성 확보 형태."
+    },
+    {
+      "id": "unsigned-service-temp-executable",
+      "name": "서명 없는 새 서비스가 임시 폴더 실행 파일을 가리킴",
+      "tier": "clear",
+      "baseConfidence": 0.95,
+      "condition": { "context": "T1543 표시", "signal": "서비스 등록·변경", "also": "서명 없음 또는 평소 목록에 없음", "path": "임시 폴더(Temp)의 실행 파일" },
+      "evidence": "ATT&CK T1543.003: 서비스를 새로 만들거나 바꿔 부팅 때마다 악성 실행 파일이 시작되게 하며, 서명 없는 서비스가 임시 폴더 파일을 가리키는 것은 정상 설치 경로가 아닌 형태."
+    },
+    {
+      "id": "unsigned-service-registration-burst",
+      "name": "서명 없는 서비스 등록 연속 반복",
+      "tier": "clear",
+      "baseConfidence": 0.9,
+      "condition": { "context": "T1543 표시", "signal": "서명 없는 서비스 등록", "count": "3건 이상" },
+      "evidence": "ATT&CK T1543.003: 서명 없는 서비스 등록이 짧게 연속되면 일회성 설치가 아니라 서비스로 지속성을 만드는 시도에 가까움."
+    },
+    {
+      "id": "unusual-scheduled-task-temp-executable",
+      "name": "낯선 예약 작업이 임시 폴더 프로그램을 실행",
+      "tier": "clear",
+      "baseConfidence": 0.92,
+      "condition": { "context": "T1053 표시", "signal": "예약 작업", "also": "처음 보는 작업 또는 임의 문자열 이름", "path": "임시 폴더(Temp)의 실행 파일" },
+      "evidence": "ATT&CK T1053.005: 예약 작업으로 악성 프로그램을 반복 실행해 지속성을 얻으며, 처음 보는 작업이 임시 폴더 파일을 실행하는 것은 정상 배포 경로가 아닌 형태."
+    },
+    {
+      "id": "startup-folder-unknown-addition",
+      "name": "시작 폴더에 평소 목록에 없는 프로그램 추가",
+      "tier": "clear",
+      "baseConfidence": 0.9,
+      "condition": { "context": "T1543·T1547 표시", "signal": "시작 폴더 또는 시작 프로그램 변경", "also": "평소 목록에 없음 또는 임시 폴더 파일" },
+      "evidence": "ATT&CK T1547.001: 시작 폴더에 프로그램을 넣으면 로그인 때마다 실행되므로, 평소 목록에 없는 항목의 추가는 지속성 확보 형태."
+    },
+    {
+      "id": "unverified-signature-new-entry",
+      "name": "서명이 확인되지 않은 새 예약 작업이나 시작 항목",
+      "tier": "suspect",
+      "baseConfidence": 0.65,
+      "condition": { "context": "T1543·T1053·T1547 표시와 규칙 수준 5 이상", "signal": "서명 확인 안 됨 또는 서명을 모름", "absent": "임시 폴더 파일, 평소 목록에 없음" },
+      "evidence": "ATT&CK T1053·T1547: 새 예약 작업이나 시작 항목은 지속성 수단이지만 서명을 알 수 없고 임시 폴더도 아니면 정상 수업 도구와 구분되지 않아 알림으로 확인."
+    },
+    {
+      "id": "temp-executable-without-registration",
+      "name": "임시 폴더 실행 파일만 있고 등록은 없음",
+      "tier": "suspect",
+      "baseConfidence": 0.6,
+      "condition": { "context": "T1543·T1053·T1547 표시와 규칙 수준 5 이상", "path": "임시 폴더(Temp)의 실행 파일", "absent": "서비스·예약 작업·시작 폴더 등록 신호" },
+      "evidence": "ATT&CK T1543·T1053: 지속성은 서비스·예약 작업 등록으로 만들어지므로, 임시 폴더에 파일만 생긴 것은 지속성 확인 전 단계로 보고 알림으로 확인."
+    },
+    {
+      "id": "persistence-change-no-follow-up",
+      "name": "서비스나 시작 폴더 변경만 있고 이어진 실행은 없음",
+      "tier": "suspect",
+      "baseConfidence": 0.55,
+      "condition": { "context": "T1543·T1053·T1547 표시와 규칙 수준 5 이상", "signal": "서비스 또는 시작 폴더 변경 표기", "absent": "서명 없음, 평소 목록에 없음, 임시 폴더 파일" },
+      "evidence": "ATT&CK T1543·T1547.001: 서비스 설정이나 시작 폴더가 바뀌는 것은 지속성 수단이지만 실행 파일이 그대로이거나 이어진 실행이 없으면 자동 차단 없이 알림으로 확인."
+    },
+    {
+      "id": "persistence-tagged-low-signal",
+      "name": "지속성 기법 표시만 있는 약한 신호",
+      "tier": "suspect",
+      "baseConfidence": 0.5,
+      "condition": { "context": "T1543·T1053·T1547 표시와 규칙 수준 5 이상", "absent": "위 패턴의 신호" },
+      "evidence": "ATT&CK T1543·T1053 으로 분류된 경보지만 서명 없음·임시 폴더 같은 악용 신호가 없으므로 자동 차단 없이 알림으로만 남김."
+    }
+  ]
+}
