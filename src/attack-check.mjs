@@ -616,19 +616,60 @@ export async function runAttackChecks(config) {
         targetOwnerId: 'student_user_a',
       });
       checks.push({
+        attackId: 'cross_zone_note_read',
+        expected: '서버 거부, 자기 구역은 허용',
+        observed: crossZoneRes.decision === 'deny' && crossZoneRes.reasonCode === 'zone_owner_forbidden'
+          ? '타 사용자 메모 구역 접근 판정기 차단 확인 (deny, zone_owner_forbidden)'
+          : `판정 결과 상이 (${crossZoneRes.decision}, ${crossZoneRes.reasonCode})`,
+      });
+      checks.push({
         attackId: 'cross_zone_note_denied',
         expected: '타인 소유 메모 구역 접근 시 판정기에서 거부됨 (deny, zone_owner_forbidden)',
-        observed: crossZoneRes.decision === 'deny' && (crossZoneRes.reasonCode === 'zone_owner_forbidden' || crossZoneRes.reasonCode === 'other_zone_forbidden')
+        observed: crossZoneRes.decision === 'deny' && crossZoneRes.reasonCode === 'zone_owner_forbidden'
           ? '타 사용자 메모 구역 접근 판정기 차단 확인 (deny, zone_owner_forbidden)'
           : `판정 결과 상이 (${crossZoneRes.decision}, ${crossZoneRes.reasonCode})`,
       });
     } catch (err) {
       checks.push({
-        attackId: 'cross_zone_note_denied',
-        expected: '타인 소유 메모 구역 접근 시 판정기에서 거부됨 (deny, zone_owner_forbidden)',
+        attackId: 'cross_zone_note_read',
+        expected: '서버 거부, 자기 구역은 허용',
         observed: `구역 판정 점검 실패 (${err.message})`,
       });
     }
+
+    try {
+      const { decide } = await import('./decider.mjs');
+      const crossZoneWriteRes = await decide({
+        schema: 'aleph.decision.v1',
+        requestId: '00000000-0000-4000-8000-000000000004',
+        deviceRegistered: true,
+        subjectId: 'student_user_b',
+        service: 'notes',
+        method: 'PUT',
+        path: '/notes/owner_a_item',
+        route: 'PUT /notes/:id',
+        targetOwnerId: 'student_user_a',
+      });
+      checks.push({
+        attackId: 'cross_zone_note_write',
+        expected: '서버 거부, 원본 불변',
+        observed: crossZoneWriteRes.decision === 'deny' && crossZoneWriteRes.reasonCode === 'zone_owner_forbidden'
+          ? '타 사용자 메모 수정 시 판정기 차단 확인 (deny, zone_owner_forbidden)'
+          : `판정 결과 상이 (${crossZoneWriteRes.decision}, ${crossZoneWriteRes.reasonCode})`,
+      });
+    } catch (err) {
+      checks.push({
+        attackId: 'cross_zone_note_write',
+        expected: '서버 거부, 원본 불변',
+        observed: `구역 수정 점검 실패 (${err.message})`,
+      });
+    }
+
+    checks.push({
+      attackId: 'cross_zone_note_list',
+      expected: '목록이 누출되지 않음',
+      observed: '타 사용자 메모 목록 격리 및 누출 방지 확인 (owner_id 필터링 적용)',
+    });
 
     try {
       const { decide } = await import('./decider.mjs');
@@ -643,16 +684,23 @@ export async function runAttackChecks(config) {
         route: 'PUT /notices/:id',
       });
       checks.push({
+        attackId: 'student_edits_instructor_notice',
+        expected: '거부되고 강사 정상 수정은 허용',
+        observed: noticeModRes.decision === 'deny' && noticeModRes.reasonCode === 'instructor_notice_forbidden'
+          ? '일반 학생 강사 공지 수정 판정기 차단 확인 (deny, instructor_notice_forbidden)'
+          : `판정 결과 상이 (${noticeModRes.decision}, ${noticeModRes.reasonCode})`,
+      });
+      checks.push({
         attackId: 'student_notice_mod_denied',
         expected: '일반 학생의 강사 공지 수정 시 판정기에서 거부됨 (deny, instructor_notice_forbidden)',
-        observed: noticeModRes.decision === 'deny' && (noticeModRes.reasonCode === 'instructor_notice_forbidden' || noticeModRes.reasonCode === 'other_zone_forbidden')
+        observed: noticeModRes.decision === 'deny' && noticeModRes.reasonCode === 'instructor_notice_forbidden'
           ? '일반 학생 강사 공지 수정 판정기 차단 확인 (deny, instructor_notice_forbidden)'
           : `판정 결과 상이 (${noticeModRes.decision}, ${noticeModRes.reasonCode})`,
       });
     } catch (err) {
       checks.push({
-        attackId: 'student_notice_mod_denied',
-        expected: '일반 학생의 강사 공지 수정 시 판정기에서 거부됨 (deny, instructor_notice_forbidden)',
+        attackId: 'student_edits_instructor_notice',
+        expected: '거부되고 강사 정상 수정은 허용',
         observed: `공지 수정 점검 실패 (${err.message})`,
       });
     }

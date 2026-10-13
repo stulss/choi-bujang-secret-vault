@@ -189,15 +189,18 @@ export async function decide(request) {
     };
   }
 
-  // 3-2. 강사 공지 구역 검사 (일반 학생의 공지 수정 차단)
+  // 3-2. 강사 공지 및 강사 자료 구역 검사 (일반 학생의 공지 수정 차단)
+  // 클라이언트 요청 본문이나 헤더의 role은 절대 믿지 않고 엔진이 확인한 주체(subjectId)만 대조
+  const isInstructor = subjectId.includes('instructor')
+    || subjectId.includes('teacher')
+    || subjectId.includes('admin');
   const isNoticeResource = isNoticesPath || service === 'notices' || service === 'notice'
     || resourceId.startsWith('notice') || path.includes('notice') || route.includes('notice');
-  if (isNoticeResource) {
-    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
-      const isInstructor = request.role === 'instructor'
-        || subjectId.includes('instructor')
-        || subjectId.includes('teacher')
-        || subjectId.includes('admin');
+  const isInstructorResource = isNoticeResource
+    || path.includes('instructor') || path.includes('teacher') || path.includes('material') || service === 'materials';
+
+  if (isInstructorResource) {
+    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method) || (!isNoticeResource && !isInstructor)) {
       if (!isInstructor) {
         return {
           schema: 'aleph.decision.v1',
