@@ -1,7 +1,7 @@
 // ALEPH SDP 엔진이 확인한 요청만 받는 학생 판정기입니다.
 // 6단계: 기기 등록 상태(deviceRegistered)를 확인하여 등록 기기만 허용합니다.
 // 7단계: 평소와 다른 시각·네트워크·대량 자료 조회의 복합 이상 사건을 추가 확인(step_up)으로 보냅니다.
-// 8단계: 자원 구역 분리(자기 메모 vs 강사 공지 및 경로 유효성 검사) 규칙을 적용합니다.
+// 8단계: 자원 구역 분리 — 자기 메모만 열고, 공지는 읽기만, 계약에 없는 경로는 거부합니다.
 // 요청 본문의 userId, role, 기기 키, 토큰을 별도로 믿거나 저장하지 마세요.
 export const RULE_IDS = Object.freeze(['device_registered', 'step_up_required', 'zone_partitioning']);
 
@@ -24,348 +24,121 @@ function isSuspiciousAccess(request) {
   return isUnusualNetwork && (isOffHours || isForeign) && hasSpikeEvents;
 }
 
-// 허용된 정규 경로 목록 (화이트리스트)
+// aleph.config.json allowedRoutes와 같은 경로 모양만 허용합니다. (엔진은 /api 없이 보낼 수 있음)
 const ALLOWED_ROUTES = new Set([
-  'GET /notes',
-  'POST /notes',
-  'GET /notes/:id',
-  'PUT /notes/:id',
-  'PATCH /notes/:id',
-  'DELETE /notes/:id',
-  'GET /notices',
-  'GET /notices/:id',
-  'POST /notices',
-  'PUT /notices/:id',
-  'PATCH /notices/:id',
-  'DELETE /notices/:id',
-  'GET /materials',
-  'GET /materials/:id',
-  'POST /materials',
-  'PUT /materials/:id',
-  'PATCH /materials/:id',
-  'DELETE /materials/:id',
-  'GET /api/notes',
-  'POST /api/notes',
-  'GET /api/notes/:id',
-  'PUT /api/notes/:id',
-  'PATCH /api/notes/:id',
-  'DELETE /api/notes/:id',
-  'GET /api/notices',
-  'GET /api/notices/:id',
-  'POST /api/notices',
-  'PUT /api/notices/:id',
-  'PATCH /api/notices/:id',
-  'DELETE /api/notices/:id',
-  'GET /api/materials',
-  'GET /api/materials/:id',
-  'POST /api/materials',
-  'PUT /api/materials/:id',
-  'PATCH /api/materials/:id',
-  'DELETE /api/materials/:id',
+  'GET /notes', 'POST /notes', 'GET /notes/:id', 'PUT /notes/:id', 'DELETE /notes/:id',
+  'GET /notices', 'GET /notices/:id', 'POST /notices', 'PUT /notices/:id', 'DELETE /notices/:id',
 ]);
 
-// 자료 ID 깊이에 올 수 없는 금지된 기능/액션 경로
+// 자료 ID 자리에 올 수 없는 기능 이름 (쿼리로 기능을 고르는 요청도 거부)
 const FORBIDDEN_ID_ACTIONS = new Set([
   'export', 'import', 'admin', 'dump', 'backup', 'all', 'download', 'upload',
   'search', 'query', 'filter', 'action', 'bulk', 'raw',
 ]);
 
-function resolveUser(str) {
-  if (!str || typeof str !== 'string') return null;
-  const s = str.toLowerCase();
-
-  // User B identifiers
-  if (
-    s.includes('user_b') || s.includes('user-b') || s.includes('userb') ||
-    s.includes('student_b') || s.includes('student-b') || s.includes('studentb') ||
-    s.includes('learner_b') || s.includes('learner-b') || s.includes('learnerb') ||
-    s.includes('owner_b') || s.includes('owner-b') || s.includes('ownerb') ||
-    s.includes('student_user_b') || s.includes('student-user-b') || s.includes('studentuserb') ||
-    s.includes('item_b') || s.includes('item-b') || s.includes('itemb') ||
-    s.includes('note_b') || s.includes('note-b') || s.includes('noteb') ||
-    s.includes('memo_b') || s.includes('memo-b') || s.includes('memob') ||
-    s.includes('user_2') || s.includes('user-2') || s.includes('user2') ||
-    s.includes('student_2') || s.includes('student-2') || s.includes('student2') ||
-    s.includes('records') || s.includes('행정') ||
-    s.includes('beb71205')
-  ) {
-    return 'user_b';
-  }
-
-  // User A identifiers
-  if (
-    s.includes('user_a') || s.includes('user-a') || s.includes('usera') ||
-    s.includes('student_a') || s.includes('student-a') || s.includes('studenta') ||
-    s.includes('learner_a') || s.includes('learner-a') || s.includes('learnera') ||
-    s.includes('owner_a') || s.includes('owner-a') || s.includes('ownera') ||
-    s.includes('student_user_a') || s.includes('student-user-a') || s.includes('studentusera') ||
-    s.includes('item_a') || s.includes('item-a') || s.includes('itema') ||
-    s.includes('note_a') || s.includes('note-a') || s.includes('notea') ||
-    s.includes('memo_a') || s.includes('memo-a') || s.includes('memoa') ||
-    s.includes('user_1') || s.includes('user-1') || s.includes('user1') ||
-    s.includes('student_1') || s.includes('student-1') || s.includes('student1') ||
-    s.includes('tasks') || s.includes('task') || s.includes('portfolio') || s.includes('ritual') ||
-    s.includes('과제') || s.includes('포트폴리오') || s.includes('리추얼') ||
-    s.includes('5e5e2177')
-  ) {
-    return 'user_a';
-  }
-
-  // Number matching: 2, 4 -> user_b / 1, 3 -> user_a
-  if (/(^|[\/_.-])(2|4)($|[\/_.-])/.test(s)) {
-    return 'user_b';
-  }
-  if (/(^|[\/_.-])(1|3)($|[\/_.-])/.test(s)) {
-    return 'user_a';
-  }
-
-  // Pattern standalone a / b
-  if (/(^|[\/_.-])b($|[\/_.-])/i.test(s)) {
-    return 'user_b';
-  }
-  if (/(^|[\/_.-])a($|[\/_.-])/i.test(s)) {
-    return 'user_a';
-  }
-
-  return null;
+function hasActionQuery(path) {
+  const query = String(path).split('?')[1];
+  if (!query) return false;
+  const params = new URLSearchParams(query);
+  return params.has('action') || params.has('func');
 }
 
-function extractGenericUser(str) {
-  if (!str || typeof str !== 'string') return null;
-  const match = str.toLowerCase().match(/(?:student[_-]?user|user|student|learner|owner)[_-]?([a-z0-9]+)/);
-  if (match) return match[1];
-  const numMatch = str.toLowerCase().match(/(?:^|[\/_.-])([0-9]+)(?:$|[\/_.-])/);
-  if (numMatch) return numMatch[1];
-  return null;
+// 주체 ID·메모 ID에서 "누구"를 가리키지 않는 표시 단어
+const OWNER_MARKERS = new Set([
+  'student', 'user', 'learner', 'subject', 'sub', 'owner', 'account', 'member', 'principal', 'id',
+  'note', 'notes', 'memo', 'memos', 'item', 'items', 'record', 'records', 'doc', 'file', 'data', 'of', 'by',
+]);
+
+function splitTokens(value) {
+  return String(value || '').toLowerCase().split(/[^a-z0-9]+/u).filter(Boolean);
+}
+
+function ownerTokens(tokens) {
+  const rest = tokens.filter(token => !OWNER_MARKERS.has(token));
+  const words = rest.filter(token => !/^\d+$/u.test(token));
+  return new Set(words.length > 0 ? words : rest);
+}
+
+// 메모 ID가 주인을 드러내는 모양(owner_a_item, b-note-1, alpha_note, a)이면 그 주인을 돌려줍니다.
+// demo, UUID처럼 주인 표시가 없으면 null이며, 그때는 서버 API의 owner_id 검사가 막습니다.
+function noteOwner(noteId) {
+  const tokens = splitTokens(noteId);
+  const marked = tokens.some(token => OWNER_MARKERS.has(token));
+  const single = tokens.length === 1 && /^[a-z]$/u.test(tokens[0]);
+  if (!marked && !single) return null;
+  const owner = ownerTokens(tokens);
+  return owner.size > 0 ? owner : null;
+}
+
+// 주인이 드러난 메모가 요청한 주체의 것이 아니면 true입니다.
+function isOtherOwnersNote(subjectId, noteId) {
+  const owner = noteOwner(noteId);
+  if (!owner) return false;
+  const subject = String(subjectId || '').toLowerCase();
+  if (subject.length >= 8 && String(noteId).toLowerCase().includes(subject)) return false;
+  const mine = ownerTokens(splitTokens(subject));
+  if (mine.size === 0 || mine.size !== owner.size) return true;
+  return ![...mine].every(token => owner.has(token));
+}
+
+function safeDecode(value) {
+  try { return decodeURIComponent(value); } catch { return value; }
+}
+
+function respond(requestId, decision, reasonCode, ruleId) {
+  return { schema: 'aleph.decision.v1', requestId, decision, reasonCode, ruleIds: [ruleId] };
 }
 
 export async function decide(request) {
-  // 9단계 호환: 가명 사용자, 기기, 요청 종류, 판정 신호만 명시적으로 읽도록 입력 처리 정리
-  // 메모 본문, 토큰, 비밀키, 실명은 일체 추출·저장·출력하지 않습니다.
+  // 계약 v1의 이름만 읽습니다. 메모 본문, 토큰, 비밀키, 실명은 추출·저장·출력하지 않습니다.
   const {
     requestId,
     subjectId = '',
     deviceId = '',
     deviceRegistered = false,
-    service = '',
-    method: rawMethod = 'GET',
+    method: rawMethod = '',
     path = '',
     route = '',
     stepUp,
-    signals,
-    recentEvents,
   } = request || {};
   const method = String(rawMethod).toUpperCase();
 
   // 1. 기기 등록 검증 (6단계)
-  if (!request || typeof request !== 'object' || deviceRegistered !== true) {
-    return {
-      schema: 'aleph.decision.v1',
-      requestId,
-      decision: 'deny',
-      reasonCode: 'device_not_registered',
-      ruleIds: ['device_registered'],
-    };
+  if (!request || typeof request !== 'object' || deviceRegistered !== true
+      || !/^[0-9a-f]{16}$/u.test(String(deviceId))) {
+    return respond(requestId, 'deny', 'device_not_registered', 'device_registered');
   }
 
-  // 2. 복합 이상 접속 사건 검사 (7단계)
+  // 2. 복합 이상 접속 사건 검사 (7단계) — 재인증을 마쳐도 아래 구역 규칙은 그대로 적용합니다.
   if (isSuspiciousAccess(request)) {
-    // 재인증 확인 완료 여부(유효 기간 900초 이내) 확인
-    if (stepUp?.verified === true && typeof stepUp.authAgeSeconds === 'number' && stepUp.authAgeSeconds <= 900) {
-      return {
-        schema: 'aleph.decision.v1',
-        requestId,
-        decision: 'allow',
-        reasonCode: 'approved',
-        ruleIds: ['step_up_required'],
-      };
-    }
-
-    return {
-      schema: 'aleph.decision.v1',
-      requestId,
-      decision: 'step_up',
-      reasonCode: 'step_up_required',
-      ruleIds: ['step_up_required'],
-    };
+    const reverified = stepUp?.verified === true && typeof stepUp.authAgeSeconds === 'number'
+      && stepUp.authAgeSeconds >= 0 && stepUp.authAgeSeconds <= 900;
+    if (!reverified) return respond(requestId, 'step_up', 'step_up_required', 'step_up_required');
   }
 
-  // 3. 구역 및 경로 유효성 검사 (8단계)
-  const [pathnameRaw, searchRaw] = String(path).split('?');
-  const normalizedPath = pathnameRaw.replace(/\/+$/, '') || '/';
-  const pathParts = normalizedPath.split('/').filter(Boolean);
-  const resourceId = pathParts.length > 1 ? pathParts[pathParts.length - 1] : '';
-
-  // 3-1. 쿼리 기반 기능 우회 차단 (쿼리로 기능을 고르지 않고 자료 ID만 고름)
-  if (searchRaw) {
-    const searchParams = new URLSearchParams(searchRaw);
-    if (searchParams.has('action') || searchParams.has('func') || searchParams.get('action') === 'export') {
-      return {
-        schema: 'aleph.decision.v1',
-        requestId,
-        decision: 'deny',
-        reasonCode: 'unknown_path',
-        ruleIds: ['zone_partitioning'],
-      };
-    }
+  // 3. 경로 확인 (8단계): 엔진이 확인한 메서드·경로가 허용 경로 모양과 정확히 맞아야 합니다.
+  const pathname = String(path).split('?')[0].replace(/\/+$/u, '');
+  const parts = pathname.split('/').filter(Boolean);
+  if (parts[0] === 'api') parts.shift();
+  const [zone, resourceId, ...rest] = parts;
+  const shape = `${method} /${zone ?? ''}${resourceId ? '/:id' : ''}`;
+  const normalizedRoute = String(route).replace(/^([A-Z]+ )\/api\//u, '$1/');
+  if (rest.length > 0 || !ALLOWED_ROUTES.has(shape) || (route && normalizedRoute !== shape)
+      || FORBIDDEN_ID_ACTIONS.has(String(resourceId).toLowerCase()) || hasActionQuery(path)) {
+    return respond(requestId, 'deny', 'unknown_path', 'zone_partitioning');
   }
 
-  // 3-2. 알 수 없는 경로 및 :id 깊이의 기능 경로 차단
-  const hasValidRoute = route ? ALLOWED_ROUTES.has(route) : true;
-  const isNotesPath = normalizedPath === '/notes' || normalizedPath.startsWith('/notes/')
-    || normalizedPath === '/api/notes' || normalizedPath.startsWith('/api/notes/');
-  const isNoticesPath = normalizedPath === '/notices' || normalizedPath.startsWith('/notices/')
-    || normalizedPath === '/api/notices' || normalizedPath.startsWith('/api/notices/');
-  const isMaterialsPath = normalizedPath === '/materials' || normalizedPath.startsWith('/materials/')
-    || normalizedPath === '/api/materials' || normalizedPath.startsWith('/api/materials/')
-    || normalizedPath === '/instructor' || normalizedPath.startsWith('/instructor/')
-    || normalizedPath === '/api/instructor' || normalizedPath.startsWith('/api/instructor/');
-  const isAllowedPathShape = isNotesPath || isNoticesPath || isMaterialsPath;
-
-  if (!hasValidRoute || !isAllowedPathShape || FORBIDDEN_ID_ACTIONS.has(resourceId) || pathParts.length > 3) {
-    return {
-      schema: 'aleph.decision.v1',
-      requestId,
-      decision: 'deny',
-      reasonCode: 'unknown_path',
-      ruleIds: ['zone_partitioning'],
-    };
+  // 4. 강사 공지 구역: 계약에 강사 역할이 없으므로 학생 주체는 읽기만 허용합니다.
+  if (zone === 'notices') {
+    if (method !== 'GET') return respond(requestId, 'deny', 'instructor_notice_forbidden', 'zone_partitioning');
+    return respond(requestId, 'allow', 'approved', 'zone_partitioning');
   }
 
-  // 3-3. 강사 공지 및 강사 자료 구역 검사 (일반 학생의 공지 수정 및 강사 자료 접근 차단)
-  // 클라이언트 요청 본문이나 헤더의 role은 절대 믿지 않고 엔진이 확인한 주체(subjectId)만 대조
-  const isInstructor = subjectId.includes('instructor')
-    || subjectId.includes('teacher')
-    || subjectId.includes('admin')
-    || subjectId === 'instructor';
-
-  const isNoticeResource = isNoticesPath || service === 'notices' || service === 'notice'
-    || service === 'announcements' || service === 'announcement'
-    || resourceId.startsWith('notice') || resourceId.startsWith('announcement') || resourceId.includes('공지')
-    || path.includes('notice') || path.includes('announcement') || path.includes('공지')
-    || route.includes('notice') || route.includes('announcement') || route.includes('공지');
-
-  const isMaterialResource = isMaterialsPath || service === 'materials' || service === 'material'
-    || resourceId.startsWith('material') || path.includes('material') || path.includes('instructor')
-    || path.includes('teacher') || route.includes('material') || route.includes('instructor');
-
-  if (isMaterialResource) {
-    if (!isInstructor) {
-      return {
-        schema: 'aleph.decision.v1',
-        requestId,
-        decision: 'deny',
-        reasonCode: 'instructor_notice_forbidden',
-        ruleIds: ['zone_partitioning'],
-      };
-    }
+  // 5. 개인 메모 구역: 목록·새 메모는 서버가 본인 것으로 묶고, 다른 주인의 메모는 읽기·수정·삭제를 막습니다.
+  if (resourceId && isOtherOwnersNote(subjectId, safeDecode(resourceId))) {
+    return respond(requestId, 'deny', 'zone_owner_forbidden', 'zone_partitioning');
   }
 
-  if (isNoticeResource) {
-    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
-      if (!isInstructor) {
-        return {
-          schema: 'aleph.decision.v1',
-          requestId,
-          decision: 'deny',
-          reasonCode: 'instructor_notice_forbidden',
-          ruleIds: ['zone_partitioning'],
-        };
-      }
-    }
-  }
-
-  // 3-4. 개인 메모 구역 검사 (타 사용자 메모 접근 차단: B의 A 메모, A의 B 메모)
-  if (!isNoticeResource && !isMaterialResource) {
-    const subjectUser = resolveUser(subjectId);
-    const declaredOwner = request.targetOwnerId || request.ownerId || request.resourceOwnerId
-      || request.targetOwner || request.targetUserId || request.targetUser
-      || request.owner || request.noteOwnerId || request.noteOwner || request.resourceOwner;
-    const targetUser = resolveUser(path) || resolveUser(resourceId) || resolveUser(declaredOwner);
-
-    // User B가 특정 자원 접근 시, 본인 소유가 확인된 자원(user_b)이 아니면 모두 차단
-    if (subjectUser === 'user_b') {
-      if (resourceId && targetUser !== 'user_b') {
-        return {
-          schema: 'aleph.decision.v1',
-          requestId,
-          decision: 'deny',
-          reasonCode: 'zone_owner_forbidden',
-          ruleIds: ['zone_partitioning'],
-        };
-      }
-    }
-
-    // User A가 특정 자원 접근 시, 본인 소유가 확인된 자원(user_a)이 아니면 모두 차단
-    if (subjectUser === 'user_a') {
-      if (resourceId && targetUser !== 'user_a') {
-        return {
-          schema: 'aleph.decision.v1',
-          requestId,
-          decision: 'deny',
-          reasonCode: 'zone_owner_forbidden',
-          ruleIds: ['zone_partitioning'],
-        };
-      }
-    }
-
-    // 대상 메모 소유자와 요청 사용자 구역이 모두 식별되었으나 서로 다른 경우 차단
-    if (subjectUser && targetUser && subjectUser !== targetUser) {
-      return {
-        schema: 'aleph.decision.v1',
-        requestId,
-        decision: 'deny',
-        reasonCode: 'zone_owner_forbidden',
-        ruleIds: ['zone_partitioning'],
-      };
-    }
-
-    // 대상 소유자 명시 필드가 존재하나 본인과 일치하지 않는 경우 차단
-    if (declaredOwner) {
-      if (declaredOwner !== subjectId) {
-        return {
-          schema: 'aleph.decision.v1',
-          requestId,
-          decision: 'deny',
-          reasonCode: 'zone_owner_forbidden',
-          ruleIds: ['zone_partitioning'],
-        };
-      }
-      const declaredUser = resolveUser(declaredOwner);
-      if (subjectUser && declaredUser && subjectUser !== declaredUser) {
-        return {
-          schema: 'aleph.decision.v1',
-          requestId,
-          decision: 'deny',
-          reasonCode: 'zone_owner_forbidden',
-          ruleIds: ['zone_partitioning'],
-        };
-      }
-    }
-
-    // 일반 사용자 식별자(user_1 vs user_2 등) 대조 (표준 식별자가 결정되지 않은 경우)
-    if (!subjectUser || !targetUser) {
-      const genericSubject = extractGenericUser(subjectId);
-      const genericTarget = extractGenericUser(path) || extractGenericUser(resourceId)
-        || extractGenericUser(declaredOwner);
-      if (genericSubject && genericTarget && genericSubject !== genericTarget) {
-        return {
-          schema: 'aleph.decision.v1',
-          requestId,
-          decision: 'deny',
-          reasonCode: 'zone_owner_forbidden',
-          ruleIds: ['zone_partitioning'],
-        };
-      }
-    }
-  }
-
-  // 4. 등록된 기기의 정상 요청 허용
-  return {
-    schema: 'aleph.decision.v1',
-    requestId,
-    decision: 'allow',
-    reasonCode: 'approved',
-    ruleIds: ['device_registered'],
-  };
+  // 6. 등록된 기기의 정상 요청 허용
+  return respond(requestId, 'allow', 'approved', 'device_registered');
 }

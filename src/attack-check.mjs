@@ -608,12 +608,12 @@ export async function runAttackChecks(config) {
         schema: 'aleph.decision.v1',
         requestId: '00000000-0000-4000-8000-000000000002',
         deviceRegistered: true,
+        deviceId: '0123456789abcdef',
         subjectId: 'student_user_b',
         service: 'notes',
         method: 'GET',
         path: '/notes/owner_a_item',
         route: 'GET /notes/:id',
-        targetOwnerId: 'student_user_a',
       });
       checks.push({
         attackId: 'cross_zone_note_read',
@@ -643,12 +643,12 @@ export async function runAttackChecks(config) {
         schema: 'aleph.decision.v1',
         requestId: '00000000-0000-4000-8000-000000000004',
         deviceRegistered: true,
+        deviceId: '0123456789abcdef',
         subjectId: 'student_user_b',
         service: 'notes',
         method: 'PUT',
         path: '/notes/owner_a_item',
         route: 'PUT /notes/:id',
-        targetOwnerId: 'student_user_a',
       });
       checks.push({
         attackId: 'cross_zone_note_write',
@@ -668,7 +668,7 @@ export async function runAttackChecks(config) {
     checks.push({
       attackId: 'cross_zone_note_list',
       expected: '목록이 누출되지 않음',
-      observed: '타 사용자 메모 목록 격리 및 누출 방지 확인 (owner_id 필터링 적용)',
+      observed: '미실행 (로그인한 두 계정의 목록 요청을 이 점검에서 보내지 않음)',
     });
 
     try {
@@ -677,6 +677,7 @@ export async function runAttackChecks(config) {
         schema: 'aleph.decision.v1',
         requestId: '00000000-0000-4000-8000-000000000003',
         deviceRegistered: true,
+        deviceId: '0123456789abcdef',
         subjectId: 'learner_normal',
         service: 'notes',
         method: 'PUT',
@@ -832,12 +833,12 @@ export async function runAttackChecks(config) {
         schema: 'aleph.decision.v1',
         requestId: '00000000-0000-4000-8000-000000000002',
         deviceRegistered: true,
+        deviceId: '0123456789abcdef',
         subjectId: 'student_user_b',
         service: 'notes',
         method: 'GET',
         path: '/notes/owner_a_item',
         route: 'GET /notes/:id',
-        targetOwnerId: 'student_user_a',
       });
       checks.push({
         attackId: 'cross_zone_note_denied',
@@ -860,6 +861,7 @@ export async function runAttackChecks(config) {
         schema: 'aleph.decision.v1',
         requestId: '00000000-0000-4000-8000-000000000003',
         deviceRegistered: true,
+        deviceId: '0123456789abcdef',
         subjectId: 'learner_normal',
         service: 'notes',
         method: 'PUT',

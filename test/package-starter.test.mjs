@@ -4,6 +4,8 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 
 const baseline = JSON.parse(await readFile(new URL('../package/baseline-functions.json', import.meta.url)));
+// 방어전 2~5단계에서 학생이 직접 만든 서버 함수 (로그인 대리, 메모, 공지)
+const DEFENSE_FUNCTIONS = ['api/auth.js', 'api/notes.js', 'api/notices.js'];
 
 test('패키징 함수 기준표는 시작 틀의 실제 API와 일치한다', async () => {
   const actual = (await readdir(new URL('../api/', import.meta.url)))
@@ -13,7 +15,7 @@ test('패키징 함수 기준표는 시작 틀의 실제 API와 일치한다', a
   assert.equal(baseline.starter, 'ChoiTimo/aleph-defense-starter');
   assert.deepEqual(baseline.functions, []);
   assert.deepEqual(baseline.allowedNew, ['api/ai.js', 'api/threat-intel.js']);
-  assert.deepEqual(actual, [...baseline.functions, ...baseline.allowedNew].sort());
+  assert.deepEqual(actual, [...baseline.functions, ...baseline.allowedNew, ...DEFENSE_FUNCTIONS].sort());
 });
 
 test('미구현 서버 뼈대는 성공이나 로그인 통과로 가장하지 않는다', async () => {

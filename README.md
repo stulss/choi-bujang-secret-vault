@@ -153,26 +153,18 @@
 
 ## 8단계: 자료마다 갈 수 있는 구역을 나눕니다
 
-- **자원 ID 분리 및 구역 정책 (`src/decider.mjs`, `api/notes.js`)**:
-  - 내 자료실 메모(기존 UUID / `note-`)와 강사 공지(`notice-` / `/notices`)를 서로 다른 자원 ID로 구분하여 서버가 명확히 판정하도록 구현했습니다. 기존 자료와 API 주소는 그대로 보존됩니다.
-  - **판정기 구역 규칙 (`zone_partitioning`)**:
-    - 자원 ID 깊이에 `export` 등 기능 경로를 두거나 알 수 없는 경로 요청 시 `deny`(`unknown_path`)로 거부합니다.
-    - 강사 공지 구역에 대한 수정(`PUT`, `POST` 등) 요청은 일반 학생일 경우 `deny`(`instructor_notice_forbidden`)로 차단합니다.
-    - 타 사용자 메모(B의 A 메모) 접근 시 `deny`(`zone_owner_forbidden`)로 차단합니다.
-    - 본인 메모 접근 및 등록 기기 정상 요청은 `allow`로 승인합니다.
-    - `RULE_IDS`에 `['device_registered', 'step_up_required', 'zone_partitioning']`를 등록했습니다.
-  - **자료 API 권한 대조 (`api/notes.js`)**:
-    - 화면 메뉴나 본문의 위조 가능한 `role`, `owner_id`를 배제하고 토큰 검증 신원과 대조합니다.
-    - 메뉴를 우회한 직접 API 요청에서도 타 구역 자료 접근 및 미인가 공지 수정 시 HTTP 403/404로 거부됩니다.
+- **판정기 구역 규칙 (`src/decider.mjs`, `zone_partitioning`)** — 엔진이 확인한 사용자(`subjectId`)·기기(`deviceRegistered`, `deviceId`)·메서드·정확한 경로만으로 판정합니다.
+  - 메서드와 경로가 `aleph.config.json`의 허용 경로 10개 모양과 정확히 맞지 않으면 `deny`(`unknown_path`)입니다. PATCH, `/materials`, `/notes/:id/export`, `/notes/export`, `?action=` 요청이 여기에 해당합니다.
+  - 공지(`/notices`)는 읽기만 허용합니다. 계약에 강사 역할 값이 없으므로 POST·PUT·DELETE는 `deny`(`instructor_notice_forbidden`)입니다.
+  - 메모 ID에 주인이 드러나면(`owner_a_item`, `b-note-1`) 요청한 주체와 같을 때만 허용하고, 다르면 `deny`(`zone_owner_forbidden`)입니다. 주인 표시가 없는 ID(UUID 등)는 서버 API의 owner_id 대조가 막습니다.
+  - 7단계 재인증을 마친 요청에도 구역 규칙을 그대로 적용합니다.
+  - `RULE_IDS`: `['device_registered', 'step_up_required', 'zone_partitioning']`
+- **자료 API 권한 대조 (`api/notes.js`, `api/notices.js`)**: 본문의 `role`, `owner_id`를 믿지 않고 토큰 검증 신원과 대조합니다. 다른 사람 메모는 HTTP 403/404, 학생의 공지 수정은 HTTP 403입니다.
 
 ### 8단계 확인 순서
-1. **판정기 검증 시험 실행**:
-   ```bash
-   npm run decider:test
-   ```
-2. **구역 격리 확인**:
-   - 타인 메모 접근 및 일반 학생의 공지 수정 시 API 거부 확인
-   - 본인 정상 요청 정상 유지 확인
+1. `npm run decider:test` — 7개 모두 `통과` (가상 요청 연습이며 심판 판정이 아님)
+2. `npm run fixture:7` — 정상 요청 `allow`, 복합 이상 요청 `step_up`
+3. 화면에서 A 계정으로 로그인해 내 메모 목록과 공지 조회가 열리는지 확인합니다. B 계정 토큰으로 A 메모 ID를 직접 요청하면 거부되어야 합니다.
 
 ## 다음 단계의 코딩 도구에 전달할 규칙
 
