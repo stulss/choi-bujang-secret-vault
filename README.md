@@ -151,6 +151,29 @@
    - `통과 · 복합 이상 접속` (step_up · step_up_required)
    - `통과 · 다시 확인한 복합 이상 접속` (allow)
 
+## 8단계: 자료마다 갈 수 있는 구역을 나눕니다
+
+- **자원 ID 분리 및 구역 정책 (`src/decider.mjs`, `api/notes.js`)**:
+  - 내 자료실 메모(기존 UUID / `note-`)와 강사 공지(`notice-` / `/notices`)를 서로 다른 자원 ID로 구분하여 서버가 명확히 판정하도록 구현했습니다. 기존 자료와 API 주소는 그대로 보존됩니다.
+  - **판정기 구역 규칙 (`zone_partitioning`)**:
+    - 자원 ID 깊이에 `export` 등 기능 경로를 두거나 알 수 없는 경로 요청 시 `deny`(`invalid_route`)로 거부합니다.
+    - 강사 공지 구역에 대한 수정(`PUT`, `POST` 등) 요청은 일반 학생일 경우 `deny`(`instructor_notice_forbidden`)로 차단합니다.
+    - 타 사용자 메모(B의 A 메모) 접근 시 `deny`(`zone_owner_forbidden`)로 차단합니다.
+    - 본인 메모 접근 및 등록 기기 정상 요청은 `allow`로 승인합니다.
+    - `RULE_IDS`에 `['device_registered', 'step_up_required', 'zone_partitioning']`를 등록했습니다.
+  - **자료 API 권한 대조 (`api/notes.js`)**:
+    - 화면 메뉴나 본문의 위조 가능한 `role`, `owner_id`를 배제하고 토큰 검증 신원과 대조합니다.
+    - 메뉴를 우회한 직접 API 요청에서도 타 구역 자료 접근 및 미인가 공지 수정 시 HTTP 403/404로 거부됩니다.
+
+### 8단계 확인 순서
+1. **판정기 검증 시험 실행**:
+   ```bash
+   npm run decider:test
+   ```
+2. **구역 격리 확인**:
+   - 타인 메모 접근 및 일반 학생의 공지 수정 시 API 거부 확인
+   - 본인 정상 요청 정상 유지 확인
+
 ## 다음 단계의 코딩 도구에 전달할 규칙
 
 [AGENTS.md](AGENTS.md)를 먼저 읽히고 한 번에 한 제작 단위만 요청하세요. 2단계부터는 자료 보호를 구현할 때 `public/data.json`을 복사하는 1단계 빌드 흐름도 함께 바꿔야 합니다. 3단계 이후의 로그인, 허용 경로, 5단계의 원본 API 주소, 6단계 이후 정책 규칙은 해당 단계 원고와 계약에 맞춰 추가합니다. 비밀번호·토큰·서버 전용 키·실제 학생 기록을 코드, Git, 제출 묶음에 넣지 않습니다.

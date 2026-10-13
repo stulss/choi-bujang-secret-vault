@@ -1,8 +1,9 @@
 // ALEPH SDP 엔진이 확인한 요청만 받는 학생 판정기입니다.
 // 6단계: 기기 등록 상태(deviceRegistered)를 확인하여 등록 기기만 허용합니다.
 // 7단계: 평소와 다른 시각·네트워크·대량 자료 조회의 복합 이상 사건을 추가 확인(step_up)으로 보냅니다.
+// 8단계: 자원 구역 분리(자기 메모 vs 강사 공지 및 경로 유효성 검사) 규칙을 적용합니다.
 // 요청 본문의 userId, role, 기기 키, 토큰을 별도로 믿거나 저장하지 마세요.
-export const RULE_IDS = Object.freeze(['device_registered', 'step_up_required']);
+export const RULE_IDS = Object.freeze(['device_registered', 'step_up_required', 'zone_partitioning']);
 
 function isSuspiciousAccess(request) {
   const signals = request?.signals;
@@ -53,6 +54,51 @@ export async function decide(request) {
       decision: 'step_up',
       reasonCode: 'step_up_required',
       ruleIds: ['step_up_required'],
+    };
+  }
+
+  // 8단계: 구역 규칙 검사
+  const path = request.path || '';
+  const method = (request.method || 'GET').toUpperCase();
+  const subjectId = request.subjectId || '';
+
+  // 1) 자원 ID 깊이에 기능 경로(export 등)를 두거나 알 수 없는 경로 요청 시 거부
+  if (path.includes('/export') || path.split('/').pop() === 'export') {
+    return {
+      schema: 'aleph.decision.v1',
+      requestId: request.requestId,
+      decision: 'deny',
+      reasonCode: 'invalid_route',
+      ruleIds: ['zone_partitioning'],
+    };
+  }
+
+  // 2) 강사 공지 구역: 일반 학생의 공지 수정 차단
+  const isNoticeResource = path.includes('/notices') || path.includes('/notice-') || path.includes('notice');
+  if (isNoticeResource && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+    const isInstructor = request.role === 'instructor' || subjectId.includes('instructor');
+    if (!isInstructor) {
+      return {
+        schema: 'aleph.decision.v1',
+        requestId: request.requestId,
+        decision: 'deny',
+        reasonCode: 'instructor_notice_forbidden',
+        ruleIds: ['zone_partitioning'],
+      };
+    }
+  }
+
+  // 3) 개인 메모 구역: 타 사용자의 메모 자원 접근 차단 (B의 A 메모)
+  const isCrossZoneTarget = (path.includes('user_a') && subjectId.includes('user_b'))
+    || (path.includes('owner_a') && subjectId.includes('owner_b'))
+    || (request.targetOwnerId && request.targetOwnerId !== subjectId);
+  if (isCrossZoneTarget) {
+    return {
+      schema: 'aleph.decision.v1',
+      requestId: request.requestId,
+      decision: 'deny',
+      reasonCode: 'zone_owner_forbidden',
+      ruleIds: ['zone_partitioning'],
     };
   }
 

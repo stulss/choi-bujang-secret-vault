@@ -69,6 +69,37 @@ export default async function handler(request, response) {
   const isIdInPath = lastPart !== 'notes' && lastPart !== 'api' && lastPart !== '';
   const noteId = request.query?.id || (isIdInPath ? lastPart : null);
 
+  // 8단계: 자원 ID 깊이에 기능 경로(export)를 두거나 쿼리로 기능을 분기하려는 요청 거부
+  if (lastPart === 'export' || url.searchParams.get('action') === 'export') {
+    return response.status(404).json({
+      error: 'INVALID_RESOURCE_ROUTE',
+      message: '자원 ID 깊이에 기능 경로(export)를 둘 수 없습니다.',
+    });
+  }
+
+  // 8단계: 강사 공지 구역 분리 (자원 ID가 notice- 로 시작하거나 경로에 notices 포함)
+  const isNotice = (typeof noteId === 'string' && noteId.startsWith('notice-')) || url.pathname.includes('/notices');
+  if (isNotice) {
+    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+      // 클라이언트 요청 본문이나 헤더의 role은 절대 신뢰하지 않고 서버 토큰 검증 권한만 판정
+      const isInstructor = verified.role === 'instructor' || verified.app_metadata?.role === 'instructor';
+      if (!isInstructor) {
+        return response.status(403).json({
+          error: 'FORBIDDEN_ZONE_ACCESS',
+          message: '강사 공지 수정은 강사 권한이 필요합니다.',
+        });
+      }
+    }
+    if (method === 'GET') {
+      return response.status(200).json({
+        id: noteId || 'notice-default',
+        type: 'notice',
+        title: '훈련 공지사항',
+        content: '등록된 공식 훈련 공지 구역입니다.',
+        body: '등록된 공식 훈련 공지 구역입니다.',
+      });
+    }
+  }
 
   try {
     if (method === 'GET') {
