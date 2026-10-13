@@ -1166,12 +1166,27 @@ export async function runAttackChecks(config) {
 // 결과는 실제 응답이나 실제 함수 반환값만 적습니다. 보내지 않은 요청은 not_run 입니다. 메모 본문·토큰·키는 남기지 않습니다.
 // allowWrites=false(npm run bundle 격리 환경)이면 공개 HTTPS 주소로 GET·HEAD만 보내고, 쓰기 요청 행은 not_run 으로 둡니다.
 
-// 심판 격리 실행기는 불러올 수 있는 모듈을 제한합니다. 이 파일은 정적 import 없이 Node 전역(fetch, crypto)만 쓰고,
-// node:fs·node:child_process·판정기·탐지기는 필요한 곳에서 try 안에서 불러옵니다. 불러오지 못하면 그 행만 not_run 입니다.
+// 심판 격리 실행기는 불러올 수 있는 모듈과 전역 객체를 제한합니다(전역 crypto 없음).
+// 허용 목록의 node:crypto(randomUUID·sha256)·node:fs·node:child_process와 판정기·탐지기는 try 안에서 불러오고,
+// 불러오지 못하면 그 행만 not_run 입니다. AbortSignal.timeout·TextEncoder 같은 전역도 있다고 가정하지 않습니다.
 const rootUrl = new URL('../', import.meta.url);
-const randomUUID = () => globalThis.crypto.randomUUID();
-const sha256Hex = async text => [...new Uint8Array(await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)))]
-  .map(b => b.toString(16).padStart(2, '0')).join('');
+// file: URL → 경로 문자열 (node:url 없이, 격리 환경의 fs·git이 문자열 경로만 받아도 되도록)
+const toPath = url => {
+  const path = decodeURIComponent(new URL(url).pathname);
+  return /^\/[A-Za-z]:\//u.test(path) ? path.slice(1) : path;
+};
+let nodeCrypto = {};
+let uuidSeq = 0;
+// 판정 요청 ID: node:crypto randomUUID. 쓸 수 없으면 시각·순번으로 만든 실행 내 고유 ID(UUID 형식 아님)를 씁니다.
+const randomUUID = () => (typeof nodeCrypto.randomUUID === 'function'
+  ? nodeCrypto.randomUUID()
+  : `local-${Date.now().toString(16)}-${(uuidSeq += 1).toString(16)}`);
+// SHA-256: node:crypto createHash('sha256'). 쓸 수 없으면 null을 돌려주고, 호출한 쪽이 그 행을 not_run 으로 둡니다.
+const sha256Hex = async text => (typeof nodeCrypto.createHash === 'function'
+  ? nodeCrypto.createHash('sha256').update(text).digest('hex')
+  : null);
+const timeoutSignal = ms => (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
+  ? AbortSignal.timeout(ms) : undefined);
 async function optional(specifier) {
   try {
     return await import(specifier);
@@ -1233,7 +1248,7 @@ const now = () => new Date().toISOString();
 async function http(app, { method = 'GET', path, url, headers = {}, body }) {
   const target = url ? new URL(url) : new URL(path, app);
   const res = await fetch(target, {
-    method, headers, body, redirect: 'manual', signal: AbortSignal.timeout(10000),
+    method, headers, body, redirect: 'manual', signal: timeoutSignal(10000),
   });
   const text = method === 'HEAD' ? '' : await res.text();
   return { status: res.status, requestId: res.headers.get('x-vercel-id') || res.headers.get('sb-request-id') || null, text };
@@ -1250,13 +1265,15 @@ async function live(rows, app, base, request, judge) {
     const verdict = judge(res);
     rows.push(row(base, { actual: verdict.actual, result: verdict.ok ? 'pass' : 'fail', requestId: res.requestId, source: 'live_http' }));
   } catch (error) {
-    rows.push(row(base, { actual: `요청 실패 (${error.name})`, result: 'fail', source: 'live_http' }));
+    rows.push(row(base, { actual: `요청 실패 (${error?.name ?? 'Error'}: ${String(error?.message ?? '').slice(0, 60)})`, result: 'fail', source: 'live_http' }));
   }
 }
 
 async function local(rows, base, run) {
   try {
-    const { actual, ok, requestId } = await run();
+    const result = await run();
+    if (result.notRun) { notRun(rows, base, result.notRun); return; }
+    const { actual, ok, requestId } = result;
     rows.push(row(base, { actual, result: ok ? 'pass' : 'fail', requestId: requestId ?? randomUUID(), source: 'local_function' }));
   } catch (error) {
     rows.push(row(base, { actual: `실행 실패 (${error.message})`, result: 'fail', source: 'local_function' }));
@@ -1267,6 +1284,7 @@ const notRun = (rows, base, why) => rows.push(row(base, { actual: why, result: '
 const statusIs = (...codes) => res => ({ ok: codes.includes(res.status), actual: `HTTP ${res.status}` });
 
 export async function collectEvidence(config, { allowWrites = false } = {}) {
+  nodeCrypto = await optional('node:crypto');
   const app = new URL(config.publicAppUrl);
   const rows = [];
   let deployedCommit = null;
@@ -1396,12 +1414,14 @@ export async function collectEvidence(config, { allowWrites = false } = {}) {
     missing(rows, policyBase, fsModule, 'node:fs');
     missing(rows, policyEval, fsModule, 'node:fs');
   } else {
-    const read = path => fsModule.readFileSync(new URL(path, rootUrl), 'utf8');
+    const read = path => fsModule.readFileSync(toPath(new URL(path, rootUrl)), 'utf8');
     await local(rows, policyBase, async () => {
       const manifest = JSON.parse(read('policy/backups/manifest.json'));
       if (!/^[a-z0-9._-]+\.json$/iu.test(String(manifest.file))) return { ok: false, actual: '사본 파일 이름 이상 → 중단' };
       const text = read(`policy/backups/${manifest.file}`);
-      const same = (await sha256Hex(text)) === manifest.sha256 && JSON.parse(text).version === manifest.version;
+      const hash = await sha256Hex(text);
+      if (hash === null) return { notRun: 'not_run (node:crypto sha256을 쓸 수 없어 검증하지 않음)' };
+      const same = hash === manifest.sha256 && JSON.parse(text).version === manifest.version;
       return { ok: same, actual: same ? `검증 통과 · ${manifest.version}` : '해시·버전 불일치 → 중단' };
     });
     await local(rows, policyEval, () => {
@@ -1419,7 +1439,7 @@ export async function collectEvidence(config, { allowWrites = false } = {}) {
     missing(rows, gitBase, gitModule, 'node:child_process');
   } else {
     await local(rows, gitBase, () => {
-      const run = args => gitModule.execFileSync('git', args, { cwd: rootUrl, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 5000 });
+      const run = args => gitModule.execFileSync('git', args, { cwd: toPath(rootUrl), encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 5000 });
       let hits = 0;
       try {
         hits = run(['grep', '-I', '-c', '-E', 'sb_secret_[A-Za-z0-9_-]{20,}|eyJ[A-Za-z0-9_-]{20,}\\.eyJ[A-Za-z0-9_-]{20,}\\.|BEGIN (EC |RSA )?PRIVATE KEY-----', 'HEAD'])
