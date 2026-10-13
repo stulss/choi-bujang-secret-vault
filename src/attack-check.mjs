@@ -1483,7 +1483,9 @@ function measuredAttackPlan(config) {
   const marker = config.sampleMarker;
   const scan = (res, { needMarker = true } = {}) => {
     const secret = SECRET_IN_PAGE.test(res.text);
-    const seed = needMarker && res.text.includes(marker);
+    // aleph.config.json·aleph.json은 시작 틀 규칙상 "sampleMarker" 항목 이름을 공개합니다. 그 선언 밖에 표식이 나오면 시드 노출입니다.
+    const withoutDeclaration = res.text.replace(/"sampleMarker"\s*:\s*"[^"]*"/gu, '');
+    const seed = needMarker && withoutDeclaration.includes(marker);
     return { blocked: res.status === 200 && !secret && !seed, note: `비밀값 ${secret ? '있음' : '없음'}${needMarker ? `·표식 ${seed ? '있음' : '없음'}` : ''}` };
   };
   return [
