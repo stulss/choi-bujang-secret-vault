@@ -803,14 +803,21 @@ export function createStudentView() {
       const root = document.createElement('div');
       root.className = 'student-explanation-card';
 
-      // 실패 또는 ok가 아닌 경우: data-student-explanation-event 미부착, 안전한 code/message 및 "기록은 그대로" 안내
+      // 실패 또는 ok가 아닌 경우: data-student-explanation-event 미부착, 안전한 code와 message를 보여주고 "기록은 그대로" 안내
       if (!explanation || explanation.status !== 'ok') {
-        const code = String(explanation?.error?.code ?? (explanation?.status === 'loading' ? 'LOADING' : 'IDLE'));
-        const message = String(explanation?.error?.message ?? (explanation?.status === 'loading' ? 'AI 설명을 요청하는 중입니다…' : '선택한 사건의 AI 설명 결과가 없습니다.'));
-
         const p = document.createElement('p');
         p.className = 'student-explanation-fallback';
-        p.textContent = `[${code}] ${message} · 기록은 그대로 유지됩니다.`;
+
+        if (explanation?.status === 'loading') {
+          p.textContent = 'AI 설명을 요청하는 중입니다… (기록은 그대로 유지됩니다)';
+        } else if (explanation?.status === 'error') {
+          const code = String(explanation.error?.code ?? 'AI_REQUEST_UNVERIFIED');
+          const message = String(explanation.error?.message ?? 'AI 설명을 확인할 수 없습니다.');
+          p.textContent = `AI 설명 실패: [${code}] ${message} · 기록은 그대로입니다.`;
+        } else {
+          p.textContent = '선택한 사건의 AI 설명 결과가 없습니다. 기록은 그대로 유지됩니다.';
+        }
+
         root.append(p);
         return root;
       }
