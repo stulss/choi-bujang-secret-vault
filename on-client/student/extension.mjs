@@ -129,7 +129,65 @@ export function createStudentView() {
 
       return root;
     },
-    renderDecision() { return '학생 구현 대기: 서버의 판정과 이유를 연결하세요.'; },
+    renderDecision({ status = 'idle', data, error, appId } = {}) {
+      const root = document.createElement('div');
+      root.className = 'student-decision-card';
+
+      const details = document.createElement('dl');
+      details.className = 'student-decision-list';
+      root.append(details);
+
+      const addDetail = (label, value) => {
+        const term = document.createElement('dt');
+        term.textContent = label;
+        const description = document.createElement('dd');
+        description.textContent = value;
+        details.append(term, description);
+      };
+
+      const addNotice = (text) => {
+        const notice = document.createElement('p');
+        notice.className = 'student-decision-notice';
+        notice.textContent = text;
+        root.append(notice);
+      };
+
+      const appValue = data?.appId ?? appId;
+      if (appValue != null) addDetail('업무 앱 ID', String(appValue));
+
+      if (status === 'idle') {
+        addNotice('요청 전: 업무 앱을 선택해 접속을 요청하세요.');
+      } else if (status === 'loading') {
+        addNotice('판정 확인 중(loading)');
+      } else if (status === 'error') {
+        const message = typeof error?.message === 'string' && error.message
+          ? error.message
+          : '서버가 오류 메시지를 제공하지 않았습니다.';
+        addNotice(`요청 실패(error): ${message}`);
+        addNotice('요청 실패는 접근 거부 판정이 아닙니다.');
+      } else if (status === 'ok') {
+        const decisionLabels = {
+          allow: '허용(allow)',
+          deny: '거부(deny)',
+          challenge: '추가 확인 필요(challenge)',
+          unknown: '확인 불가(unknown)',
+        };
+        const decision = typeof data?.decision === 'string' ? data.decision : 'unknown';
+        addDetail('접근 판정', Object.hasOwn(decisionLabels, decision) ? decisionLabels[decision] : '확인 불가(unknown)');
+        addDetail('판정 이유', typeof data?.reason === 'string' && data.reason ? data.reason : '사유 정보 없음');
+        addDetail('판정 시각', typeof data?.checkedAt === 'string' && data.checkedAt ? data.checkedAt : '확인 불가');
+
+        if (decision === 'challenge') {
+          addNotice('이 화면은 추가 인증 또는 확인 절차를 대신 수행하지 않습니다.');
+        } else if (!Object.hasOwn(decisionLabels, decision) || decision === 'unknown') {
+          addNotice('확인할 수 없는 판정은 접근 허용이나 정상으로 간주하지 않습니다.');
+        }
+      } else {
+        addNotice('판정을 확인할 수 없습니다(unknown). 접근 허용으로 간주하지 않습니다.');
+      }
+
+      return root;
+    },
     renderEvents() { return '학생 구현 대기: 본인 접속·XDR 기록을 연결하세요.'; },
     renderStatus() { return '학생 구현 대기: 기기·세션·알림과 연결 점검 상태를 구분하세요.'; },
     renderVulnerabilities() { return '학생 구현 대기: 정확한 설치 버전·OSV 출처·조회 시각·부분 결과·조회 실패를 구분하세요.'; },
