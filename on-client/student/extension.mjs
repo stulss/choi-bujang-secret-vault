@@ -49,85 +49,83 @@ export function createStudentView() {
           : `연결 실패: ${message}`;
       };
 
-      const deviceLabel = (status) => ({
-        compliant: '보안 기준 충족',
-        noncompliant: '보안 기준 미충족',
-        unknown: '확인 불가',
-      })[status] || `확인 불가 (${status ?? 'unknown'})`;
+      const deviceLabel = (status) => {
+        const code = typeof status === 'string' && status ? status : 'unknown';
+        const meaning = ({
+          compliant: '보안 기준 충족',
+          noncompliant: '보안 기준 미충족',
+          unknown: '확인 불가',
+        })[code] || '확인 불가';
+        return `${meaning} (${code})`;
+      };
 
-      const sessionLabel = (status) => ({
-        active: '활성',
-        expired: '만료',
-        revoked: '철회됨',
-        unknown: '확인 불가',
-      })[status] || `확인 불가 (${status ?? 'unknown'})`;
+      const sessionLabel = (status) => {
+        const code = typeof status === 'string' && status ? status : 'unknown';
+        const meaning = ({
+          active: '활성',
+          expired: '만료',
+          revoked: '철회됨',
+          unknown: '확인 불가',
+        })[code] || '확인 불가';
+        return `${meaning} (${code})`;
+      };
 
-      // 1. 모드 안내 (loading, error 상태에서도 전달받은 모드 안내 표시)
+      const addListState = (label, resource) => {
+        if (resource?.status === 'loading') {
+          addDetail(label, '불러오는 중');
+        } else if (resource?.status === 'error') {
+          addDetail(label, errorText(resource));
+        } else if (resource?.status !== 'ok') {
+          addDetail(label, '확인 불가');
+        }
+      };
+
+      // 각 입력의 모드 안내는 해당 자료가 loading/error여도 함께 표시한다.
       addMode('로그인 정보', me);
       addMode('기기 정보', devices);
       addMode('세션 정보', sessions);
 
-      // 2. me/devices/sessions 상태별 렌더링
+      // 사용자 및 현재 기기·세션은 로그인 정보(me)를 기준으로 표시한다.
       if (me?.status === 'loading') {
         addDetail('사용자', '불러오는 중');
-        addDetail('현재 기기', '불러오는 중');
-        addDetail('로그인 세션', '불러오는 중');
       } else if (me?.status === 'error') {
-        const message = errorText(me);
-        // 오류 시 이전 사용자 정보를 남기지 않고 실패 메시지만 표시
-        addDetail('사용자', message);
-        addDetail('현재 기기', message);
-        addDetail('로그인 세션', message);
+        addDetail('사용자', errorText(me));
       } else if (me?.status === 'ok' && me.data) {
-        const { user, device, session } = me.data;
-
-        // devices 목록에서 현재 기기 정보 확인
-        const listedDevice = devices?.status === 'ok' && Array.isArray(devices.data)
-          ? devices.data.find((item) => item.id === device?.id)
-          : null;
-        const currentDevice = listedDevice || device || {};
-
-        // sessions 목록에서 현재 세션 정보 확인
-        const listedSession = sessions?.status === 'ok' && Array.isArray(sessions.data)
-          ? sessions.data.find((item) => item.id === session?.id)
-          : null;
-        const currentSession = listedSession || session || {};
-
-        // 사용자 표시
-        const userName = user?.label || user?.id || '확인 불가';
-        addDetail('사용자', `${userName} (ID: ${user?.id ?? '확인 불가'})`);
-
-        // 기기 표시
-        if (devices?.status === 'loading') {
-          addDetail('현재 기기', '불러오는 중');
-        } else if (devices?.status === 'error') {
-          addDetail('현재 기기', errorText(devices));
-        } else if (devices?.status === 'ok') {
-          const dLabel = currentDevice.label || currentDevice.id || '확인 불가';
-          const dId = currentDevice.id ?? '확인 불가';
-          const dStatusText = deviceLabel(currentDevice.status);
-          addDetail('현재 기기', `${dLabel} (ID: ${dId}) · ${dStatusText}`, currentDevice.status);
-        } else {
-          addDetail('현재 기기', '확인 불가');
-        }
-
-        // 세션 표시
-        if (sessions?.status === 'loading') {
-          addDetail('로그인 세션', '불러오는 중');
-        } else if (sessions?.status === 'error') {
-          addDetail('로그인 세션', errorText(sessions));
-        } else if (sessions?.status === 'ok') {
-          const sId = currentSession.id ?? '확인 불가';
-          const sStatusText = sessionLabel(currentSession.status);
-          addDetail('로그인 세션', `${sId} · ${sStatusText}`, currentSession.status);
-        } else {
-          addDetail('로그인 세션', '확인 불가');
-        }
+        const user = me.data.user || {};
+        const userName = user.label || user.id || '확인 불가';
+        addDetail('사용자', `${userName} (ID: ${user.id ?? '확인 불가'})`);
       } else {
         addDetail('사용자', '확인 불가');
+      }
+
+      const currentDevice = me?.status === 'ok' && me.data ? me.data.device : null;
+      if (me?.status === 'loading') {
+        addDetail('현재 기기', '불러오는 중');
+      } else if (me?.status === 'error') {
+        addDetail('현재 기기', errorText(me));
+      } else if (me?.status === 'ok' && currentDevice) {
+        const label = currentDevice.label || currentDevice.id || '확인 불가';
+        const id = currentDevice.id ?? '확인 불가';
+        addDetail('현재 기기', `${label} (ID: ${id}) · ${deviceLabel(currentDevice.status)}`, currentDevice.status);
+      } else {
         addDetail('현재 기기', '확인 불가');
+      }
+
+      const currentSession = me?.status === 'ok' && me.data ? me.data.session : null;
+      if (me?.status === 'loading') {
+        addDetail('로그인 세션', '불러오는 중');
+      } else if (me?.status === 'error') {
+        addDetail('로그인 세션', errorText(me));
+      } else if (me?.status === 'ok' && currentSession) {
+        const id = currentSession.id ?? '확인 불가';
+        addDetail('로그인 세션', `${id} · ${sessionLabel(currentSession.status)}`, currentSession.status);
+      } else {
         addDetail('로그인 세션', '확인 불가');
       }
+
+      // 목록 자체의 loading/error는 현재 로그인 정보와 별도로 표시한다.
+      addListState('기기 목록', devices);
+      addListState('세션 목록', sessions);
 
       return root;
     },
