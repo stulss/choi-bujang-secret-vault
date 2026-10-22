@@ -146,3 +146,5 @@ export function createVaultOnAiService({enabled=false,vault,model='aleph/auto',t
     explainLearningSupport:(input,observation,options)=>operation('learner-support',input,options,observation),
   });
 }
+
+// Verification: AI credential vault service binding

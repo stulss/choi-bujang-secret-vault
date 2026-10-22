@@ -102,3 +102,5 @@ export function createAlekovAppConnector({enabled=false,gatewayOrigin=CLCO_GATEW
   });}
   return Object.freeze({available:configured,begin,complete});
 }
+
+// Verification: AI connection manager binding
