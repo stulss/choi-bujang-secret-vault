@@ -110,5 +110,3 @@ export function createOnAppAuthorizationVerifier({baseUrl,token,allowLoopbackHtt
     } finally {clearTimeout(timer);externalSignal?.removeEventListener('abort',cancel);controller.abort();}
   };
 }
-
-// Verification: app authorization helper binding

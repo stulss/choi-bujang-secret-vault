@@ -437,5 +437,3 @@ export function createOnAiService({ env = process.env, model = env.ON_AI_MODEL, 
     },
   });
 }
-
-// Verification: AI service and transport binding
