@@ -705,12 +705,14 @@ export function createStudentView() {
 
       // 1) idle / loading 상태 처리
       if (!status || status === 'idle') {
-        addParagraph('AI 연결 점검 전입니다. 설정값 존재는 이용 권한 확인이 아닙니다. 상단 점검 버튼을 직접 눌러 점검하세요.', 'student-ai-status-idle');
+        addParagraph('AI 연결 점검 전', 'student-ai-status-idle');
+        addParagraph('설정값 존재는 이용 권한 확인이 아닙니다. 상단 점검 버튼을 직접 눌러 점검하세요.', 'student-ai-guide');
         return root;
       }
 
       if (status === 'loading') {
-        addParagraph('현재 로그인으로 AI 모델 응답을 점검하는 중입니다… (AI 연결 점검 중)', 'student-ai-status-loading');
+        addParagraph('AI 연결 점검 중', 'student-ai-status-loading');
+        addParagraph('현재 로그인으로 AI 모델 응답을 점검하는 중입니다…', 'student-ai-guide');
         return root;
       }
 
@@ -718,7 +720,7 @@ export function createStudentView() {
       if (status === 'ok') {
         const auth = data?.audienceAuthorization;
         const authLabel = auth === 'test'
-          ? '시험 연결 점검(test) · 실제 게이트 수용 아님'
+          ? '시험 연결 점검(test)'
           : auth === 'verified'
             ? '앱 권한 확인 후 점검(verified)'
             : '확인 불가';
@@ -749,7 +751,7 @@ export function createStudentView() {
 
         // 핵심 안내: 연결만 점검했고 사건 설명은 아직 실행하지 않음
         const explainNotice = addParagraph(
-          '사건 설명은 아직 실행하지 않았습니다. 연결 점검 성공 또는 모델 목록 응답만으로 사건 설명이 완료된 것이 아닙니다. 사건 설명은 보안 기록에서 별도로 요청하세요.',
+          '사건 설명은 아직 실행하지 않았습니다. 모델 목록 응답은 연결 점검 결과일 뿐이며 사건 설명이 완료된 것이 아닙니다. 사건 설명은 보안 기록에서 별도로 확인하세요.',
           'student-ai-notice-unexecuted'
         );
         explainNotice.setAttribute('role', 'note');
@@ -767,32 +769,32 @@ export function createStudentView() {
         root.append(errHeading);
 
         let guideText = '';
-        if (code === 'ON_AI_PROVISIONING_PENDING') {
-          guideText = '권한 준비 중: 학생 앱 이용 권한의 발급·연결을 준비 중입니다. 담당자에게 계정 연결과 앱 권한 확인을 요청하세요. (학생 환경 설정 오류가 아닙니다)';
-        } else if (code === 'WB_CLCO_AUTH_REQUIRED') {
-          guideText = '인증 실패: 앱 전용 열쇠의 인증을 확인하세요. 계정 연결을 다시 확인하거나 담당자에게 확인을 요청하세요. (Workbench 열쇠를 복사하지 마세요)';
-        } else if (code === 'WB_CLCO_ACCESS_BLOCKED' || code === 'SUBJECT_SCOPE_UNVERIFIED') {
-          guideText = '접근 제한: 학생 앱의 이용 권한을 확인하세요. 계정 연결을 다시 확인하고 담당자에게 문의하세요.';
-        } else if (code === 'WB_CLCO_COHORT_BUDGET_EXHAUSTED' || code === 'WB_CLCO_LIMIT_REACHED') {
-          guideText = '반 사용량 소진 또는 이용 한도 도달: AI 사용량이 초과되었습니다. 담당자에게 확인을 요청하세요.';
-        } else if (code === 'WB_CLCO_SESSION_CLOSED') {
-          guideText = '이용 시간 아님: 현재 AI 이용 시간이 아닙니다. 지정된 이용 시간을 확인하세요.';
-        } else if (['WB_CLCO_TIMEOUT', 'REQUEST_TIMEOUT', 'ENGINE_TIMEOUT', 'TIMEOUT', 'WB_CLCO_RATE_LIMITED'].includes(code)) {
-          guideText = '요청 제한·응답 시간 초과·네트워크 지연: 잠시 뒤 상단의 버튼을 직접 눌러 다시 점검하세요. (자동 재점검은 실행되지 않습니다)';
+        if (code === 'ON_AI_PROVISIONING_PENDING' || code === 'ON_AI_TRANSPORT_PENDING') {
+          guideText = '권한 준비 중: 담당자에게 계정 연결과 앱 권한 확인을 요청하세요. (학생 환경 설정 오류가 아닙니다)';
+        } else if (code === 'WB_CLCO_AUTH_REQUIRED' || code === 'AUTH_REQUIRED' || code === 'UNAUTHORIZED') {
+          guideText = '인증 실패: 계정 연결을 다시 확인하거나 담당자에게 확인을 요청하세요. (Workbench 열쇠나 원본 열쇠를 복사하지 마세요)';
+        } else if (code === 'WB_CLCO_ACCESS_BLOCKED' || code === 'SUBJECT_SCOPE_UNVERIFIED' || code === 'FORBIDDEN' || code === 'ACCESS_DENIED') {
+          guideText = '접근 제한: 계정 연결을 다시 확인하거나 담당자에게 확인을 요청하세요.';
+        } else if (code === 'WB_CLCO_COHORT_BUDGET_EXHAUSTED' || code === 'WB_CLCO_LIMIT_REACHED' || code === 'LIMIT_EXCEEDED' || code === 'QUOTA_EXCEEDED') {
+          guideText = '반 사용량·이용 한도: 담당자 확인을 요청하세요.';
+        } else if (code === 'WB_CLCO_SESSION_CLOSED' || code === 'SESSION_CLOSED') {
+          guideText = '이용 시간 아님: 이용 시간을 확인하세요.';
+        } else if (['WB_CLCO_TIMEOUT', 'REQUEST_TIMEOUT', 'ENGINE_TIMEOUT', 'TIMEOUT', 'WB_CLCO_RATE_LIMITED', 'WB_CLCO_NETWORK_ERROR', 'WB_CLCO_SERVER_UNAVAILABLE', 'NETWORK_ERROR'].includes(code)) {
+          guideText = '요청 제한·시간 초과·네트워크: 잠시 뒤 직접 다시 점검하세요.';
         } else if (['WB_CLCO_CANCELLED', 'CANCELLED', 'REQUEST_CANCELLED'].includes(code)) {
-          guideText = '취소됨: AI 연결 점검 요청이 취소되었습니다. 이전 점검 결과는 현재 결과가 아니며 유효하지 않습니다.';
-        } else if (code === 'ON_AI_MODEL_LIST_EMPTY' || code === 'MODEL_NOT_CONFIGURED') {
-          guideText = '쓸 수 있는 모델 없음: 현재 앱 권한으로 쓸 수 있는 AI 모델이 없습니다. 담당자에게 모델 허용 설정을 확인하세요.';
+          guideText = '취소: 취소됨. 이전 결과는 현재 결과가 아닙니다.';
+        } else if (code === 'ON_AI_MODEL_LIST_EMPTY' || code === 'MODEL_NOT_CONFIGURED' || code === 'NO_MODELS') {
+          guideText = '쓸 수 있는 모델 없음: 담당자에게 모델 허용 설정 확인을 요청하세요.';
         } else if (code === 'ON_AI_AUTHORIZATION_CHANGED') {
           guideText = '권한 변경 감지: AI 이용 권한 내용이 점검 도중 바뀌었습니다. 다시 점검하기 전에 담당자에게 현재 권한을 확인하세요.';
         } else {
-          guideText = '확인 불가: AI 연결 또는 응답을 확인할 수 없습니다. 담당자에게 계정 연결과 앱 권한 확인을 요청하세요.';
+          guideText = '권한 준비 중 또는 확인 불가: 담당자에게 계정 연결과 앱 권한 확인을 요청하세요.';
         }
 
         const guidePara = addParagraph(guideText, 'student-ai-error-guide');
         guidePara.setAttribute('role', 'alert');
 
-        addParagraph('자동으로 다시 점검하지 않습니다. 다시 점검하려면 상단의 「AI 연결 점검」 버튼을 직접 누르세요.', 'student-ai-retry-notice');
+        addParagraph('자동으로 다시 점검하지 않습니다. 다시 점검하려면 상단의 버튼을 직접 누르세요.', 'student-ai-retry-notice');
         return root;
       }
 
