@@ -719,6 +719,11 @@ export function createStudentView() {
       // 2) ok 상태 처리
       if (status === 'ok') {
         const auth = data?.audienceAuthorization;
+        if ((auth !== 'test' && auth !== 'verified') || !Number.isInteger(data?.modelCount)) {
+          addParagraph('AI 연결 점검 결과를 확인할 수 없습니다', 'student-ai-status-unverified');
+          addParagraph('점검 종류(test/verified) 또는 모델 수가 계약과 다릅니다. 연결 완료로 보지 말고 상단 버튼으로 직접 다시 점검하세요.', 'student-ai-guide');
+          return root;
+        }
         const authLabel = auth === 'test'
           ? '시험 연결 점검(test)'
           : auth === 'verified'
