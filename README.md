@@ -366,11 +366,11 @@ flowchart TD
 ```
 
 - **글로 쓴 구성**:
-  - **브라우저**: `http://127.0.0.1:5189` (`on-client/public/index.html`) — UI 조작, 비밀값 영구 저장 없음.
+  - **브라우저**: `http://127.0.0.1:5189` (`on-client/public/index.html`) — UI 조작, 자격 증명 영구 저장 없음.
   - **로컬 앱 서버**: `on-client/src/server.mjs` — 포트 5189 수신, 세션 관리 및 프록시 중계.
   - **학생 확장 모듈**: `on-client/student/extension.mjs` — 순수 DOM 기반 8대 렌더러 함수(`renderIdentity` ~ `renderVulnerabilities`).
   - **접근 제어 / XDR**: `src/decider.mjs`, `src/detect.mjs` — 판정 규칙 및 비정상 탐지.
-  - **수업용 AI 게이트웨이**: CLCO 게이트 (`/api/ai/*`) — 원본 API 키는 게이트에만 보관되며 클라이언트 노출 없음.
+  - **수업용 AI 게이트웨이**: CLCO 게이트 (`/api/ai/*`) — AI 원본 자격 증명은 게이트에만 보관되며 클라이언트 노출 없음.
   - **외부 취약점 정보**: OSV (`https://api.osv.dev/v1/querybatch`) — 정확한 semver 대조.
 
 ### 4. 제공 코드와 학생 구현 영역 경계
@@ -390,7 +390,7 @@ flowchart TD
 6. **재실행**: 종료 후 동일하게 `npm start` 실행 (이전 메모리 상태 초기화 확인)
 
 ### 6. 장애 안내 및 문제 해결
-- `[AI_REQUEST_UNVERIFIED]`: 운영 측 계정 권한 미반영 상태. 운영 담당자에게 확인 요청. (임의의 외부 열쇠 복사 금지)
+- `[AI_REQUEST_UNVERIFIED]`: 운영 측 계정 권한 미반영 상태. 운영 담당자에게 확인 요청. (임의의 외부 자격 증명 복사 금지)
 - `[CANCELLED]`: 패키지 조회 취소. 상단의 「설치 패키지 조회」 버튼으로 신규 요청.
 - `[TIMEOUT]` / `[SERVICE_UNAVAILABLE]`: OSV 응답 지연 또는 네트워크 불안정. 네트워크 확인 후 재시도.
 - `not_configured` / `not_checked`: 승인된 공개 패키지 미등록. 정상 대기 상태이며 취약점 없음이 아님.

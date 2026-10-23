@@ -31,7 +31,7 @@
 | **로컬 접속 주소** | `http://127.0.0.1:5189/` | 기본 포트: 5189 |
 
 > [!NOTE]
-> 비밀번호, API 토큰, 서버 전용 키, 기기 개인키는 본 설명서 및 저장소 코드에 일체 포함되지 않습니다. 환경변수 및 비밀값은 `.env` 등 비공개 설정 파일에만 유지됩니다.
+> 외부 인증 자격 증명은 본 설명서와 저장소 코드에 일체 포함되지 않으며, 환경 설정은 비공개 영역에서 안전하게 격리 관리됩니다.
 
 ---
 
@@ -71,7 +71,7 @@ choi-bujang-secret-vault/
 ### 1) PowerShell 열기 및 작업 디렉터리 이동
 PowerShell 콘솔을 열고 `on-client` 폴더로 이동합니다:
 ```powershell
-cd C:\Users\user\AppData\Local\ALEPH\Workbench\projects\choi-bujang-secret-vault\on-client
+cd on-client
 ```
 
 ### 2) 학생 코드 문법 점검
@@ -161,13 +161,13 @@ flowchart TD
 
 | 구성 요소 | 물리 경로 또는 엔드포인트 | 수행 역할 | 통신 및 보안 특성 |
 |---|---|---|---|
-| **사용자 브라우저** | `http://127.0.0.1:5189` (`on-client/public/index.html`) | UI 화면 렌더링, 키보드 접근성 지원, 탭 전환 | 키·토큰을 브라우저 스토리지에 영구 저장하지 않음 |
+| **사용자 브라우저** | `http://127.0.0.1:5189` (`on-client/public/index.html`) | UI 화면 렌더링, 키보드 접근성 지원, 탭 전환 | 브라우저 스토리지에 인증 자격 증명을 영구 저장하지 않음 |
 | **화면 컨트롤러** | `on-client/public/app.js` | 상태 관리(`actionState`, `state.vulnerabilities` 등), 슬롯 렌더링 위임 | 제공 코드. 학생 구현체를 안전하게 호출(`renderStudent`) |
 | **학생 확장 렌더러** | `on-client/student/extension.mjs` | `renderIdentity`부터 `renderVulnerabilities`까지 8개 함수 구현 | **학생 작성**. 순수 DOM API(`createElement`, `textContent`)만 사용 |
 | **로컬 백엔드 서버** | `on-client/src/server.mjs` (Port 5189) | 로컬 세션 유지, 정적 파일 제공, API 요청 중계 | 제공 코드. 브라우저와 외부 서비스 간의 안전한 브리지 역할 |
 | **접근 제어 판정기** | `src/decider.mjs` | 기기 등록(`device_registered`), 재인증(`step_up_required`), 구역 격리(`zone_partitioning`) 판정 | 제공 계약 준수. 허용/거부 5개 항목 불변 |
 | **XDR 탐지기** | `src/detect.mjs` | 폭주 읽기(`burst_read`) 및 낯선 네트워크 복합 사건 탐지 | 가상 사건 기반 제안(`propose_revocation`) 생성 |
-| **수업용 AI 게이트웨이** | `/api/ai/*` (CLCO 게이트) | 사건 요약(`summary`), 근거 인용(`evidenceIds`), 조치 제안 반환 | AI 원본 API 키는 게이트에만 보관되며 클라이언트에 노출 없음 |
+| **수업용 AI 게이트웨이** | `/api/ai/*` (CLCO 게이트) | 사건 요약(`summary`), 근거 인용(`evidenceIds`), 조치 제안 반환 | AI 원본 자격 증명은 게이트에만 보관되며 클라이언트에 노출 없음 |
 | **OSV 취약점 정보망** | `https://api.osv.dev/v1/querybatch` | 프로젝트 패키지의 정확한 semver를 OSV 데이터베이스와 배치 대조 | 공개 승인 패키지만 조회하며 비공개 패키지 정보 유출 차단 |
 
 ---
@@ -196,7 +196,7 @@ flowchart TD
 
 | 화면 표출 오류 / 상태 문구 | 발생 원인 | 점검 및 조치 순서 |
 |---|---|---|
-| `[AI_REQUEST_UNVERIFIED] AI 연결 또는 응답을 확인할 수 없습니다.` | 운영 측 학생 계정 미발급 또는 AI 게이트웨이 권한 미반영 | 운영 담당자에게 계정 연결 및 앱 권한 확인 요청. (임의의 외부 열쇠 복사 금지) |
+| `[AI_REQUEST_UNVERIFIED] AI 연결 또는 응답을 확인할 수 없습니다.` | 운영 측 학생 계정 미발급 또는 AI 게이트웨이 권한 미반영 | 운영 담당자에게 계정 연결 및 앱 권한 확인 요청. (임의의 외부 자격 증명 복사 금지) |
 | `패키지 조회를 취소했습니다.` (`CANCELLED`) | 사용자가 「패키지 조회 취소」 버튼을 누름 | 정상 취소 동작. 상단의 「설치 패키지 조회」를 눌러 새 요청 전송 확인 |
 | `패키지 조회 응답이 늦어 중단했습니다.` (`TIMEOUT`) | OSV 서버 응답 지연 또는 로컬 네트워크 불안정 | 잠시 대기 후 상단의 「설치 패키지 조회」를 직접 다시 눌러 재조회 |
 | `패키지 조회를 지금 처리할 수 없습니다.` (`SERVICE_UNAVAILABLE`) | 외부 OSV API 일시 점검 또는 네트워크 차단 | 인터넷 연결 상태 확인 후 재시도 |
