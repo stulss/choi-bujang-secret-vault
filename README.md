@@ -306,6 +306,102 @@
 | 8 | 실제 브라우저에서 첫 화면 → 로그인 → 기기 승인 → 작전실 확인 | 로그인 전에도 서버 점검 기록 보임, 승인 뒤 자료실·작전실 열림 | 승인 전 메모 없음 | **미실행** (화면을 직접 조작하지 않음) |
 | 9 | 이 보완을 배포한 뒤 `GET /api/checks`와 `npm run bundle` | 두 결과의 `attackId`·`stage`·`expected`·`observed`·`result`가 같음 | — | **미실행** (커밋·배포 뒤 실행, 결과는 제출 묶음에 그대로 기록) |
 
+## 21단계: 학생용 실행 설명서와 시스템 구성도 (보안 Agent 「케셰브」)
+
+13~20단계에서 완성된 로컬 ZTNA·XDR 보안 Agent 앱(Agent 명칭: **「케셰브」**)의 실행 설명서, 시스템 구성도, 제공/학생 경계 및 장애 해결 안내입니다. 상세 실행 지침 및 단계별 설명서는 [STUDENT_RUNBOOK.md](docs/STUDENT_RUNBOOK.md)에 전문이 보관되어 있습니다.
+
+### 1. 목적과 기능
+- **목적**: 제로 트러스트(ZTNA) 기기·세션 검증, XDR 탐지 경보 조회, 수업용 AI 게이트웨이 연계 사건 설명 및 안전한 조치 집행 상태 관리를 제공하는 로컬 보안 Agent 시스템 구축.
+- **핵심 화면**:
+  1. **보호 현황**: 로그인·기기·세션 상태, XDR 알림, AI 연결 점검, 설치 패키지 OSV 취약점 조회, 진단 도움정보(안전한 복사 지원)
+  2. **업무 앱**: 앱별 접속 판정(allow / deny / step_up / unknown) 표출
+  3. **보안 기록**: 내 접속 기록 40건, XDR 경보 필터, 근거 연결 AI 설명, 조치 제안 및 집행 상태 추적
+
+### 2. 지원 환경 및 실측 버전
+- **운영체제**: Windows 11 (PowerShell 5.1 / 7+)
+- **Node.js**: `v24.19.0` (직접 실행 확인 완료, 권장 v22~v24)
+- **npm**: `11.17.0` (직접 실행 확인 완료)
+- **클라이언트 패키지**: `alekov-client-starter@0.2.11` (`on-client/package.json`)
+- **로컬 서비스 주소**: `http://127.0.0.1:5189/`
+
+### 3. 시스템 구성도
+
+```mermaid
+flowchart TD
+    User["사용자 웹 브라우저
+    http://127.0.0.1:5189
+    on-client/public/index.html"]
+
+    subgraph ClientApp["로컬 보안 Agent: 케셰브 (on-client)"]
+        UI["화면 컨트롤러
+        on-client/public/app.js"]
+        StudentExt["학생 확장 렌더러
+        on-client/student/extension.mjs"]
+        LocalServer["로컬 앱 서버 (Node.js)
+        on-client/src/server.mjs"]
+    end
+
+    subgraph DefenseBackend["접근 제어 및 XDR 백엔드"]
+        Decider["SDP 판정기
+        src/decider.mjs"]
+        Detector["XDR 탐지기
+        src/detect.mjs"]
+        Database["외부 학습용 DB / 인증
+        Supabase"]
+    end
+
+    subgraph ExternalServices["수업용 AI 게이트웨이 및 취약점 DB"]
+        CLCO["수업용 AI 게이트웨이
+        /api/ai/*"]
+        OSV["OSV 취약점 DB
+        https://api.osv.dev/v1/querybatch"]
+    end
+
+    User <-->|DOM 렌더링 & 사용자 인터랙션| UI
+    UI <-->|데이터 바인딩 & 슬롯 위임| StudentExt
+    UI <-->|로컬 REST API 통신| LocalServer
+    LocalServer <-->|접속 판정 & 사건 조회| DefenseBackend
+    LocalServer <-->|AI 연결 확인 & 사건 설명 요청| CLCO
+    LocalServer <-->|공개 패키지 취약점 쿼리배치| OSV
+```
+
+- **글로 쓴 구성**:
+  - **브라우저**: `http://127.0.0.1:5189` (`on-client/public/index.html`) — UI 조작, 비밀값 영구 저장 없음.
+  - **로컬 앱 서버**: `on-client/src/server.mjs` — 포트 5189 수신, 세션 관리 및 프록시 중계.
+  - **학생 확장 모듈**: `on-client/student/extension.mjs` — 순수 DOM 기반 8대 렌더러 함수(`renderIdentity` ~ `renderVulnerabilities`).
+  - **접근 제어 / XDR**: `src/decider.mjs`, `src/detect.mjs` — 판정 규칙 및 비정상 탐지.
+  - **수업용 AI 게이트웨이**: CLCO 게이트 (`/api/ai/*`) — 원본 API 키는 게이트에만 보관되며 클라이언트 노출 없음.
+  - **외부 취약점 정보**: OSV (`https://api.osv.dev/v1/querybatch`) — 정확한 semver 대조.
+
+### 4. 제공 코드와 학생 구현 영역 경계
+| 구분 | 파일 위치 | 주요 역할 |
+|---|---|---|
+| **제공 코드** | `on-client/src/server.mjs` | 로컬 서버 기동 및 API 중계 프록시 (수정 금지) |
+| **제공 코드** | `on-client/public/app.js` | 상태 관리 및 화면 제어 컨트롤러 (수정 금지) |
+| **제공 코드** | `on-client/public/vulnerabilities-view.mjs` | OSV 응답 정규화 모듈 (수정 금지) |
+| **학생 구현** | `on-client/student/extension.mjs` | `renderIdentity` (13단계: 신원/기기/세션 표출)<br>`renderDecision` (14단계: 4대 접속 판정 표출)<br>`renderEvents` (15단계: 최근 기록 40건, XDR 필터, unknown 분리)<br>`renderStatus` (16단계: 컴플라이언스 알림, 진단 및 안전 복사)<br>`renderAiConnection` (17단계: AI 연결 상태, 모델 수, audienceAuthorization)<br>`renderExplanation` (18단계: 근거 ID 대조, 규칙 목록, 미실행 제안, 속성 통제)<br>`renderAction` (19단계: 조치 상태, ACK≠효과 구분, 속성 바인딩)<br>`renderVulnerabilities` (20단계: lockfile 정확한 semver, OSV 취약점 대조, 미조회 구분) |
+
+### 5. 설치, 실행, 종료 순서
+1. **이동**: `cd on-client`
+2. **문법 점검**: `npm run check` (정상 종료 코드 0 확인)
+3. **실행**: `npm start` (또는 `powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\start-alekov.ps1`)
+4. **접속**: 브라우저에서 `http://127.0.0.1:5189/` 접속
+5. **종료**: 터미널에서 `Ctrl + C` 입력
+6. **재실행**: 종료 후 동일하게 `npm start` 실행 (이전 메모리 상태 초기화 확인)
+
+### 6. 장애 안내 및 문제 해결
+- `[AI_REQUEST_UNVERIFIED]`: 운영 측 계정 권한 미반영 상태. 운영 담당자에게 확인 요청. (임의의 외부 열쇠 복사 금지)
+- `[CANCELLED]`: 패키지 조회 취소. 상단의 「설치 패키지 조회」 버튼으로 신규 요청.
+- `[TIMEOUT]` / `[SERVICE_UNAVAILABLE]`: OSV 응답 지연 또는 네트워크 불안정. 네트워크 확인 후 재시도.
+- `not_configured` / `not_checked`: 승인된 공개 패키지 미등록. 정상 대기 상태이며 취약점 없음이 아님.
+- `결과 불명 (unknown)`: 원천 집행기 미연결 상태. 성공으로 단정하지 않고 「원천 결과만 재조회」 버튼 사용.
+
+### 7. 실제 지원 범위와 기다림(UNV) 목록
+- **실제 확인 완료**: 8대 학생 렌더러 함수 문법 검사(`npm run check`) 100% 통과, 로컬 서버 구동(`npm start`) 및 모의 데이터 분기 검증 완료.
+- **기다림(UNV)**: 실제 학생 계정의 CLCO AI 게이트웨이 권한 정식 발급, 실제 운영 원천 조치 집행기 연결 및 실시간 결과 회수, 대규모 공개 패키지 목록 OSV 실시간 쿼리 (운영자 준비 항목).
+
+---
+
 ## 다음 단계의 코딩 도구에 전달할 규칙
 
 [AGENTS.md](AGENTS.md)를 먼저 읽히고 한 번에 한 제작 단위만 요청하세요. 2단계부터는 자료 보호를 구현할 때 `public/data.json`을 복사하는 1단계 빌드 흐름도 함께 바꿔야 합니다. 3단계 이후의 로그인, 허용 경로, 5단계의 원본 API 주소, 6단계 이후 정책 규칙은 해당 단계 원고와 계약에 맞춰 추가합니다. 비밀번호·토큰·서버 전용 키·실제 학생 기록을 코드, Git, 제출 묶음에 넣지 않습니다.
