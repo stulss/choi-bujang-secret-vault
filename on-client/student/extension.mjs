@@ -1010,6 +1010,201 @@ export function createStudentView() {
 
       return root;
     },
-    renderAction() { return '학생 구현 대기: 현재 사건·조치·실제 대상·사람 확인·ACK와 원천 효과·unknown을 구분하세요.'; },
+    renderAction(actionState = {}) {
+      const root = document.createElement('div');
+      root.className = 'student-action-card';
+
+      const addParagraph = (text, className) => {
+        const p = document.createElement('p');
+        p.textContent = text;
+        if (className) p.className = className;
+        root.append(p);
+        return p;
+      };
+
+      const {
+        status = 'idle',
+        event = null,
+        actionId = null,
+        target = null,
+        receipt = null,
+        observation = null,
+        message = null,
+        confirmationExpiresAt = null,
+        error = null,
+      } = actionState || {};
+
+      // 1) 바깥 요소에 event.id 및 receipt.requestId 속성 조건부 부착 (duplicate_prevention)
+      if (event?.id) {
+        root.setAttribute('data-student-action-event', String(event.id));
+      }
+      if (receipt?.requestId) {
+        root.setAttribute('data-student-action-request', String(receipt.requestId));
+      }
+
+      // 2) 상태별 헤딩 및 설명 문구 구성
+      const heading = document.createElement('h3');
+      root.append(heading);
+
+      // 관측 결과의 실제 효과 적용 여부 판정 (observed_server_result)
+      const isEffectObserved = status === 'succeeded' && observation?.effectApplied === true;
+
+      switch (status) {
+        case 'idle':
+          heading.textContent = '조치 상태: 아직 미실행 (idle)';
+          addParagraph('조치 제안은 아직 실행되지 않았습니다.', 'student-action-notice');
+          addParagraph('보안 조치는 사람의 확인과 연동 시스템 집행을 거쳐야 하며, 자동으로 실행되지 않습니다.', 'student-action-guide');
+          break;
+
+        case 'loading':
+          heading.textContent = '조치 상태: 원천에 확인하는 중 · 완료 아님 (loading)';
+          addParagraph('조치 준비 또는 결과 조회 중입니다. 결과가 아직 확인되지 않았습니다 (완료 아님).', 'student-action-loading');
+          break;
+
+        case 'prepared':
+          heading.textContent = '조치 상태: 준비됨 · 미실행 (prepared)';
+          addParagraph('조치가 준비되었으나 아직 실행되지 않았습니다. 집행하려면 사람의 명시적 확인이 필요합니다.', 'student-action-prepared');
+          if (confirmationExpiresAt) {
+            addParagraph(`사람 확인 기한: ${String(confirmationExpiresAt)}`, 'student-action-expiry');
+          }
+          addParagraph('집행하려면 제공 화면의 「대상과 조치를 확인했으며 집행합니다」 버튼을 누르세요.', 'student-action-guide');
+          break;
+
+        case 'executing':
+          heading.textContent = '조치 상태: 서버에 전달 중 · 완료 아님 (executing)';
+          addParagraph('사람 확인 후 원천 서버에 조치 요청을 전달하는 중입니다. 아직 완료되지 않았으며 결과가 없습니다 (완료 아님).', 'student-action-executing');
+          break;
+
+        case 'pending':
+          heading.textContent = '조치 상태: 서버 접수·처리 중 · 완료 아님 (pending)';
+          addParagraph('서버가 요청을 접수하여 처리 중입니다. 서버 접수 확인(ACK)은 실제 조치 효과가 아닙니다 (완료 아님).', 'student-action-pending');
+          addParagraph('연동 시스템의 실제 집행 결과는 제공 화면의 「원천 결과만 재조회」 버튼을 눌러 확인하세요.', 'student-action-guide');
+          break;
+
+        case 'succeeded':
+          if (isEffectObserved) {
+            heading.textContent = '조치 상태: 효과 확인 (succeeded)';
+            addParagraph('연동 시스템에서 조치의 실제 효과가 확인되었습니다.', 'student-action-success');
+            if (observation?.observedAt) {
+              addParagraph(`원천 관측 시각: ${String(observation.observedAt)}`, 'student-action-observation');
+            }
+            addParagraph('실제 효과: effectApplied: true', 'student-action-effect');
+            if (receipt?.receiptId) {
+              addParagraph(`영수증 ID: ${String(receipt.receiptId)}`, 'student-action-receipt');
+            }
+          } else {
+            // 성공 응답이지만 실제 효과 관측(effectApplied: true)이 없는 경우 결과 불명 처리
+            heading.textContent = '조치 상태: 결과 불명 (unknown) · 실제 효과 미확인';
+            addParagraph('성공(succeeded) 응답을 받았으나 원천 시스템의 실제 효과(effectApplied: true)가 확인되지 않았습니다.', 'student-action-unknown');
+            addParagraph('효과 없음으로도 성공으로도 판단하지 마세요. 제공 화면의 「원천 결과만 재조회」 버튼으로 다시 확인하세요.', 'student-action-guide');
+          }
+          break;
+
+        case 'denied':
+          heading.textContent = '조치 상태: 원천 거절 (denied)';
+          addParagraph('연동 시스템에서 조치 실행을 거절했습니다.', 'student-action-denied');
+          if (message) {
+            addParagraph(`사유: ${String(message)}`, 'student-action-message');
+          }
+          break;
+
+        case 'failed':
+          heading.textContent = '조치 상태: 원천 실패 (failed)';
+          addParagraph('연동 시스템에서 조치 실행 중 실패가 발생했습니다.', 'student-action-failed');
+          if (message) {
+            addParagraph(`오류 내용: ${String(message)}`, 'student-action-message');
+          }
+          break;
+
+        case 'unknown':
+          heading.textContent = '조치 상태: 결과 불명 (unknown)';
+          addParagraph('조치 처리 결과를 확인할 수 없습니다.', 'student-action-unknown');
+          addParagraph('효과 없음으로도 성공으로도 판단하지 마세요. 결과가 불분명하므로 제공 화면의 「원천 결과만 재조회」 버튼으로 다시 확인하세요.', 'student-action-guide');
+          break;
+
+        case 'expired':
+          heading.textContent = '조치 상태: 확인 기한 지남 (expired)';
+          addParagraph('사람 확인 기한이 지났습니다. 이번 준비로는 집행할 수 없으므로 조치를 다시 준비하세요.', 'student-action-expired');
+          break;
+
+        case 'error':
+          heading.textContent = '조치 상태: 요청 처리 안 됨 (error)';
+          {
+            const code = String(error?.code ?? 'ACTION_ERROR');
+            const msg = String(error?.message ?? message ?? '요청이 처리되지 않았습니다.');
+            addParagraph(`[${code}] ${msg}`, 'student-action-error');
+          }
+          addParagraph('기존 보안 기록 및 업무 앱 판정은 그대로 유지됩니다.', 'student-action-notice');
+          break;
+
+        default:
+          heading.textContent = `조치 상태: ${String(status)}`;
+          if (message) {
+            addParagraph(String(message), 'student-action-message');
+          }
+          break;
+      }
+
+      // 3) 현재 사건·조치·대상·영수증 세부 정보 바인딩 (current_intent_binding)
+      const detailsHead = document.createElement('h4');
+      detailsHead.textContent = '조치 세부 정보';
+      root.append(detailsHead);
+
+      const detailsUl = document.createElement('ul');
+      detailsUl.className = 'student-action-details';
+
+      const addDetailItem = (label, val) => {
+        if (val == null || val === '') return;
+        const li = document.createElement('li');
+        li.textContent = `${label}: ${val}`;
+        detailsUl.append(li);
+      };
+
+      if (event?.id) {
+        addDetailItem('사건 ID', event.id);
+      }
+
+      const evidenceList = Array.isArray(event?.evidence) ? event.evidence : [];
+      if (evidenceList.length > 0) {
+        const evidenceIds = evidenceList.map(e => e.id).filter(Boolean);
+        if (evidenceIds.length > 0) {
+          addDetailItem('근거 ID', evidenceIds.join(', '));
+        }
+      }
+
+      if (actionId) {
+        addDetailItem('조치 ID', actionId);
+      }
+
+      if (target?.id) {
+        const genText = target.generation != null ? ` (세대: ${target.generation})` : '';
+        addDetailItem('실제 대상', `${target.id}${genText}`);
+      }
+
+      if (receipt?.requestId) {
+        addDetailItem('요청 ID', receipt.requestId);
+      }
+
+      if (receipt?.receiptId) {
+        addDetailItem('영수증 ID', receipt.receiptId);
+      }
+
+      if (receipt?.version != null) {
+        addDetailItem('버전', receipt.version);
+      }
+
+      if (detailsUl.children.length > 0) {
+        root.append(detailsUl);
+      } else {
+        addParagraph('표시할 조치 세부 정보가 없습니다.', 'student-action-empty-details');
+      }
+
+      // 4) 영수증 대체 알림 (superseded)
+      if (receipt?.superseded) {
+        addParagraph('이전 조회는 최신 결과를 대신하지 않습니다(superseded).', 'student-action-superseded');
+      }
+
+      return root;
+    },
   };
 }
