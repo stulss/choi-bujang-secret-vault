@@ -810,45 +810,202 @@ export function createStudentView() {
       const root = document.createElement('div');
       root.className = 'student-explanation-card';
 
-      // 실패 또는 ok가 아닌 경우: data-student-explanation-event 미부착, 안전한 code와 message를 보여주고 "기록은 그대로" 안내
-      if (!explanation || explanation.status !== 'ok') {
+      const addParagraph = (text, className) => {
         const p = document.createElement('p');
-        p.className = 'student-explanation-fallback';
-
-        if (explanation?.status === 'loading') {
-          p.textContent = 'AI 설명을 요청하는 중입니다… (기록은 그대로 유지됩니다)';
-        } else if (explanation?.status === 'error') {
-          const code = String(explanation.error?.code ?? 'AI_REQUEST_UNVERIFIED');
-          const message = String(explanation.error?.message ?? 'AI 설명을 확인할 수 없습니다.');
-          p.textContent = `AI 설명 실패: [${code}] ${message} · 기록은 그대로입니다.`;
-        } else {
-          p.textContent = '선택한 사건의 AI 설명 결과가 없습니다. 기록은 그대로 유지됩니다.';
-        }
-
+        p.textContent = text;
+        if (className) p.className = className;
         root.append(p);
+        return p;
+      };
+
+      // 1) explanation.status가 error인 경우
+      // event가 null이어도 안전한 오류 코드·메시지와 근거 부족 등 실패 이유를 먼저 표시
+      if (explanation?.status === 'error') {
+        const code = String(explanation.error?.code ?? 'AI_REQUEST_UNVERIFIED');
+        const message = String(explanation.error?.message ?? 'AI 설명을 확인할 수 없습니다.');
+
+        const errHeading = document.createElement('h3');
+        errHeading.textContent = `AI 설명 실패: [${code}] ${message}`;
+        root.append(errHeading);
+
+        addParagraph('기록은 그대로입니다 (과제 실패가 아닙니다).', 'student-explanation-notice');
+        addParagraph('AI 연결 상태 및 사건의 근거를 다시 확인하세요.', 'student-explanation-guide');
         return root;
       }
 
-      // ok 상태: 바깥 요소에 data-student-explanation-event 속성으로 event.id 부착
-      const eventId = String(event?.id ?? '');
-      if (eventId) {
-        root.setAttribute('data-student-explanation-event', eventId);
+      // 2) 오류 없이 event가 null이거나 없는 경우: 보안 기록을 먼저 선택하도록 안내
+      if (!event) {
+        addParagraph('보안 기록에서 기록을 먼저 고르세요.', 'student-explanation-placeholder');
+        return root;
       }
 
-      const title = document.createElement('h3');
-      title.textContent = `사건 ${eventId} AI 설명 결과`;
-      root.append(title);
+      // 3) explanation.status가 loading인 경우: 요청 중 안내
+      if (explanation?.status === 'loading') {
+        addParagraph('AI 설명을 요청하는 중입니다… (기록은 그대로 유지됩니다)', 'student-explanation-loading');
+        return root;
+      }
 
-      const summaryPara = document.createElement('p');
-      summaryPara.className = 'student-explanation-summary';
-      summaryPara.textContent = String(explanation.data?.summary ?? '설명 요약이 없습니다.');
-      root.append(summaryPara);
+      // 4) explanation이 없거나 status가 ok가 아닌 대기 상태인 경우
+      if (!explanation || explanation.status !== 'ok' || !explanation.data) {
+        addParagraph('선택한 사건의 AI 설명 결과가 없습니다. 기록은 그대로 유지됩니다.', 'student-explanation-empty');
+        return root;
+      }
 
+      const data = explanation.data;
+
+      // 5) 이상 응답 검증: AI가 이미 실행했다고 답한 설명은 쓸 수 없음 (proposal_not_executed / executed_output_rejected)
+      if (data.executed === true) {
+        const alertHeading = document.createElement('h3');
+        alertHeading.textContent = 'AI 설명 오류: 이미 실행된 것으로 표시된 설명';
+        root.append(alertHeading);
+        addParagraph('AI가 이미 실행했다고 답한 설명은 쓸 수 없습니다. 기록은 그대로 유지됩니다.', 'student-explanation-alert');
+        return root;
+      }
+
+      // 6) 근거 대조 검증: event.evidence와 data.evidenceIds 대조 (insufficient_evidence / wrong_event_rejected / evidence_binding)
+      const evidenceList = Array.isArray(event.evidence) ? event.evidence : [];
+      const evidenceMap = new Map(evidenceList.map(e => [e.id, e.text]));
+      const evidenceIds = Array.isArray(data.evidenceIds) ? data.evidenceIds : [];
+
+      // 근거가 아예 없거나 인용한 근거가 없는 경우
+      if (evidenceList.length === 0 || evidenceIds.length === 0) {
+        const failHeading = document.createElement('h3');
+        failHeading.textContent = 'AI 설명 불가: 근거 부족';
+        root.append(failHeading);
+        addParagraph('근거가 없는 사건은 설명할 수 없습니다 (근거 부족·입력 오류). 기록은 그대로 유지됩니다.', 'student-explanation-alert');
+        return root;
+      }
+
+      // 인용한 근거 ID가 사건의 근거에 없는 경우
+      const hasInvalidEvidence = evidenceIds.some(id => !evidenceMap.has(id));
+      if (hasInvalidEvidence) {
+        const mismatchHeading = document.createElement('h3');
+        mismatchHeading.textContent = 'AI 설명 불가: 근거 불일치';
+        root.append(mismatchHeading);
+        addParagraph('해당 설명을 쓸 수 없습니다. 설명의 근거가 선택한 사건의 근거와 맞지 않습니다 (근거가 맞지 않음). 내용을 지어내지 않습니다.', 'student-explanation-alert');
+        addParagraph('안전한 오류 코드: INVALID_EVIDENCE_BINDING · 기록은 그대로 유지됩니다.', 'student-explanation-guide');
+        return root;
+      }
+
+      // proposals 내부의 evidenceIds 검증
+      const proposals = Array.isArray(data.proposals) ? data.proposals : [];
+      const hasInvalidProposalEvidence = proposals.some(p => Array.isArray(p.evidenceIds) && p.evidenceIds.some(id => !evidenceMap.has(id)));
+      if (hasInvalidProposalEvidence) {
+        const mismatchHeading = document.createElement('h3');
+        mismatchHeading.textContent = 'AI 설명 불가: 제안 근거 불일치';
+        root.append(mismatchHeading);
+        addParagraph('조치 제안의 근거가 사건의 근거와 일치하지 않아 설명을 쓸 수 없습니다. 내용을 지어내지 않습니다.', 'student-explanation-alert');
+        return root;
+      }
+
+      // 7) 모든 검증 통과: 성공 표식(data-student-explanation-event)을 바깥 요소에 event.id로 부착
+      root.setAttribute('data-student-explanation-event', String(event.id));
+
+      // 7-1) 사건 ID와 AI 설명 제목 및 요약
+      const head = document.createElement('h3');
+      head.textContent = `사건 ${event.id} AI 설명(참고용)`;
+      root.append(head);
+
+      addParagraph('AI 설명은 참고 정보이며 해석입니다. 사실 판단은 인용한 근거와 연동 시스템이 알려 준 상태를 기준으로 합니다.', 'student-explanation-subtext');
+
+      addParagraph(String(data.summary ?? ''), 'student-explanation-summary');
+
+      // 7-2) 인용한 근거 목록 (evidenceIds마다 "근거 ID — 근거 글")
+      const evidenceHead = document.createElement('h4');
+      evidenceHead.textContent = '인용한 근거 목록';
+      root.append(evidenceHead);
+
+      const evidenceUl = document.createElement('ul');
+      evidenceUl.className = 'student-explanation-evidence-list';
+      for (const refId of evidenceIds) {
+        const li = document.createElement('li');
+        const text = evidenceMap.get(refId) ?? '근거 본문 없음';
+        li.textContent = `${refId} — ${text}`;
+        evidenceUl.append(li);
+      }
+      root.append(evidenceUl);
+
+      // 7-3) 규칙 목록 (event.rules 마다 "규칙 ID — 규칙 글")
+      const rulesHead = document.createElement('h4');
+      rulesHead.textContent = '적용 규칙 목록';
+      root.append(rulesHead);
+
+      const rulesList = Array.isArray(event.rules) ? event.rules : [];
+      if (rulesList.length === 0) {
+        addParagraph('적용된 규칙이 없습니다.', 'student-explanation-empty-rules');
+      } else {
+        const rulesUl = document.createElement('ul');
+        rulesUl.className = 'student-explanation-rules-list';
+        for (const rule of rulesList) {
+          const li = document.createElement('li');
+          li.textContent = `${rule.id} — ${rule.text}`;
+          rulesUl.append(li);
+        }
+        root.append(rulesUl);
+      }
+
+      // 7-4) 확인 불가 상태 목록 (event.state에서 unknown인 항목 나열 / unknown_evidence)
+      const stateHead = document.createElement('h4');
+      stateHead.textContent = '확인되지 않은 현재 상태';
+      root.append(stateHead);
+
+      const stateLabels = { access: '접속', session: '세션', device: '기기' };
+      const unknownStates = [];
+      for (const [key, label] of Object.entries(stateLabels)) {
+        if (event.state?.[key] === 'unknown') {
+          unknownStates.push(`${label}: 확인 불가(unknown)`);
+        }
+      }
+
+      if (unknownStates.length === 0) {
+        addParagraph('확인 불가 상태: 없음', 'student-explanation-unknown-none');
+      } else {
+        const unknownUl = document.createElement('ul');
+        unknownUl.className = 'student-explanation-unknown-list';
+        for (const item of unknownStates) {
+          const li = document.createElement('li');
+          li.textContent = item;
+          unknownUl.append(li);
+        }
+        root.append(unknownUl);
+      }
+      addParagraph('확인할 수 없는 상태(unknown)는 안전이나 정상으로 간주하지 않습니다.', 'student-explanation-subtext');
+
+      // 7-5) 조치 제안 (proposals)
+      const proposalHead = document.createElement('h4');
+      proposalHead.textContent = '조치 제안';
+      root.append(proposalHead);
+
+      const supportedActions = Array.isArray(event.supportedActions) ? event.supportedActions : [];
+      if (proposals.length === 0) {
+        if (supportedActions.length === 0) {
+          addParagraph('연동 시스템이 지원하는 조치가 없어 제안이 없습니다(정상).', 'student-explanation-no-proposals');
+        } else {
+          addParagraph('AI가 제안한 조치가 없습니다.', 'student-explanation-no-proposals');
+        }
+        addParagraph('AI는 아무런 조치도 실행하지 않았습니다.', 'student-explanation-subtext');
+      } else {
+        const proposalsUl = document.createElement('ul');
+        proposalsUl.className = 'student-explanation-proposals-list';
+        for (const p of proposals) {
+          const li = document.createElement('li');
+          const pAction = document.createElement('p');
+          const refEvidenceStr = Array.isArray(p.evidenceIds) && p.evidenceIds.length ? ` (근거: ${p.evidenceIds.join(', ')})` : '';
+          pAction.textContent = `조치 제안: ${p.action} — 이유: ${p.reason}${refEvidenceStr}`;
+
+          const pStatus = document.createElement('p');
+          pStatus.className = 'student-explanation-proposal-status';
+          pStatus.textContent = '사람 확인이 필요하며 실행되지 않았습니다(미실행). 설명·제안만으로 보안 조치가 자동 실행되지 않습니다.';
+
+          li.append(pAction, pStatus);
+          proposalsUl.append(li);
+        }
+        root.append(proposalsUl);
+      }
+
+      // 7-6) 점검 시각
       if (checkedAt) {
-        const timePara = document.createElement('p');
-        timePara.className = 'student-explanation-time';
-        timePara.textContent = `점검 시각: ${String(checkedAt)}`;
-        root.append(timePara);
+        addParagraph(`점검 시각: ${String(checkedAt)}`, 'student-explanation-time');
       }
 
       return root;
