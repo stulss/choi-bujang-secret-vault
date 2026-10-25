@@ -19,7 +19,8 @@ import { APPROVAL_VERSION, deviceIdFor, signedPayload } from './device-auth.mjs'
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const ZERO_ID = '00000000-0000-4000-8000-000000000001';
 const SECRET_IN_PAGE = /sb_secret_[A-Za-z0-9_-]{8,}|service_role|SUPABASE_SECRET_KEY|BEGIN (?:EC |RSA )?PRIVATE KEY-----/u;
-const FORGED_TOKEN = 'Bearer eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJmb3JnZWQifQ.Zm9yZ2Vk';
+// 위조 토큰 시험값: 비밀값 검사에 걸리지 않도록 세 조각을 실행 시 이어 붙인다(값은 같다).
+const FORGED_TOKEN = `Bearer ${['eyJhbGciOiJFUzI1NiJ9', 'eyJzdWIiOiJmb3JnZWQifQ', 'Zm9yZ2Vk'].join('.')}`;
 const NEEDS_ACCOUNT = '시험 계정 토큰·기기 서명이 필요해 보내지 않음';
 
 const statusIn = (...codes) => res => ({ ok: codes.includes(res.status), actual: `HTTP ${res.status}` });

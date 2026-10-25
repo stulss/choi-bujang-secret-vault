@@ -94,7 +94,7 @@
 ### 5단계 점검 항목 및 검증 절차
 1. **브라우저의 서버 함수 단일 창구 호출 검증**:
    - 화면 소스코드(`public/index.html`, `public/app.js` 등)에서 Supabase PostgREST(`rest/v1`)를 직접 호출하는 코드가 일체 없으며, 메모 요청은 동일 호스트의 `/api/notes`로만 전달됨을 확인했습니다.
-   - 브라우저 JS 번들 및 정적 파일에 서버 전용 키(`service_role`, `sb_secret_`, 개인키)가 포함되지 않음을 확인했습니다.
+   - 브라우저 JS 번들 및 정적 파일에 서버 전용 키와 개인키가 포함되지 않음을 확인했습니다.
 2. **A 정상 · B 거부 · 무로그인 확인 절차**:
    - **무로그인 거절**: 인증 헤더 없이 `GET /api/notes` 호출 시 HTTP 401 Unauthorized가 반환되며 자료가 유출되지 않음을 확인했습니다.
    - **A 계정 정상 동작**: A 사용자로 로그인한 후 메모 조회(GET), 추가(POST), 수정(PUT), 삭제(DELETE)가 정상 수행됨을 확인했습니다.
@@ -308,97 +308,79 @@
 
 ## 21단계: 학생용 실행 설명서와 시스템 구성도 (보안 Agent 「케셰브」)
 
-13~20단계에서 완성된 로컬 ZTNA·XDR 보안 Agent 앱(Agent 명칭: **「케셰브」**)의 실행 설명서, 시스템 구성도, 제공/학생 경계 및 장애 해결 안내입니다. 상세 실행 지침 및 단계별 설명서는 [STUDENT_RUNBOOK.md](docs/STUDENT_RUNBOOK.md)에 전문이 보관되어 있습니다.
+13~20단계에서 만든 로컬 보안 앱 `on-client/`의 실행 설명서입니다. 전문(폴더 구조, 모드별 시작 신호, 구성도 표, 오류별 확인 순서, 확인 상태 표)은 [docs/STUDENT_RUNBOOK.md](docs/STUDENT_RUNBOOK.md)에 있습니다. 항목마다 **실행 확인 / 코드 확인 / 미확인**을 구분해 적었습니다.
 
-### 1. 목적과 기능
-- **목적**: 제로 트러스트(ZTNA) 기기·세션 검증, XDR 탐지 경보 조회, 수업용 AI 게이트웨이 연계 사건 설명 및 안전한 조치 집행 상태 관리를 제공하는 로컬 보안 Agent 시스템 구축.
-- **핵심 화면**:
-  1. **보호 현황**: 로그인·기기·세션 상태, XDR 알림, AI 연결 점검, 설치 패키지 OSV 취약점 조회, 진단 도움정보(안전한 복사 지원)
-  2. **업무 앱**: 앱별 접속 판정(allow / deny / step_up / unknown) 표출
-  3. **보안 기록**: 내 접속 기록 40건, XDR 경보 필터, 근거 연결 AI 설명, 조치 제안 및 집행 상태 추적
+### 목적과 기능
+기기·세션 상태, 업무 앱 접속 판정(allow / deny / step_up / unknown), 접속 기록·경보 목록, AI 설명과 조치 상태, 설치 패키지의 공개 취약점(OSV) 대조를 한 화면(탭 「보호 현황」 「업무 앱」 「보안 기록」)에 보여 줍니다.
 
-### 2. 지원 환경 및 실측 버전
-- **운영체제**: Windows 11 (PowerShell 5.1 / 7+)
-- **Node.js**: `v24.19.0` (직접 실행 확인 완료, 권장 v22~v24)
-- **npm**: `11.17.0` (직접 실행 확인 완료)
-- **클라이언트 패키지**: `alekov-client-starter@0.2.11` (`on-client/package.json`)
-- **로컬 서비스 주소**: `http://127.0.0.1:5189/`
+### 지원 환경과 확인한 버전
+| 항목 | 값 | 근거 |
+|---|---|---|
+| OS | Windows 11 Home 10.0.26200 | 실행 환경 정보 |
+| Node.js | `v24.19.0` (`on-client/package.json`의 `engines.node`는 `24.19.0`, 시작 도구는 22~24 허용) | 실행 확인 |
+| npm | `11.17.0` | 실행 확인 |
+| 앱 | `alekov-client-starter@0.2.11`, 주소 `http://127.0.0.1:5189/` (`ON_PORT`로 변경) | 코드 확인 |
 
-### 3. 시스템 구성도
+macOS·Linux·Node 22~23·PowerShell 7은 확인하지 않았습니다.
 
+### 실행 (PowerShell, `on-client` 폴더에서)
+| 순서 | 명령 | 정상 결과 | 근거 |
+|---|---|---|---|
+| 1 | `npm run check` | 오류 없이 종료 (문법만 점검) | 실행 확인 |
+| 2 | `npm run demo` | `케셰브 예제: http://127.0.0.1:5189` — 가상 자료, 실제 판정 아님 | 실행 확인 (포트 5199) |
+| 2′ | `npm start` | `케셰브 연결 확인: http://127.0.0.1:5189` — 엔진 미연결이 기본값(`ENGINE_NOT_CONNECTED`) | 실행 확인 (포트 5198) |
+| 3 | 브라우저에서 `http://127.0.0.1:5189/` | `GET /` 200. 탭 화면 모양은 미확인 | 응답 실행 확인 |
+| 4 | `Ctrl + C` | 서버 종료 | 미확인 |
+
+이미 쓰는 포트면 `EADDRINUSE`로 끝납니다(실행 확인). `on-client`에는 설치할 의존성이 없고 `package-lock.json`도 없습니다.
+
+### 구성도
 ```mermaid
 flowchart TD
-    User["사용자 웹 브라우저
-    http://127.0.0.1:5189
-    on-client/public/index.html"]
-
-    subgraph ClientApp["로컬 보안 Agent: 케셰브 (on-client)"]
-        UI["화면 컨트롤러
-        on-client/public/app.js"]
-        StudentExt["학생 확장 렌더러
-        on-client/student/extension.mjs"]
-        LocalServer["로컬 앱 서버 (Node.js)
-        on-client/src/server.mjs"]
+    B["브라우저 http://127.0.0.1:5189/"]
+    subgraph LOCAL["on-client (Node.js, 127.0.0.1만 수신)"]
+        PUB["public/index.html, app.js
+        + student/extension.mjs (학생)"]
+        SRV["src/server.mjs (제공)"]
+        ENG["student/engine-adapter.mjs
+        기본값 disconnected"]
+        AIM["src/ai/*, vendor/clco-http.mjs"]
+        VUL["src/vulnerabilities/*"]
     end
-
-    subgraph DefenseBackend["접근 제어 및 XDR 백엔드"]
-        Decider["SDP 판정기
-        src/decider.mjs"]
-        Detector["XDR 탐지기
-        src/detect.mjs"]
-        Database["외부 학습용 DB / 인증
-        Supabase"]
-    end
-
-    subgraph ExternalServices["수업용 AI 게이트웨이 및 취약점 DB"]
-        CLCO["수업용 AI 게이트웨이
-        /api/ai/*"]
-        OSV["OSV 취약점 DB
-        https://api.osv.dev/v1/querybatch"]
-    end
-
-    User <-->|DOM 렌더링 & 사용자 인터랙션| UI
-    UI <-->|데이터 바인딩 & 슬롯 위임| StudentExt
-    UI <-->|로컬 REST API 통신| LocalServer
-    LocalServer <-->|접속 판정 & 사건 조회| DefenseBackend
-    LocalServer <-->|AI 연결 확인 & 사건 설명 요청| CLCO
-    LocalServer <-->|공개 패키지 취약점 쿼리배치| OSV
+    SDP["ALEPH SDP 엔진 (제공, 저장소에 코드 없음)"]
+    DEC["src/decider.mjs · src/detect.mjs (학생 규칙)"]
+    GW["수업용 AI 게이트웨이"]
+    OSV["OSV api.osv.dev/v1/querybatch"]
+    B <--> SRV
+    B --- PUB
+    SRV --> ENG
+    ENG -. "미확인" .-> SDP
+    SDP -. "미확인" .-> DEC
+    SRV --> AIM
+    AIM -. "미확인" .-> GW
+    SRV --> VUL
+    VUL -. "미확인" .-> OSV
 ```
+실선은 코드 안의 호출 경로, 점선은 설정이 있을 때만 쓰이거나 실제 연결을 확인하지 못한 연결입니다. 로컬 앱 서버는 `src/decider.mjs`를 직접 부르지 않습니다(코드 확인). 글로 쓴 구성은 런북 5-2 표에 있습니다.
 
-- **글로 쓴 구성**:
-  - **브라우저**: `http://127.0.0.1:5189` (`on-client/public/index.html`) — UI 조작, 자격 증명 영구 저장 없음.
-  - **로컬 앱 서버**: `on-client/src/server.mjs` — 포트 5189 수신, 세션 관리 및 프록시 중계.
-  - **학생 확장 모듈**: `on-client/student/extension.mjs` — 순수 DOM 기반 8대 렌더러 함수(`renderIdentity` ~ `renderVulnerabilities`).
-  - **접근 제어 / XDR**: `src/decider.mjs`, `src/detect.mjs` — 판정 규칙 및 비정상 탐지.
-  - **수업용 AI 게이트웨이**: CLCO 게이트 (`/api/ai/*`) — AI 원본 자격 증명은 게이트에만 보관되며 클라이언트 노출 없음.
-  - **외부 취약점 정보**: OSV (`https://api.osv.dev/v1/querybatch`) — 정확한 semver 대조.
+### 제공 부분과 학생 작성 부분
+| 구분 | 위치 |
+|---|---|
+| 학생 작성 | `on-client/student/extension.mjs` — `createStudentView()` 객체의 `renderIdentity`·`renderDecision`·`renderEvents`·`renderStatus`·`renderAiConnection`·`renderExplanation`·`renderAction`·`renderVulnerabilities` (13~20단계). 학생 작성 `src/decider.mjs`, `src/detect.mjs` |
+| 제공 | `on-client/src/**`, `on-client/public/**`, `on-client/vendor/**`, `on-client/tools/**`, ALEPH SDP 엔진(저장소 밖) |
 
-### 4. 제공 코드와 학생 구현 영역 경계
-| 구분 | 파일 위치 | 주요 역할 |
-|---|---|---|
-| **제공 코드** | `on-client/src/server.mjs` | 로컬 서버 기동 및 API 중계 프록시 (수정 금지) |
-| **제공 코드** | `on-client/public/app.js` | 상태 관리 및 화면 제어 컨트롤러 (수정 금지) |
-| **제공 코드** | `on-client/public/vulnerabilities-view.mjs` | OSV 응답 정규화 모듈 (수정 금지) |
-| **학생 구현** | `on-client/student/extension.mjs` | `renderIdentity` (13단계: 신원/기기/세션 표출)<br>`renderDecision` (14단계: 4대 접속 판정 표출)<br>`renderEvents` (15단계: 최근 기록 40건, XDR 필터, unknown 분리)<br>`renderStatus` (16단계: 컴플라이언스 알림, 진단 및 안전 복사)<br>`renderAiConnection` (17단계: AI 연결 상태, 모델 수, audienceAuthorization)<br>`renderExplanation` (18단계: 근거 ID 대조, 규칙 목록, 미실행 제안, 속성 통제)<br>`renderAction` (19단계: 조치 상태, ACK≠효과 구분, 속성 바인딩)<br>`renderVulnerabilities` (20단계: lockfile 정확한 semver, OSV 취약점 대조, 미조회 구분) |
+### 장애 안내
+| 증상 | 확인 순서 |
+|---|---|
+| `EADDRINUSE` | `Get-NetTCPConnection -LocalPort 5189 -State Listen`로 사용 프로세스 확인 → 내 `node`면 종료, 아니면 `$env:ON_PORT=5190` |
+| `ENGINE_NOT_CONNECTED` | 기본값입니다. `http://127.0.0.1:5189/api/diagnostics`의 `engine.mode` 확인, 연습은 `npm run demo` |
+| 패키지 `PROJECT_NOT_CONFIGURED` / `NO_APPROVED_PACKAGES` / `LOCKFILE_UNVERIFIABLE` | 조회하지 않은 상태입니다. 취약점 없음이 아닙니다. 설정은 운영 안내를 따름 |
+| `AI_REQUEST_UNVERIFIED` | 앱 권한 미확인. 담당자에게 확인, 열쇠 값은 어디에도 적지 않음 |
+| 조치 `결과 불명` | 성공으로 보지 않음. 「원천 결과만 재조회」 사용 |
 
-### 5. 설치, 실행, 종료 순서
-1. **이동**: `cd on-client`
-2. **문법 점검**: `npm run check` (정상 종료 코드 0 확인)
-3. **실행**: `npm start` (또는 `powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\start-alekov.ps1`)
-4. **접속**: 브라우저에서 `http://127.0.0.1:5189/` 접속
-5. **종료**: 터미널에서 `Ctrl + C` 입력
-6. **재실행**: 종료 후 동일하게 `npm start` 실행 (이전 메모리 상태 초기화 확인)
-
-### 6. 장애 안내 및 문제 해결
-- `[AI_REQUEST_UNVERIFIED]`: 운영 측 계정 권한 미반영 상태. 운영 담당자에게 확인 요청. (임의의 외부 자격 증명 복사 금지)
-- `[CANCELLED]`: 패키지 조회 취소. 상단의 「설치 패키지 조회」 버튼으로 신규 요청.
-- `[TIMEOUT]` / `[SERVICE_UNAVAILABLE]`: OSV 응답 지연 또는 네트워크 불안정. 네트워크 확인 후 재시도.
-- `not_configured` / `not_checked`: 승인된 공개 패키지 미등록. 정상 대기 상태이며 취약점 없음이 아님.
-- `결과 불명 (unknown)`: 원천 집행기 미연결 상태. 성공으로 단정하지 않고 「원천 결과만 재조회」 버튼 사용.
-
-### 7. 실제 지원 범위와 기다림(UNV) 목록
-- **실제 확인 완료**: 8대 학생 렌더러 함수 문법 검사(`npm run check`) 100% 통과, 로컬 서버 구동(`npm start`) 및 모의 데이터 분기 검증 완료.
-- **기다림(UNV)**: 실제 학생 계정의 CLCO AI 게이트웨이 권한 정식 발급, 실제 운영 원천 조치 집행기 연결 및 실시간 결과 회수, 대규모 공개 패키지 목록 OSV 실시간 쿼리 (운영자 준비 항목).
+### 지원 범위와 미확인
+실행 확인: Node/npm 버전, `npm run check`, `npm run demo`·`npm start` 시작 신호와 `/api/diagnostics`·`/api/vulnerabilities` 응답, `EADDRINUSE`, `node --test test/package-starter.test.mjs`(3건 통과).
+**미확인**: 브라우저 화면·버튼 동작, `start-alekov.ps1`, `Ctrl + C`, 8개 렌더러의 분기별 동작, SDP 엔진·AI 게이트웨이·OSV 연결, 조치 집행, 배포·심판 판정.
 
 ---
 

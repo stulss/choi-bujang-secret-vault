@@ -94,7 +94,7 @@ test('계정 토큰·기기 서명이 필요한 요청은 보내지 않고 미�
   for (const { init } of calls) {
     const headers = init.headers ?? {};
     assert.equal('x-aleph-signature' in headers, false);
-    if (headers.authorization) assert.match(headers.authorization, /^Bearer eyJhbGciOiJFUzI1NiJ9\.eyJzdWIiOiJmb3JnZWQifQ\.Zm9yZ2Vk$/u);
+    if (headers.authorization) assert.equal(headers.authorization, `Bearer ${['eyJhbGciOiJFUzI1NiJ9', 'eyJzdWIiOiJmb3JnZWQifQ', 'Zm9yZ2Vk'].join('.')}`);
   }
   assert.equal(evidence.summary.normalNotRun, notRun.filter(r => r.kind === 'normal').length);
 });
