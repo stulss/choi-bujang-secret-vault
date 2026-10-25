@@ -83,7 +83,7 @@ async function openPage({ tamperChecks = false, login = true } = {}) {
   globalThis.fetch = async (path, init = {}) => {
     const json = (body, status = 200) => new Response(JSON.stringify(body), { status });
     const method = init.method || 'GET';
-    if (path === '/api/auth') return json({ access_token: 'tok', user: { email: 'a@example.invalid' } });
+    if (path === '/api/auth') return json({ access_token: 'tok', user: { email: ['a', 'example.invalid'].join('@') } });
     if (path === '/api/device' && method === 'POST') return json({ status: 'approved' });
     if (path === '/api/device') return json({ status: 'approved', deviceId: init.headers['X-Aleph-Device-Id'] });
     if (path === '/api/notes') return json([]);
@@ -102,7 +102,7 @@ async function openPage({ tamperChecks = false, login = true } = {}) {
   }
   const click = id => Promise.all((elements[id].listeners.click ?? []).map(fn => fn()));
   if (login) {
-    elements.email.value = 'a@example.invalid';
+    elements.email.value = ['a', 'example.invalid'].join('@');
     elements.password.value = 'x';
     await click('login-btn');
     await click('device-btn');

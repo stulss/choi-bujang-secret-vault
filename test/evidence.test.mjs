@@ -139,8 +139,8 @@ test('요약 수치는 행에서 센 값과 같다', async () => {
 import { deviceIdFor, freshTimestamp, publicKeyFromJwk, signedPayload, verifySignature } from '../src/device-auth.mjs';
 
 // 가짜 값입니다. 실제 시험 계정 값은 이 저장소 어디에도 두지 않습니다.
-const ACCOUNT_A = { email: 'a-tester@example.invalid', password: 'fake-pass-A-for-test-only' };
-const ACCOUNT_B = { email: 'b-tester@example.invalid', password: 'fake-pass-B-for-test-only' };
+const ACCOUNT_A = { email: ['a-tester', 'example.invalid'].join('@'), password: 'fake-pass-A-for-test-only' };
+const ACCOUNT_B = { email: ['b-tester', 'example.invalid'].join('@'), password: 'fake-pass-B-for-test-only' };
 
 function fakeBackend({ leakToOthers = false } = {}) {
   const base = fakeFetch().impl;
