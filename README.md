@@ -430,6 +430,49 @@ flowchart TD
 
 ---
 
+## 22단계: 최종 커밋의 새 환경 재현과 릴리스 기록 (보안 Agent 「케셰브」)
+
+기존 작업 폴더를 보존한 채, 별도의 새 격리 폴더에 `git clone`하여 실행 설명서([docs/STUDENT_RUNBOOK.md](docs/STUDENT_RUNBOOK.md))대로 재현한 실측 결과와 최종 릴리스 보고서입니다. 상세 보고서는 [docs/REPRODUCTION_REPORT.md](docs/REPRODUCTION_REPORT.md)에 기술되어 있습니다.
+
+### 1. 새 환경 재현 절차 및 관찰 결과 (학생 진술 및 실측)
+- **저장소 및 최종 커밋**: `https://github.com/stulss/choi-bujang-secret-vault.git` (브랜치: `main`)
+- **격리 재현 실측**:
+  - 새 빈 폴더에 clone 후 `cd on-client` 진입.
+  - `node -v` (`v24.19.0`), `npm -v` (`11.17.0`), `npm run check` 통과 확인 (실행 확인).
+  - `on-client/package.json`에 `dependencies`가 없으므로 `npm install` 없이 즉시 실행 가능 (코드 확인).
+  - 예제 모드(`node src/server.mjs --demo`): 포트 5195에서 `케셰브 예제: http://127.0.0.1:5195` 신호 확인 및 `/api/diagnostics` 응답 `engine.mode: "demo"` 관측 (실행 확인).
+  - 기본 모드(`node src/server.mjs`): 포트 5196에서 `케셰브 연결 확인: http://127.0.0.1:5196` 신호 확인 및 `/api/diagnostics` 응답 `engine.mode: "disconnected"` 관측 (실행 확인).
+  - 웹 루트(`GET /`): HTTP 200 응답 확인 (실행 확인).
+  - 프로세스 종료: PID 확인 후 `Stop-Process` 정상 종료 및 포트 해제 확인 (실행 확인).
+
+### 2. 13~21단계 누적 기능 실측 요약
+- **13단계 (신원·기기·세션)**: `renderIdentity` 예제 데이터 렌더링 확인 (라이브 SDP 엔진 미확인).
+- **14단계 (접속 판정)**: `renderDecision` 4상태(allow/deny/step_up/unknown) 분기 렌더링 확인 (원격 호스트 미확인).
+- **15단계 (접속 기록·경보)**: `renderEvents` 가상 이벤트 1건 및 증거 목록 렌더링 확인 (운영 XDR 수집기 미확인).
+- **16단계 (안내·진단)**: `renderStatus` 로컬 서버 진단 응답 기반 도움말 렌더링 확인.
+- **17단계 (AI 연결 상태)**: `renderAiConnection` 인가 상태 구분 및 모델 카운트 렌더링 확인 (게이트웨이 실제 권한 대기).
+- **18단계 (AI 설명 바인딩)**: `renderExplanation` 이벤트 근거 대조 및 미지원 조치 안내 확인.
+- **19단계 (보안 조치)**: `renderAction` 배지 및 `effectApplied` 구분 확인 (**실제 보안 조치 집행 연결은 미제공·미확인**).
+- **20단계 (패키지 취약점)**: `renderVulnerabilities` 상태 5종 한글 매핑 및 표 렌더링 확인 (OSV 라이브 쿼리 미실행).
+- **21단계 (실행 설명서·구성도)**: `STUDENT_RUNBOOK.md`와 `README.md`의 절차·장애복구·구성도 정합성 통과.
+
+### 3. 데이터 보존 계획 (백업·복원 절차 및 한계)
+- **보존 대상**: 로컬 브라우저 캐시/스토리지 UI 설정값, 런타임 메모리 상태, 로컬 설정 파일([.env.example](.env.example)), Git 전체 이력.
+- **백업 및 복원**: Git 원격 저장소(`origin/main`) 동기화로 형상 보존, `git clone`과 `.env.example` 설정 복사를 통해 새 환경 즉시 복원 가능.
+- **제한 사항**: 로컬 앱 서버는 인메모리 상태 중심이므로 프로세스 종료 시 세션이 초기화되며, 임시 세션 토큰은 영구 저장하지 않습니다.
+
+### 4. 시연·학생 진술·원문 검토 구분
+- **시연(demo)**: `npm run demo`의 가상 데이터는 구조 검증용이며 실제 운영 서버의 결과가 아닙니다.
+- **학생 진술**: 1절의 실측 관찰 결과는 학생이 로컬 PowerShell에서 직접 명령을 실행해 확인한 사실만을 기록했습니다.
+- **AI 원문 검토**: 포털의 AI 검토 통과는 제출 커밋의 문서와 코드가 일치한다는 **정적 원문 검토 기준의 통과**이며, 원격 실제 실행이나 v1.0 자동 인증을 의미하지 않습니다.
+
+### 5. 버전 및 지원 범위
+- **릴리스 버전**: `v1.0-rc1` (검증 중인 버전)
+- **지원 환경**: Windows 11 Home + Node.js `v24.19.0` + npm `11.17.0`
+- **미지원 / 미해결 사항**: macOS/Linux/Node 22~23 미지원, 19단계 실제 시스템 보안 조치 라이브 집행 연결 미제공.
+
+---
+
 ## 다음 단계의 코딩 도구에 전달할 규칙
 
 [AGENTS.md](AGENTS.md)를 먼저 읽히고 한 번에 한 제작 단위만 요청하세요. 2단계부터는 자료 보호를 구현할 때 `public/data.json`을 복사하는 1단계 빌드 흐름도 함께 바꿔야 합니다. 3단계 이후의 로그인, 허용 경로, 5단계의 원본 API 주소, 6단계 이후 정책 규칙은 해당 단계 원고와 계약에 맞춰 추가합니다. 외부 인증 자격 증명(인증서, 접속 암호, API 인증 키) 및 실제 학생 기록을 코드, Git, 제출 묶음에 넣지 않습니다.
