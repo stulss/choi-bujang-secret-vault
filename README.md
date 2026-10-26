@@ -436,3 +436,5 @@ flowchart TD
 
 `src/decider.mjs`와 `src/detect.mjs`의 로컬 시험은 반 엔진이나 운영 심판의 결과가 아닙니다. 1단계 이후 제출 묶음 계약 `aleph.defense.submission.v2`는 `scripts/bundle.mjs`에 남아 있으며, 코딩 도구가 해당 단계의 최신 배포 주소와 Git 원격을 맞춘 뒤 사용합니다.
 
+
+공개 키 값은 설정 파일에 두지 않고, 필요한 값은 `.env.example`을 참고해 Vercel 프로젝트의 환경변수란에 직접 입력합니다.
