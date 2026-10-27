@@ -5,7 +5,7 @@
   "author": "student",
   "description": "ZTNA·XDR 보안 관제 및 실시간 PC 자원·보안 진단 Agent 앱",
   "entry": "on-client/src/server.mjs",
-  "uiLayout": "control_dashboard",
+  "uiLayout": "control_dashboard_with_timeline",
   "packaging": {
     "type": "inno_setup",
     "installerPath": "dist-installer/setup.exe",

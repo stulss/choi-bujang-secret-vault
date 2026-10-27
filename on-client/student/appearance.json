@@ -1,7 +1,7 @@
 {
   "appName": "케셰브 (Keshev)",
   "version": "1.0.0",
-  "dashboardLayout": "control_dashboard",
+  "dashboardLayout": "control_dashboard_with_timeline",
   "theme": {
     "palette": "dashboard-slate",
     "primary": "#1976d2",
