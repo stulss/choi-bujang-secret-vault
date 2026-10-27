@@ -28,12 +28,12 @@ echo.
 rem Auto-launch browser
 start "" http://127.0.0.1:5189/
 
-if "%~1"=="--normal" (
-    echo [INFO] Starting Keshev in NORMAL mode...
-    node src\server.mjs
-) else (
-    echo [INFO] Starting Keshev in DEMO mode [default]...
+if "%~1"=="--demo" (
+    echo [INFO] Starting Keshev in DEMO mode...
     node src\server.mjs --demo
+) else (
+    echo [INFO] Starting Keshev in ACTUAL/NORMAL mode [default]...
+    node src\server.mjs
 )
 
 if errorlevel 1 (
