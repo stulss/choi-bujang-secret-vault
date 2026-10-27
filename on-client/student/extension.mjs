@@ -1250,6 +1250,191 @@ export function createStudentView() {
       root.append(auditContainer);
 
       // =========================================================================
+      // [선택 심화 기능] 개발자 4대 클라우드 서비스(GitHub · Vercel · Supabase · Railway) 상태 및 비용 관제
+      // =========================================================================
+      const saasContainer = document.createElement('div');
+      saasContainer.className = 'saas-container';
+
+      const saasHeader = document.createElement('div');
+      saasHeader.className = 'saas-header-row';
+
+      const saasTitle = document.createElement('h4');
+      saasTitle.textContent = '클라우드 서비스(SaaS) 상태 및 비용 관제 ';
+      const saasTag1 = document.createElement('span');
+      saasTag1.className = 'tag tag-osv';
+      saasTag1.textContent = '4대 서비스 관측';
+      const saasTag2 = document.createElement('span');
+      saasTag2.className = 'tag tag-unverifiable';
+      saasTag2.textContent = '미연결 시 0원 표기 금지';
+      saasTitle.append(saasTag1, saasTag2);
+
+      const saasBtnRow = document.createElement('div');
+      const saasToggleBtn = document.createElement('button');
+      saasToggleBtn.type = 'button';
+      saasToggleBtn.className = 'btn btn-retry';
+      saasToggleBtn.textContent = '📊 예시 보기 (가상 시나리오)';
+
+      saasBtnRow.append(saasToggleBtn);
+      saasHeader.append(saasTitle, saasBtnRow);
+      saasContainer.append(saasHeader);
+
+      const saasGrid = document.createElement('div');
+      saasGrid.className = 'saas-grid';
+      saasContainer.append(saasGrid);
+
+      let isSaasExampleMode = false;
+
+      function renderSaasCards() {
+        saasGrid.replaceChildren();
+
+        const services = [
+          {
+            name: 'GitHub',
+            icon: '🐙',
+            defaultStatus: '연결 전 · 확인 불가',
+            demoStatus: '정상 (2FA 활성)',
+            defaultMetrics: [
+              ['계정 신원', '확인 불가'],
+              ['2단계 인증(2FA)', '확인 불가'],
+              ['Actions 사용량', '확인 불가'],
+              ['월 청구액', '확인 불가 (0원 아님)'],
+            ],
+            demoMetrics: [
+              ['계정 신원', 'student-dev (인증됨)'],
+              ['2단계 인증(2FA)', '켜짐 (보안 준수)'],
+              ['Actions 사용량', '140분 / 2,000분 (7%)'],
+              ['월 청구액', '$0.00 (Free Tier)'],
+            ],
+            endpoint: 'https://api.github.com/user\nhttps://api.github.com/users/{user}/settings/billing/usage',
+            scope: 'read:user, billing:read (최소 권한 원칙)',
+            note: '※ 토큰이 없을 때 0원이나 안전으로 표기하지 않고 확인 불가로 시작합니다.',
+          },
+          {
+            name: 'Vercel',
+            icon: '▲',
+            defaultStatus: '연결 전 · 확인 불가',
+            demoStatus: '정상 (Hobby)',
+            defaultMetrics: [
+              ['배포 상태', '확인 불가'],
+              ['팀 플랜', '확인 불가'],
+              ['대역폭(Bandwidth)', '확인 불가'],
+              ['월 청구액', '확인 불가 (0원 아님)'],
+            ],
+            demoMetrics: [
+              ['배포 상태', 'stulss-secret-vault (배포됨)'],
+              ['팀 플랜', 'Hobby (개인 무료)'],
+              ['대역폭(Bandwidth)', '18.4 GB / 100 GB (18%)'],
+              ['월 청구액', '$0.00 (크레딧 미반영)'],
+            ],
+            endpoint: 'https://api.vercel.com/v2/user\nhttps://api.vercel.com/v1/billing/usage',
+            scope: 'read-only user token',
+            note: '※ 통화가 다른 타 서비스 금액과 합산하지 않고 행별 통화를 보존합니다.',
+          },
+          {
+            name: 'Supabase',
+            icon: '⚡',
+            defaultStatus: '연결 전 · 확인 불가',
+            demoStatus: '정상 (1 프로젝트)',
+            defaultMetrics: [
+              ['Management API', '확인 불가'],
+              ['프로젝트 상태', '확인 불가'],
+              ['DB 스토리지', '확인 불가'],
+              ['비용 조회', '미지원 (요청 안 함)'],
+            ],
+            demoMetrics: [
+              ['Management API', '연결 확인 (토큰 유효)'],
+              ['프로젝트 상태', 'kolzruwueiachnjjkcya (ACTIVE_HEALTHY)'],
+              ['DB 스토리지', '42 MB / 500 MB (8%)'],
+              ['비용 조회', '미지원 (비용 요청 안 함)'],
+            ],
+            endpoint: 'https://api.supabase.com/v1/projects',
+            scope: 'projects:read',
+            note: '※ Supabase 비용 조회를 임의로 추정하거나 0원으로 왜곡하지 않습니다.',
+          },
+          {
+            name: 'Railway',
+            icon: '🚂',
+            defaultStatus: '연결 전 · 확인 불가',
+            demoStatus: '정상 (Starter)',
+            defaultMetrics: [
+              ['GraphQL Me', '확인 불가'],
+              ['실행 서비스', '확인 불가'],
+              ['월간 크레딧', '확인 불가'],
+              ['비용 조회', '미지원 (요청 안 함)'],
+            ],
+            demoMetrics: [
+              ['GraphQL Me', 'query AlephAccountStatus { me { id } } (성공)'],
+              ['실행 서비스', 'aleph-judge-prod (1개 실행 중)'],
+              ['월간 크레딧', '$2.15 소진 / $5.00 잔여'],
+              ['비용 조회', '미지원 (비용 요청 안 함)'],
+            ],
+            endpoint: 'https://backboard.railway.com/graphql/v2',
+            scope: 'personal token query me',
+            note: '※ Railway 공식 API 규격에 맞춰 me 쿼리만 수행하며 비용 임의 조작 없음.',
+          },
+        ];
+
+        services.forEach(svc => {
+          const card = document.createElement('div');
+          card.className = 'saas-card';
+
+          const cardHeader = document.createElement('div');
+          cardHeader.className = 'saas-card-header';
+
+          const nameEl = document.createElement('span');
+          nameEl.className = 'saas-service-name';
+          nameEl.textContent = `${svc.icon} ${svc.name}`;
+
+          const statusBadge = document.createElement('span');
+          statusBadge.className = `saas-badge-status ${isSaasExampleMode ? 'demo' : 'unverifiable'}`;
+          statusBadge.textContent = isSaasExampleMode ? svc.demoStatus : svc.defaultStatus;
+
+          cardHeader.append(nameEl, statusBadge);
+          card.append(cardHeader);
+
+          const cardBody = document.createElement('div');
+          cardBody.className = 'saas-card-body';
+
+          const metrics = isSaasExampleMode ? svc.demoMetrics : svc.defaultMetrics;
+          metrics.forEach(([label, val]) => {
+            const row = document.createElement('div');
+            row.className = 'saas-metric-row';
+            const lbl = document.createElement('span');
+            lbl.textContent = label;
+            const vl = document.createElement('span');
+            vl.style.fontWeight = '600';
+            vl.textContent = val;
+            row.append(lbl, vl);
+            cardBody.append(row);
+          });
+          card.append(cardBody);
+
+          const details = document.createElement('details');
+          details.className = 'saas-details';
+          const summary = document.createElement('summary');
+          summary.textContent = '🔍 관측 근거 및 엔드포인트 보기';
+
+          const content = document.createElement('div');
+          content.className = 'saas-details-content';
+          content.textContent = `[엔드포인트]\n${svc.endpoint}\n\n[권한 스코프]\n${svc.scope}\n\n[안내]\n${svc.note}`;
+
+          details.append(summary, content);
+          card.append(details);
+
+          saasGrid.append(card);
+        });
+      }
+
+      saasToggleBtn.addEventListener('click', () => {
+        isSaasExampleMode = !isSaasExampleMode;
+        saasToggleBtn.textContent = isSaasExampleMode ? '🔒 실제 상태로 (미연결 · 확인 불가)' : '📊 예시 보기 (가상 시나리오)';
+        renderSaasCards();
+      });
+
+      renderSaasCards();
+      root.append(saasContainer);
+
+      // =========================================================================
       // [핵심 기능 3] 원클릭 통합 진단 보고서 내보내기 및 클립보드 복사
       // =========================================================================
       const reportContainer = document.createElement('div');
