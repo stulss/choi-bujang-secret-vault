@@ -434,10 +434,15 @@ flowchart TD
 
 기존 작업 폴더를 보존한 채, 별도의 새 격리 폴더에 `git clone`하여 실행 설명서([docs/STUDENT_RUNBOOK.md](docs/STUDENT_RUNBOOK.md))대로 재현한 실측 결과와 최종 릴리스 보고서입니다. 상세 보고서는 [docs/REPRODUCTION_REPORT.md](docs/REPRODUCTION_REPORT.md)에 기술되어 있습니다.
 
-### 0. 누구나 따라 할 수 있는 3대 실행 방법 (루트 / 설치형 / 하위폴더)
-1. **[방법 1 - 가장 간단한 루트 실행]**: 저장소 최상위(`choi-bujang-secret-vault`)에서 `npm run demo` 또는 `npm start` 입력 시 브라우저에서 관제 대시보드가 즉시 실행됩니다. (`Missing script` 방지 스크립트 내장)
-2. **[방법 2 - 설치 프로그램 실행]**: `dist-installer\setup.exe`를 실행하면 일반 권한으로 자동 설치되며, 바탕화면의 바로가기 또는 `%LOCALAPPDATA%\Programs\Keshev\start-keshev.cmd`로 실행됩니다.
-3. **[방법 3 - 하위 폴더 실행]**: `cd on-client` 진입 후 `npm run demo` 실행.
+### 0. 공식 실행 도구 및 3대 실행 방법 (공식 도구 / 설치형 / 루트)
+1. **[공식 권장 - 실행 도구(보안 설정 자동 초기화)]**: 앱 폴더(`on-client`)에서 실행 도구로 켭니다:
+   ```powershell
+   powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\start-alekov.ps1
+   ```
+   *(※ `npm start`로 직접 켤 경우 PC 보안 설정 초기화가 누락되어 `NATIVE_HOST_DISABLED`나 `ALEKOV_CONNECT_UNAVAILABLE`이 발생할 수 있으므로 공식 실행 도구 사용을 권장합니다.)*
+   *(※ `ALEKOV_VAULT_`로 시작하는 오류는 AI 키 DPAPI 암호화 저장 시 보안 정책에 따른 것으로 과제 판정과 무관합니다.)*
+2. **[방법 2 - 설치 프로그램 실행]**: `dist-installer\setup.exe`를 실행하면 일반 권한으로 자동 설치되며, 바탕화면의 바로가기 또는 `%LOCALAPPDATA%\Programs\Keshev\start-keshev.cmd`를 통해 내부적으로 공식 도구(`tools\start-alekov.ps1`)를 호출하여 안전하게 실행됩니다.
+3. **[방법 3 - 간편 루트 실행]**: 저장소 최상위(`choi-bujang-secret-vault`)에서 `npm run demo` 또는 `npm start`.
 
 - **포트 충돌 해결**: `EADDRINUSE: :::5189` 발생 시 PowerShell에서 `Get-Process node | Stop-Process -Force`를 입력하여 즉시 해제할 수 있습니다.
 

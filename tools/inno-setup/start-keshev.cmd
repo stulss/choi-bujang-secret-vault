@@ -28,12 +28,23 @@ echo.
 rem Auto-launch browser
 start "" http://127.0.0.1:5189/
 
-if "%~1"=="--demo" (
-    echo [INFO] Starting Keshev in DEMO mode...
-    node src\server.mjs --demo
+rem Launch via official student launch tool (start-alekov.ps1) to ensure native security context is initialized
+if exist "tools\start-alekov.ps1" (
+    if "%~1"=="--demo" (
+        echo [INFO] Starting Keshev via official launch tool (DEMO mode)...
+        powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\start-alekov.ps1 -Demo
+    ) else (
+        echo [INFO] Starting Keshev via official launch tool (ACTUAL mode [default])...
+        powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\start-alekov.ps1
+    )
 ) else (
-    echo [INFO] Starting Keshev in ACTUAL/NORMAL mode [default]...
-    node src\server.mjs
+    if "%~1"=="--demo" (
+        echo [INFO] Starting Keshev in DEMO mode...
+        node src\server.mjs --demo
+    ) else (
+        echo [INFO] Starting Keshev in ACTUAL/NORMAL mode [default]...
+        node src\server.mjs
+    )
 )
 
 if errorlevel 1 (
