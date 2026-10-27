@@ -27,9 +27,9 @@
   background: var(--bg);
 }
 
-/* 다크 모드 (사이버 보안 관제센터 SOC 스타일 자동 감지) */
+/* 다크 모드 (사이버 보안 관제센터 SOC 스타일) */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #0b1120;
     --surface: #131d31;
     --border: #24324d;
@@ -48,6 +48,46 @@
     --student: #c084fc;
     --student-soft: rgba(192, 132, 252, 0.15);
   }
+}
+
+[data-theme="dark"] {
+  --bg: #0b1120;
+  --surface: #131d31;
+  --border: #24324d;
+  --text: #f1f5f9;
+  --muted: #94a3b8;
+  --accent: #38bdf8;
+  --accent-soft: rgba(56, 189, 248, 0.15);
+  --allow: #34d399;
+  --allow-soft: rgba(52, 211, 153, 0.15);
+  --deny: #f87171;
+  --deny-soft: rgba(248, 113, 113, 0.15);
+  --challenge: #fbbf24;
+  --challenge-soft: rgba(251, 191, 36, 0.15);
+  --unknown: #94a3b8;
+  --unknown-soft: rgba(148, 163, 184, 0.15);
+  --student: #c084fc;
+  --student-soft: rgba(192, 132, 252, 0.15);
+}
+
+[data-theme="light"] {
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --border: #d9dde3;
+  --text: #1c2430;
+  --muted: #5a6472;
+  --accent: #2357c6;
+  --accent-soft: #e7eefc;
+  --allow: #1d7a3e;
+  --allow-soft: #e5f4ea;
+  --deny: #b42318;
+  --deny-soft: #fdeceb;
+  --challenge: #9a5b00;
+  --challenge-soft: #fff4e0;
+  --unknown: #4b5563;
+  --unknown-soft: #eceff3;
+  --student: #6b3fb3;
+  --student-soft: #f3edfb;
 }
 
 * { box-sizing: border-box; }

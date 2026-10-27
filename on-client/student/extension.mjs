@@ -2,7 +2,44 @@
 // 제공 UI를 받은 것만으로 단계 완료를 인정하지 않습니다.
 
 // 관제 대시보드형 상단 4대 상태 카드 및 하단 실시간 타임라인 동기화 헬퍼
+function initThemeToggle() {
+  if (typeof document === 'undefined') return;
+  const toggleBtn = document.getElementById('theme-toggle');
+  if (!toggleBtn || toggleBtn.dataset.bound === 'true') return;
+  toggleBtn.dataset.bound = 'true';
+
+  let currentTheme = null;
+  try {
+    currentTheme = localStorage.getItem('keshev_theme');
+  } catch (e) {}
+
+  if (!currentTheme) {
+    currentTheme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  document.documentElement.setAttribute('data-theme', currentTheme);
+  toggleBtn.textContent = currentTheme === 'dark' ? '☀️ 라이트 모드' : '🌙 다크 모드';
+
+  toggleBtn.addEventListener('click', () => {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const nextTheme = isDark ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', nextTheme);
+    try {
+      localStorage.setItem('keshev_theme', nextTheme);
+    } catch (e) {}
+    toggleBtn.textContent = nextTheme === 'dark' ? '☀️ 라이트 모드' : '🌙 다크 모드';
+  });
+}
+
+if (typeof window !== 'undefined') {
+  if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', initThemeToggle);
+  } else {
+    initThemeToggle();
+  }
+}
+
 function syncDashboard(type, payload) {
+  initThemeToggle();
   if (typeof document === 'undefined') return;
   try {
     if (type === 'identity') {
