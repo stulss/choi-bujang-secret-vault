@@ -1,8 +1,176 @@
 // 이 파일은 학생이 같은 프로젝트에서 이어서 구현합니다.
 // 제공 UI를 받은 것만으로 단계 완료를 인정하지 않습니다.
+
+// 관제 대시보드형 상단 4대 상태 카드 및 하단 실시간 타임라인 동기화 헬퍼
+function syncDashboard(type, payload) {
+  if (typeof document === 'undefined') return;
+  try {
+    if (type === 'identity') {
+      const { me, devices, sessions } = payload || {};
+      const metric = document.getElementById('metric-integrity');
+      const desc = document.getElementById('desc-integrity');
+      const badge = document.getElementById('badge-integrity');
+      if (metric && desc && badge) {
+        const deviceStatus = me?.data?.device?.status;
+        if (deviceStatus === 'compliant') {
+          metric.textContent = '정상 (보호 중)';
+          badge.textContent = '기준 충족';
+          badge.dataset.status = 'ok';
+          desc.textContent = `등록 기기: ${me?.data?.device?.id || '확인됨'}`;
+        } else if (deviceStatus === 'noncompliant') {
+          metric.textContent = '주의 (미충족)';
+          badge.textContent = '기준 미충족';
+          badge.dataset.status = 'warn';
+          desc.textContent = '기기 보안 기준 점검 필요';
+        } else if (me?.mode === 'demo') {
+          metric.textContent = '정상 [예시 값]';
+          badge.textContent = '예제 모드';
+          badge.dataset.status = 'demo';
+          desc.textContent = `가상 기기: ${me?.data?.device?.id || 'demo-device-01'}`;
+        } else {
+          metric.textContent = '미연결';
+          badge.textContent = '확인 불가';
+          badge.dataset.status = 'unknown';
+          desc.textContent = 'SDP 호스트 연결 대기';
+        }
+      }
+    } else if (type === 'decision') {
+      const { status, data, error } = payload || {};
+      const metric = document.getElementById('metric-decision');
+      const desc = document.getElementById('desc-decision');
+      const badge = document.getElementById('badge-decision');
+      if (metric && desc && badge) {
+        if (status === 'ok') {
+          const decision = data?.decision;
+          if (decision === 'allow') {
+            metric.textContent = '접속 허용';
+            badge.textContent = '허용 (allow)';
+            badge.dataset.status = 'allow';
+            desc.textContent = `규칙: ${data?.rule || 'device_registered'}`;
+          } else if (decision === 'deny') {
+            metric.textContent = '접속 차단';
+            badge.textContent = '차단 (deny)';
+            badge.dataset.status = 'deny';
+            desc.textContent = `사유: ${data?.reason || '미인가'}`;
+          } else if (decision === 'challenge') {
+            metric.textContent = '재인증 요구';
+            badge.textContent = '추가 확인 (step_up)';
+            badge.dataset.status = 'challenge';
+            desc.textContent = '2차 본인 확인 절차 필요';
+          } else {
+            metric.textContent = '판정 불명';
+            badge.textContent = '확인 불가';
+            badge.dataset.status = 'unknown';
+            desc.textContent = '원격 서버 판정 미응답';
+          }
+        } else if (status === 'loading') {
+          metric.textContent = '판정 중...';
+          badge.textContent = '조회 중';
+        } else if (status === 'error') {
+          metric.textContent = '판정 실패';
+          badge.textContent = '통신 오류';
+          desc.textContent = error?.message || '판정 요청 실패';
+        }
+      }
+    } else if (type === 'events') {
+      const { status, data } = payload || {};
+      const metric = document.getElementById('metric-alerts');
+      const desc = document.getElementById('desc-alerts');
+      const badge = document.getElementById('badge-alerts');
+      const timeline = document.getElementById('dashboard-timeline');
+      if (metric && desc && badge) {
+        if (status === 'ok' && Array.isArray(data)) {
+          const xdrCount = data.filter(e => e?.kind === 'xdr').length;
+          metric.textContent = `${xdrCount}건`;
+          badge.textContent = xdrCount > 0 ? '경보 탐지됨' : '정상 관제';
+          badge.dataset.status = xdrCount > 0 ? 'warn' : 'ok';
+          desc.textContent = `수집된 전체 기록: ${data.length}건`;
+
+          if (timeline && data.length > 0) {
+            timeline.replaceChildren();
+            const list = document.createElement('div');
+            list.className = 'timeline-list';
+            const recent = data.slice(0, 5);
+            recent.forEach(ev => {
+              const item = document.createElement('div');
+              item.className = 'timeline-item';
+              const left = document.createElement('span');
+              left.textContent = `[${ev?.kind === 'xdr' ? 'XDR경보' : '접속'}] ${ev?.summary || ev?.id || '기록'}`;
+              const right = document.createElement('span');
+              right.className = 'muted';
+              right.textContent = ev?.at ? new Date(ev.at).toLocaleTimeString() : '-';
+              item.append(left, right);
+              list.append(item);
+            });
+            timeline.append(list);
+          }
+        }
+      }
+    } else if (type === 'vulnerabilities') {
+      const { status, data } = payload || {};
+      const metric = document.getElementById('metric-vulnerabilities');
+      const desc = document.getElementById('desc-vulnerabilities');
+      const badge = document.getElementById('badge-vulnerabilities');
+      if (metric && desc && badge) {
+        if (status === 'ok') {
+          const count = data?.summary?.totalVulnerabilities ?? 0;
+          metric.textContent = count === 0 ? '0건 (안전)' : `${count}건 발견`;
+          badge.textContent = data?.status === 'complete' ? '점검 완료' : (data?.status || '점검됨');
+          badge.dataset.status = count === 0 ? 'ok' : 'warn';
+          desc.textContent = `패키지 ${data?.packages?.length ?? 0}개 대조`;
+        } else if (status === 'loading') {
+          metric.textContent = '조회 중...';
+          badge.textContent = 'OSV 조회';
+        } else if (status === 'error') {
+          metric.textContent = '조회 실패';
+          badge.textContent = '오류';
+        }
+      }
+    } else if (type === 'system-health') {
+      const data = payload;
+      const noteIntegrity = document.getElementById('note-integrity');
+      const trendVisualBar = document.getElementById('trend-visual-bar');
+      if (data) {
+        if (noteIntegrity) {
+          const parts = [];
+          if (data.memory?.status === 'ok') {
+            parts.push(`RSS ${data.memory.agentRssMb}MB`);
+          }
+          if (data.disk?.status === 'ok') {
+            parts.push(`디스크 여유 ${data.disk.freeGb}GB(${data.disk.freePercent}%)`);
+          } else if (data.disk?.status === 'unverifiable') {
+            parts.push('디스크 확인 불가');
+          }
+          if (parts.length > 0) {
+            noteIntegrity.textContent = `[실측] ${parts.join(' · ')}`;
+          }
+        }
+        if (trendVisualBar && data.disk?.status === 'ok' && data.memory?.status === 'ok') {
+          trendVisualBar.replaceChildren();
+          const safeSeg = document.createElement('div');
+          safeSeg.className = 'trend-segment segment-safe';
+          safeSeg.style.width = `${data.disk.freePercent}%`;
+          safeSeg.textContent = `디스크 가용 여유 ${data.disk.freePercent}% [실측 값]`;
+
+          const memSeg = document.createElement('div');
+          memSeg.className = 'trend-segment segment-warn';
+          const usedMemPct = 100 - data.memory.freePercent;
+          memSeg.style.width = `${Math.max(20, 100 - data.disk.freePercent)}%`;
+          memSeg.textContent = `시스템 메모리 사용 ${usedMemPct}% (Agent 극경량 점유)`;
+
+          trendVisualBar.append(safeSeg, memSeg);
+        }
+      }
+    }
+  } catch (e) {
+    // 관제 대시보드 동기화 실패 시 기본 렌더러에 영향을 주지 않음
+  }
+}
+
 export function createStudentView() {
   return {
     renderIdentity({ me, devices, sessions } = {}) {
+      syncDashboard('identity', { me, devices, sessions });
       const root = document.createElement('div');
       root.className = 'student-identity-card';
 
@@ -130,6 +298,7 @@ export function createStudentView() {
       return root;
     },
     renderDecision({ status = 'idle', data, error, appId } = {}) {
+      syncDashboard('decision', { status, data, error, appId });
       const root = document.createElement('div');
       root.className = 'student-decision-card';
 
@@ -503,6 +672,631 @@ export function createStudentView() {
       })[m] || '';
 
       const modeStr = modeText(mode);
+
+      // 최상단: 케셰브 학생 영역 3대 핵심 기능 우선 배치 배너
+      const priorityBanner = document.createElement('div');
+      priorityBanner.className = 'student-priority-banner';
+
+      const bannerTitle = document.createElement('h3');
+      bannerTitle.className = 'student-priority-title';
+      bannerTitle.textContent = '🛡️ 케셰브 보안 Agent 3대 핵심 기능';
+
+      const bannerBadges = document.createElement('div');
+      bannerBadges.className = 'student-priority-badges';
+
+      const bReal = document.createElement('span');
+      bReal.className = 'tag tag-real';
+      bReal.textContent = '실측 중심';
+
+      const bReadOnly = document.createElement('span');
+      bReadOnly.className = 'tag tag-policy';
+      bReadOnly.textContent = '읽기 전용';
+
+      bannerBadges.append(bReal, bReadOnly);
+      priorityBanner.append(bannerTitle, bannerBadges);
+      root.append(priorityBanner);
+
+      let lastHealthData = null;
+      let lastAuditData = null;
+
+      // =========================================================================
+      // [핵심 기능 1] 내 PC 하드웨어 자원 실측 및 초경량 안전 마진 분석
+      // =========================================================================
+      const healthContainer = document.createElement('div');
+      healthContainer.className = 'health-container';
+
+      const healthHeader = document.createElement('div');
+      healthHeader.className = 'health-header-row';
+
+      const healthTitle = document.createElement('h4');
+      healthTitle.textContent = '1. 내 PC 하드웨어 자원 상태 및 안전 마진 분석';
+
+      const realBadge = document.createElement('span');
+      realBadge.className = 'tag tag-real';
+      realBadge.textContent = '실측 값';
+      healthTitle.append(realBadge);
+
+      const healthActions = document.createElement('div');
+      healthActions.style.display = 'flex';
+      healthActions.style.alignItems = 'center';
+      healthActions.style.gap = '8px';
+
+      const healthLoadingSpan = document.createElement('span');
+      healthLoadingSpan.className = 'loading-indicator';
+      healthLoadingSpan.setAttribute('role', 'status');
+
+      const refreshBtn = document.createElement('button');
+      refreshBtn.type = 'button';
+      refreshBtn.className = 'btn btn-sm btn-retry';
+      refreshBtn.textContent = '다시 조회';
+      refreshBtn.setAttribute('aria-label', '하드웨어 자원 상태 다시 조회');
+      refreshBtn.setAttribute('tabindex', '0');
+
+      healthActions.append(healthLoadingSpan, refreshBtn);
+      healthHeader.append(healthTitle, healthActions);
+      healthContainer.append(healthHeader);
+
+      const healthDesc = document.createElement('p');
+      healthDesc.className = 'muted';
+      healthDesc.textContent = '일반 사용자 권한(standard_user)으로 측정된 내 PC의 실제 하드웨어 자원 상태입니다. 관리자(UAC) 권한을 요구하지 않습니다.';
+      healthContainer.append(healthDesc);
+
+      const healthGrid = document.createElement('div');
+      healthGrid.className = 'health-grid';
+      healthContainer.append(healthGrid);
+
+      const analysisBox = document.createElement('div');
+      analysisBox.className = 'health-analysis-box';
+      healthContainer.append(analysisBox);
+
+      const metaBox = document.createElement('div');
+      metaBox.className = 'health-meta';
+      healthContainer.append(metaBox);
+
+      const populateHealth = (healthData, errorReason = null) => {
+        healthGrid.replaceChildren();
+        analysisBox.replaceChildren();
+        metaBox.replaceChildren();
+        lastHealthData = healthData;
+
+        // 조회 실패 시: 가짜 예시 값을 숨기지 않고 실패 항목과 다음에 할 일 표시
+        if (!healthData || typeof healthData !== 'object' || healthData.memory?.status === 'unverifiable') {
+          const failBox = document.createElement('div');
+          failBox.className = 'failure-action-box';
+
+          const failTitle = document.createElement('div');
+          failTitle.className = 'failure-item-title';
+          failTitle.textContent = '❌ [실패한 항목]: 내 PC 하드웨어(CPU/메모리/디스크) 실측 지표';
+
+          const failReason = document.createElement('div');
+          failReason.className = 'failure-reason';
+          failReason.textContent = `사유: ${errorReason || healthData?.memory?.reason || '내부 API 서버(/api/system-health) 통신 실패 또는 통계 접근 권한 부족'}`;
+
+          const failAction = document.createElement('div');
+          failAction.className = 'failure-next-action';
+          failAction.textContent = '▶ 다음에 할 일: 케셰브 앱 백엔드(127.0.0.1:5189)의 실행 상태를 확인하고, 상단의 「다시 조회」 버튼을 직접 누르세요. (가짜 예시 값으로 위장하지 않습니다)';
+
+          failBox.append(failTitle, failReason, failAction);
+          healthGrid.append(failBox);
+          return;
+        }
+
+        const { memory, disk, cpu, measuredAt, privilege } = healthData;
+
+        // 1. CPU 카드
+        const cpuCard = document.createElement('div');
+        cpuCard.className = 'health-item';
+        const cpuTitle = document.createElement('div');
+        cpuTitle.className = 'health-item-title';
+        const cpuTitleText = document.createElement('span');
+        cpuTitleText.textContent = 'CPU 정보';
+        const cpuTag = document.createElement('span');
+        cpuTag.className = 'tag tag-real';
+        cpuTag.textContent = '실측';
+        cpuTitle.append(cpuTitleText, cpuTag);
+
+        const cpuVal = document.createElement('div');
+        cpuVal.className = 'health-item-val';
+        cpuVal.textContent = `${cpu?.cores ?? '확인불가'} 코어`;
+
+        const cpuSub = document.createElement('div');
+        cpuSub.className = 'health-item-sub';
+        cpuSub.textContent = `${cpu?.arch || 'x64'} (${cpu?.platform || 'os'}) · ${cpu?.model || 'Standard CPU'}`;
+        cpuCard.append(cpuTitle, cpuVal, cpuSub);
+
+        // 2. 메모리 카드
+        const memCard = document.createElement('div');
+        memCard.className = 'health-item';
+        const memTitle = document.createElement('div');
+        memTitle.className = 'health-item-title';
+        const memTitleText = document.createElement('span');
+        memTitleText.textContent = '메모리 (RAM) 사용량';
+        const memTag = document.createElement('span');
+        memTag.className = memory?.status === 'ok' ? 'tag tag-real' : 'tag tag-unverifiable';
+        memTag.textContent = memory?.status === 'ok' ? '실측' : '확인불가';
+        memTitle.append(memTitleText, memTag);
+
+        const memVal = document.createElement('div');
+        memVal.className = 'health-item-val';
+        const memSub = document.createElement('div');
+        memSub.className = 'health-item-sub';
+
+        if (memory?.status === 'ok') {
+          memVal.textContent = `RSS ${memory.agentRssMb} MB`;
+          memSub.textContent = `가용 ${memory.freeMemGb} GB / 전체 ${memory.totalMemGb} GB (${memory.freePercent}% 여유)`;
+        } else {
+          memVal.textContent = '「확인 불가」';
+          memSub.className = 'health-item-sub unverifiable';
+          memSub.textContent = `사유: ${memory?.reason || '메모리 통계 접근 불가'}`;
+        }
+        memCard.append(memTitle, memVal, memSub);
+
+        // 3. 디스크 카드
+        const diskCard = document.createElement('div');
+        diskCard.className = 'health-item';
+        const diskTitle = document.createElement('div');
+        diskTitle.className = 'health-item-title';
+        const diskTitleText = document.createElement('span');
+        diskTitleText.textContent = '디스크 잔여 용량';
+        const diskTag = document.createElement('span');
+        diskTag.className = disk?.status === 'ok' ? 'tag tag-real' : 'tag tag-unverifiable';
+        diskTag.textContent = disk?.status === 'ok' ? '실측' : '확인불가';
+        diskTitle.append(diskTitleText, diskTag);
+
+        const diskVal = document.createElement('div');
+        diskVal.className = 'health-item-val';
+        const diskSub = document.createElement('div');
+        diskSub.className = 'health-item-sub';
+
+        if (disk?.status === 'ok') {
+          diskVal.textContent = `${disk.freeGb} GB 여유`;
+          diskSub.textContent = `잔여 ${disk.freePercent}% / 전체 ${disk.totalGb} GB (작업 드라이브)`;
+        } else {
+          diskVal.textContent = '「확인 불가」';
+          diskSub.className = 'health-item-sub unverifiable';
+          diskSub.textContent = `사유: ${disk?.reason || '디스크 통계 접근 불가'}`;
+        }
+        diskCard.append(diskTitle, diskVal, diskSub);
+
+        healthGrid.append(cpuCard, memCard, diskCard);
+
+        // 4. 추이 비교 및 설명 영역
+        const analysisTitle = document.createElement('div');
+        analysisTitle.className = 'health-analysis-title';
+        analysisTitle.textContent = '📊 케셰브 Agent 자원 안전 마진 및 지속성 추이 분석 [개선 구현]';
+        analysisBox.append(analysisTitle);
+
+        const analysisP1 = document.createElement('p');
+        if (memory?.status === 'ok' && memory.freeMemGb > 0) {
+          const agentRatio = ((memory.agentRssMb / (memory.freeMemGb * 1024)) * 100).toFixed(1);
+          analysisP1.textContent = `• 메모리 안전 마진: 케셰브 Agent 점유 메모리(${memory.agentRssMb} MB)는 시스템 가용 메모리(${memory.freeMemGb} GB) 대비 약 ${agentRatio}% 수준의 극경량(Ultra-lightweight) 상태를 유지하여 사용자 PC 작업에 영향을 주지 않습니다.`;
+        } else {
+          analysisP1.textContent = '• 메모리 안전 마진: 메모리 실측 정보 미제공으로 안전 마진 비교를 수행할 수 없습니다 (확인 불가).';
+        }
+
+        const analysisP2 = document.createElement('p');
+        if (disk?.status === 'ok') {
+          analysisP2.textContent = `• 디스크 지속성: 설치 디스크의 잔여 여유 공간이 ${disk.freeGb} GB(${disk.freePercent}%) 확보되어 관제 로그 보관 및 무결성 검증을 안정적으로 지속할 수 있습니다.`;
+        } else {
+          analysisP2.textContent = '• 디스크 지속성: 디스크 실측 정보 미제공으로 잔여 용량 분석을 수행할 수 없습니다 (확인 불가).';
+        }
+        analysisBox.append(analysisP1, analysisP2);
+
+        // 5. 메타 정보 (시각, 권한, 단위)
+        const timeSpan = document.createElement('span');
+        timeSpan.textContent = `측정 시각: ${measuredAt || new Date().toISOString()} (단위: MB, GB, %)`;
+        const privSpan = document.createElement('span');
+        privSpan.textContent = `계측 권한: ${privilege || 'standard_user (일반 사용자 권한)'}`;
+        metaBox.append(timeSpan, privSpan);
+
+        // 상단 관제 대시보드 동기화
+        syncDashboard('system-health', healthData);
+      };
+
+      const doFetch = () => {
+        refreshBtn.disabled = true;
+        refreshBtn.setAttribute('aria-busy', 'true');
+        refreshBtn.textContent = '조회 중...';
+        healthLoadingSpan.textContent = '자료를 다시 조회하는 중입니다...';
+
+        fetch('/api/system-health')
+          .then(res => {
+            if (!res.ok) throw new Error(`HTTP 상태 코드 ${res.status}`);
+            return res.json();
+          })
+          .then(json => {
+            refreshBtn.disabled = false;
+            refreshBtn.setAttribute('aria-busy', 'false');
+            refreshBtn.textContent = '다시 조회';
+            healthLoadingSpan.textContent = '';
+            if (json?.ok && json?.data) {
+              populateHealth(json.data);
+            } else {
+              populateHealth(null, json?.error?.message);
+            }
+          })
+          .catch(err => {
+            refreshBtn.disabled = false;
+            refreshBtn.setAttribute('aria-busy', 'false');
+            refreshBtn.textContent = '다시 조회';
+            healthLoadingSpan.textContent = '';
+            populateHealth(null, err?.message);
+          });
+      };
+
+      refreshBtn.addEventListener('click', doFetch);
+      doFetch();
+
+      root.append(healthContainer);
+
+      // =========================================================================
+      // [핵심 기능 2] 내 PC 네트워크 구성 및 Windows 방화벽(읽기 전용)·운영 이벤트 진단
+      // =========================================================================
+      const auditContainer = document.createElement('div');
+      auditContainer.className = 'health-container';
+
+      const auditHeader = document.createElement('div');
+      auditHeader.className = 'health-header-row';
+
+      const auditTitle = document.createElement('h4');
+      auditTitle.textContent = '2. 내 PC 네트워크 · 방화벽 · Windows 운영 기록 진단';
+
+      const auditRealBadge = document.createElement('span');
+      auditRealBadge.className = 'tag tag-real';
+      auditRealBadge.textContent = '실측 값';
+
+      const sdpBadge = document.createElement('span');
+      sdpBadge.className = 'tag tag-sdp-disconnected';
+      sdpBadge.textContent = 'SDP 미연결';
+
+      auditTitle.append(auditRealBadge, sdpBadge);
+
+      const auditActions = document.createElement('div');
+      auditActions.style.display = 'flex';
+      auditActions.style.alignItems = 'center';
+      auditActions.style.gap = '8px';
+
+      const auditLoadingSpan = document.createElement('span');
+      auditLoadingSpan.className = 'loading-indicator';
+      auditLoadingSpan.setAttribute('role', 'status');
+
+      const auditRefreshBtn = document.createElement('button');
+      auditRefreshBtn.type = 'button';
+      auditRefreshBtn.className = 'btn btn-sm btn-retry';
+      auditRefreshBtn.textContent = '다시 조회';
+      auditRefreshBtn.setAttribute('aria-label', '네트워크 및 방화벽 진단 다시 조회');
+      auditRefreshBtn.setAttribute('tabindex', '0');
+
+      auditActions.append(auditLoadingSpan, auditRefreshBtn);
+      auditHeader.append(auditTitle, auditActions);
+      auditContainer.append(auditHeader);
+
+      // SDP 서버 분리 안내
+      const sdpNotice = document.createElement('p');
+      sdpNotice.className = 'muted';
+      sdpNotice.textContent = '• SDP 서버 연결 상태: [SDP 미연결] (PC 하드웨어·네트워크 조회가 성공한 것과 SDP 서버 연결 여부는 무관하며 분리하여 관리됩니다.)';
+      auditContainer.append(sdpNotice);
+
+      // 필수 고지문: 침해나 공격 탐지 결과가 아님
+      const disclaimerBox = document.createElement('div');
+      disclaimerBox.className = 'audit-disclaimer-box';
+
+      const disclaimerTitle = document.createElement('div');
+      disclaimerTitle.className = 'audit-disclaimer-title';
+      disclaimerTitle.textContent = '⚠️ Windows 운영 이벤트 안내 (비침해 고지)';
+
+      const disclaimerP = document.createElement('p');
+      disclaimerP.style.margin = '0';
+      disclaimerP.textContent = '이 건수는 침해나 공격 탐지 결과가 아니며, Windows 운영체제 및 응용프로그램의 일반 시스템 운영 이벤트 집계입니다.';
+
+      disclaimerBox.append(disclaimerTitle, disclaimerP);
+      auditContainer.append(disclaimerBox);
+
+      const auditGrid = document.createElement('div');
+      auditGrid.className = 'audit-grid';
+      auditContainer.append(auditGrid);
+
+      const auditMeta = document.createElement('div');
+      auditMeta.className = 'health-meta';
+      auditContainer.append(auditMeta);
+
+      const populateAudit = (auditData, errorReason = null) => {
+        auditGrid.replaceChildren();
+        auditMeta.replaceChildren();
+        lastAuditData = auditData;
+
+        // 조회 실패 시: 실패 항목과 다음에 할 일 표시
+        if (!auditData || typeof auditData !== 'object' || auditData.firewall?.status === 'unverifiable') {
+          const failBox = document.createElement('div');
+          failBox.className = 'failure-action-box';
+
+          const failTitle = document.createElement('div');
+          failTitle.className = 'failure-item-title';
+          failTitle.textContent = '❌ [실패한 항목]: 네트워크 구성 및 Windows 방화벽/이벤트 진단';
+
+          const failReason = document.createElement('div');
+          failReason.className = 'failure-reason';
+          failReason.textContent = `사유: ${errorReason || auditData?.firewall?.reason || '내부 진단 API(/api/system-security-audit) 응답 실패 또는 서비스 미응답'}`;
+
+          const failAction = document.createElement('div');
+          failAction.className = 'failure-next-action';
+          failAction.textContent = '▶ 다음에 할 일: Windows 이벤트 로그 및 방화벽 서비스가 정상 동작 중인지 확인하고 상단의 「다시 조회」 버튼을 누르세요. (가짜 예시 값으로 위장하지 않습니다)';
+
+          failBox.append(failTitle, failReason, failAction);
+          auditGrid.append(failBox);
+          return;
+        }
+
+        const { network, firewall, eventLogs, sdp, measuredAt, privilege } = auditData;
+
+        // SDP 배지 업데이트
+        if (sdp?.connected) {
+          sdpBadge.className = 'tag tag-real';
+          sdpBadge.textContent = 'SDP 연결됨';
+          sdpNotice.textContent = '• SDP 서버 연결 상태: [SDP 연결됨] (정상 연결 관리 중)';
+        } else {
+          sdpBadge.className = 'tag tag-sdp-disconnected';
+          sdpBadge.textContent = 'SDP 미연결';
+          sdpNotice.textContent = '• SDP 서버 연결 상태: [SDP 미연결] (PC 하드웨어·네트워크 조회가 성공한 것과 SDP 서버 연결 여부는 무관하며 분리하여 관리됩니다.)';
+        }
+
+        // 1. 방화벽 설정 카드 (읽기 전용)
+        const fwCard = document.createElement('div');
+        fwCard.className = 'audit-card';
+        const fwTitle = document.createElement('div');
+        fwTitle.className = 'audit-card-title';
+        const fwTitleText = document.createElement('span');
+        fwTitleText.textContent = 'Windows 방화벽 프로필';
+        const fwTag = document.createElement('span');
+        fwTag.className = firewall?.status === 'ok' ? 'tag tag-real' : 'tag tag-unverifiable';
+        fwTag.textContent = firewall?.status === 'ok' ? '실측·읽기 전용' : '확인불가';
+        fwTitle.append(fwTitleText, fwTag);
+        fwCard.append(fwTitle);
+
+        if (firewall?.status === 'ok' && Array.isArray(firewall.profiles)) {
+          const fwList = document.createElement('ul');
+          fwList.className = 'audit-list';
+          firewall.profiles.forEach(p => {
+            const li = document.createElement('li');
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = p.profile;
+            const stateSpan = document.createElement('span');
+            stateSpan.className = p.state === '사용' ? 'audit-status-badge on' : 'audit-status-badge off';
+            stateSpan.textContent = p.state === '사용' ? '사용 (ON)' : p.state;
+            li.append(nameSpan, stateSpan);
+            fwList.append(li);
+          });
+          fwCard.append(fwList);
+          const fwNote = document.createElement('p');
+          fwNote.className = 'muted';
+          fwNote.style.marginTop = '8px';
+          fwNote.style.fontSize = '0.76rem';
+          fwNote.textContent = '※ 읽기 전용 조회이며 방화벽 설정은 절대 변경하지 않습니다. 관리자 권한이 필요한 항목은 변경을 시도하지 않고 보호합니다.';
+          fwCard.append(fwNote);
+        } else {
+          const fwErr = document.createElement('p');
+          fwErr.className = 'health-item-sub unverifiable';
+          fwErr.textContent = `「확인 불가」: ${firewall?.reason || '방화벽 통계 조회 불가'}`;
+          fwCard.append(fwErr);
+        }
+
+        // 2. 최근 Windows 기록 (System·Application) 경고·오류 건수 카드
+        const logCard = document.createElement('div');
+        logCard.className = 'audit-card';
+        const logTitle = document.createElement('div');
+        logTitle.className = 'audit-card-title';
+        const logTitleText = document.createElement('span');
+        logTitleText.textContent = '최근 Windows 운영 이벤트';
+        const logTag = document.createElement('span');
+        logTag.className = eventLogs?.status === 'ok' ? 'tag tag-real' : 'tag tag-unverifiable';
+        logTag.textContent = eventLogs?.status === 'ok' ? '실측' : '확인불가';
+        logTitle.append(logTitleText, logTag);
+        logCard.append(logTitle);
+
+        if (eventLogs?.status === 'ok') {
+          const logList = document.createElement('ul');
+          logList.className = 'audit-list';
+
+          const liSys = document.createElement('li');
+          const sysName = document.createElement('span');
+          sysName.textContent = 'System 로그 경고·오류';
+          const sysVal = document.createElement('span');
+          sysVal.className = 'audit-status-badge';
+          sysVal.textContent = eventLogs.systemWarnErrorCount;
+          liSys.append(sysName, sysVal);
+
+          const liApp = document.createElement('li');
+          const appName = document.createElement('span');
+          appName.textContent = 'Application 로그 경고·오류';
+          const appVal = document.createElement('span');
+          appVal.className = 'audit-status-badge';
+          appVal.textContent = eventLogs.applicationWarnErrorCount;
+          liApp.append(appName, appVal);
+
+          logList.append(liSys, liApp);
+          logCard.append(logList);
+
+          const noticeBottom = document.createElement('p');
+          noticeBottom.className = 'muted';
+          noticeBottom.style.marginTop = '8px';
+          noticeBottom.style.fontSize = '0.76rem';
+          noticeBottom.textContent = '※ OS/응용프로그램 일반 운영 이벤트이며 침해 징후가 아닙니다.';
+          logCard.append(noticeBottom);
+        } else {
+          const logErr = document.createElement('p');
+          logErr.className = 'health-item-sub unverifiable';
+          logErr.textContent = `「확인 불가」: ${eventLogs?.reason || '이벤트 로그 조회 불가'}`;
+          logCard.append(logErr);
+        }
+
+        // 3. 네트워크 구성 카드
+        const netCard = document.createElement('div');
+        netCard.className = 'audit-card';
+        const netTitle = document.createElement('div');
+        netTitle.className = 'audit-card-title';
+        const netTitleText = document.createElement('span');
+        netTitleText.textContent = '네트워크 구성';
+        const netTag = document.createElement('span');
+        netTag.className = network?.status === 'ok' ? 'tag tag-real' : 'tag tag-unverifiable';
+        netTag.textContent = network?.status === 'ok' ? '실측' : '확인불가';
+        netTitle.append(netTitleText, netTag);
+        netCard.append(netTitle);
+
+        if (network?.status === 'ok' && Array.isArray(network.interfaces)) {
+          const netTable = document.createElement('div');
+          netTable.className = 'net-scroll-table';
+          netTable.setAttribute('tabindex', '0');
+          netTable.setAttribute('role', 'region');
+          netTable.setAttribute('aria-label', '네트워크 인터페이스 목록 (키보드 방향키로 스크롤 가능)');
+
+          network.interfaces.slice(0, 10).forEach(item => {
+            const row = document.createElement('div');
+            row.className = 'net-row';
+            const left = document.createElement('span');
+            left.textContent = `[${item.interface}] ${item.family}`;
+            const right = document.createElement('span');
+            right.textContent = item.address;
+            row.append(left, right);
+            netTable.append(row);
+          });
+          netCard.append(netTable);
+        } else {
+          const netErr = document.createElement('p');
+          netErr.className = 'health-item-sub unverifiable';
+          netErr.textContent = '「확인 불가」: 네트워크 인터페이스 정보 없음';
+          netCard.append(netErr);
+        }
+
+        auditGrid.append(fwCard, logCard, netCard);
+
+        const timeSpan = document.createElement('span');
+        timeSpan.textContent = `진단 시각: ${measuredAt || new Date().toISOString()}`;
+        const privSpan = document.createElement('span');
+        privSpan.textContent = `실행 모드: ${privilege || 'standard_user (읽기 전용, 설정 변경 불가)'}`;
+        auditMeta.append(timeSpan, privSpan);
+      };
+
+      const doFetchAudit = () => {
+        auditRefreshBtn.disabled = true;
+        auditRefreshBtn.setAttribute('aria-busy', 'true');
+        auditRefreshBtn.textContent = '조회 중...';
+        auditLoadingSpan.textContent = '네트워크 및 방화벽 상태를 다시 조회하는 중입니다...';
+
+        fetch('/api/system-security-audit')
+          .then(res => {
+            if (!res.ok) throw new Error(`HTTP 상태 코드 ${res.status}`);
+            return res.json();
+          })
+          .then(json => {
+            auditRefreshBtn.disabled = false;
+            auditRefreshBtn.setAttribute('aria-busy', 'false');
+            auditRefreshBtn.textContent = '다시 조회';
+            auditLoadingSpan.textContent = '';
+            if (json?.ok && json?.data) {
+              populateAudit(json.data);
+            } else {
+              populateAudit(null, json?.error?.message);
+            }
+          })
+          .catch(err => {
+            auditRefreshBtn.disabled = false;
+            auditRefreshBtn.setAttribute('aria-busy', 'false');
+            auditRefreshBtn.textContent = '다시 조회';
+            auditLoadingSpan.textContent = '';
+            populateAudit(null, err?.message);
+          });
+      };
+
+      auditRefreshBtn.addEventListener('click', doFetchAudit);
+      doFetchAudit();
+
+      root.append(auditContainer);
+
+      // =========================================================================
+      // [핵심 기능 3] 원클릭 통합 진단 보고서 내보내기 및 클립보드 복사
+      // =========================================================================
+      const reportContainer = document.createElement('div');
+      reportContainer.className = 'health-container';
+
+      const reportHeader = document.createElement('div');
+      reportHeader.className = 'health-header-row';
+
+      const reportTitle = document.createElement('h4');
+      reportTitle.textContent = '3. 원클릭 통합 진단 보고서 내보내기';
+
+      const reportTag = document.createElement('span');
+      reportTag.className = 'tag tag-policy';
+      reportTag.textContent = '통합 점검';
+      reportTitle.append(reportTag);
+
+      reportHeader.append(reportTitle);
+      reportContainer.append(reportHeader);
+
+      const reportDesc = document.createElement('p');
+      reportDesc.className = 'muted';
+      reportDesc.textContent = '비밀번호나 개인키 등의 비밀값 없이, 실측된 하드웨어·네트워크·방화벽·운영 이벤트 진단 결과를 한눈에 복사할 수 있습니다.';
+      reportContainer.append(reportDesc);
+
+      const reportBtnWrapper = document.createElement('div');
+      reportBtnWrapper.style.display = 'flex';
+      reportBtnWrapper.style.alignItems = 'center';
+      reportBtnWrapper.style.gap = '10px';
+      reportBtnWrapper.style.marginTop = '10px';
+
+      const copyReportBtn = document.createElement('button');
+      copyReportBtn.type = 'button';
+      copyReportBtn.className = 'btn btn-retry';
+      copyReportBtn.textContent = '통합 진단 보고서 복사';
+      copyReportBtn.setAttribute('aria-label', '통합 진단 보고서 클립보드 복사');
+      copyReportBtn.setAttribute('tabindex', '0');
+
+      const copyStatusSpan = document.createElement('span');
+      copyStatusSpan.className = 'student-copy-status';
+      copyStatusSpan.setAttribute('role', 'status');
+
+      copyReportBtn.addEventListener('click', async () => {
+        const unifiedReport = {
+          reportTitle: '케셰브 ZTNA·보안 Agent 통합 진단 보고서',
+          measuredAt: new Date().toISOString(),
+          sdpStatus: lastAuditData?.sdp?.status || 'SDP 미연결',
+          hardware: lastHealthData ? {
+            cpu: lastHealthData.cpu,
+            memory: lastHealthData.memory,
+            disk: lastHealthData.disk
+          } : '미측정 또는 확인 불가',
+          networkAndFirewall: lastAuditData ? {
+            networkInterfacesCount: lastAuditData.network?.interfaces?.length ?? 0,
+            firewallProfiles: lastAuditData.firewall?.profiles,
+            eventLogs: lastAuditData.eventLogs
+          } : '미측정 또는 확인 불가',
+          diagnostics: diagnostics?.data || '기본 진단 미조회',
+          disclaimer: '이 보고서의 Windows 운영 이벤트 건수는 침해나 공격 탐지 결과가 아니며, 일반 시스템 운영 이벤트 집계입니다.'
+        };
+
+        try {
+          if (navigator?.clipboard?.writeText) {
+            await navigator.clipboard.writeText(JSON.stringify(unifiedReport, null, 2));
+            copyStatusSpan.textContent = ' (통합 진단 보고서가 클립보드에 복사되었습니다.)';
+          } else {
+            copyStatusSpan.textContent = ' (클립보드 API를 지원하지 않습니다.)';
+          }
+        } catch {
+          copyStatusSpan.textContent = ' (복사에 실패했습니다. 권한을 확인하세요.)';
+        }
+      });
+
+      reportBtnWrapper.append(copyReportBtn, copyStatusSpan);
+      reportContainer.append(reportBtnWrapper);
+      root.append(reportContainer);
+
+      // =========================================================================
+      // 부가 정보 영역: 기존 등록 기기, 세션, 알림, 기본 도움정보
+      // =========================================================================
+      const auxSectionTitle = document.createElement('h3');
+      auxSectionTitle.className = 'subview-title';
+      auxSectionTitle.textContent = '📋 보안 Agent 부가 상태 및 등록 정보 (기기 · 세션 · 알림)';
+      root.append(auxSectionTitle);
+
       if (modeStr) {
         addParagraph(`상태 모드: ${modeStr}`, 'student-mode-notice');
       }

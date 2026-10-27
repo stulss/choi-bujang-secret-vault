@@ -434,6 +434,13 @@ flowchart TD
 
 기존 작업 폴더를 보존한 채, 별도의 새 격리 폴더에 `git clone`하여 실행 설명서([docs/STUDENT_RUNBOOK.md](docs/STUDENT_RUNBOOK.md))대로 재현한 실측 결과와 최종 릴리스 보고서입니다. 상세 보고서는 [docs/REPRODUCTION_REPORT.md](docs/REPRODUCTION_REPORT.md)에 기술되어 있습니다.
 
+### 0. 누구나 따라 할 수 있는 3대 실행 방법 (루트 / 설치형 / 하위폴더)
+1. **[방법 1 - 가장 간단한 루트 실행]**: 저장소 최상위(`choi-bujang-secret-vault`)에서 `npm run demo` 또는 `npm start` 입력 시 브라우저에서 관제 대시보드가 즉시 실행됩니다. (`Missing script` 방지 스크립트 내장)
+2. **[방법 2 - 설치 프로그램 실행]**: `dist-installer\setup.exe`를 실행하면 일반 권한으로 자동 설치되며, 바탕화면의 바로가기 또는 `%LOCALAPPDATA%\Programs\Keshev\start-keshev.cmd`로 실행됩니다.
+3. **[방법 3 - 하위 폴더 실행]**: `cd on-client` 진입 후 `npm run demo` 실행.
+
+- **포트 충돌 해결**: `EADDRINUSE: :::5189` 발생 시 PowerShell에서 `Get-Process node | Stop-Process -Force`를 입력하여 즉시 해제할 수 있습니다.
+
 ### 1. 새 환경 재현 절차 및 관찰 결과 (학생 진술 및 실측)
 - **저장소 및 최종 커밋**: `https://github.com/stulss/choi-bujang-secret-vault.git` (브랜치: `main`)
 - **격리 재현 실측**:

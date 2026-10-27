@@ -1,0 +1,33 @@
+{
+  "name": "keshev-security-agent",
+  "displayName": "케셰브 (보안 Agent)",
+  "version": "0.2.11",
+  "author": "student",
+  "description": "ZTNA·XDR 보안 관제 및 실시간 PC 자원·보안 진단 Agent 앱",
+  "entry": "on-client/src/server.mjs",
+  "uiLayout": "control_dashboard",
+  "packaging": {
+    "type": "inno_setup",
+    "installerPath": "dist-installer/setup.exe",
+    "privilegesRequired": "lowest",
+    "installDirectory": "{localappdata}\\Programs\\Keshev",
+    "launcher": "start-keshev.cmd"
+  },
+  "runtime": {
+    "status": "PROVIDED_RUNTIME_NOT_INSTALLED",
+    "requiredHostRuntime": "ALEPH_ZTNA_HOST_RUNTIME",
+    "appAuthorizationKey": "PENDING_OPERATOR_PROVISIONING",
+    "note": "운영 앱 승인 키 및 제공 런타임은 우회하거나 가짜로 대체하지 않고, 담당자 준비 필요 항목으로 정직하게 기록함"
+  },
+  "capabilities": [
+    "system_hardware_health_monitor",
+    "network_adapter_audit",
+    "firewall_profile_readonly_inspect",
+    "windows_event_log_monitor",
+    "unified_diagnostics_report_export"
+  ],
+  "accessibility": {
+    "keyboardNavigable": true,
+    "highContrastFocus": true
+  }
+}

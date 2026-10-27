@@ -1,0 +1,42 @@
+{
+  "appName": "케셰브 (Keshev)",
+  "version": "1.0.0",
+  "dashboardLayout": "control_dashboard",
+  "theme": {
+    "palette": "dashboard-slate",
+    "primary": "#1976d2",
+    "success": "#2e7d32",
+    "warning": "#f57c00",
+    "danger": "#c62828",
+    "background": "#f8f9fa"
+  },
+  "coreFeatures": [
+    {
+      "id": "system_hardware_health",
+      "priority": 1,
+      "title": "내 PC 하드웨어 자원 실측 및 초경량 안전 마진 분석",
+      "measured": true,
+      "readOnly": true
+    },
+    {
+      "id": "network_firewall_audit",
+      "priority": 2,
+      "title": "네트워크 어댑터 구성 및 Windows 방화벽(읽기 전용)·운영 이벤트 진단",
+      "measured": true,
+      "readOnly": true,
+      "sdpSeparated": true
+    },
+    {
+      "id": "unified_diagnostics_report",
+      "priority": 3,
+      "title": "원클릭 통합 진단 보고서 내보내기 및 클립보드 복사",
+      "measured": false,
+      "readOnly": true
+    }
+  ],
+  "accessibility": {
+    "keyboardNavigable": true,
+    "highContrastFocus": true,
+    "ariaLiveAnnouncements": true
+  }
+}

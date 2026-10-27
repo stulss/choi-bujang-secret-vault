@@ -1,3 +1,6 @@
+import os from 'node:os';
+import {statfsSync} from 'node:fs';
+import {execFile} from 'node:child_process';
 import http from 'node:http';
 import {readFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
@@ -687,6 +690,148 @@ export function createOnServer(serverOptions={}) {
         send(200,{ok:true,data:{requestId,component:'on-client',version:'0.1.0',engine:{mode,code:mode==='disconnected'?'ENGINE_NOT_CONNECTED':mode==='demo'?'DEMO_ONLY':'ADAPTER_CONFIGURED'},
           ai:{configured:info?.configured===true,authorized:false,authorizationRequired:true},checkedAt:clock().toISOString(),workbenchRequiredAtRuntime:false}});return;
       }
+      if(req.method==='GET'&&url.pathname==='/api/system-health'){
+        const measuredAt = new Date().toISOString();
+        let disk = { status: 'unverifiable', reason: '권한 또는 OS 미지원으로 디스크 여유 공간을 읽을 수 없음', freeGb: null, totalGb: null, freePercent: null };
+        try {
+          const stats = statfsSync(process.cwd());
+          const freeBytes = Number(stats.bavail) * Number(stats.bsize);
+          const totalBytes = Number(stats.blocks) * Number(stats.bsize);
+          if (totalBytes > 0) {
+            disk = {
+              status: 'ok',
+              freeGb: Number((freeBytes / (1024 ** 3)).toFixed(1)),
+              totalGb: Number((totalBytes / (1024 ** 3)).toFixed(1)),
+              freePercent: Math.round((freeBytes / totalBytes) * 100),
+              unit: 'GB'
+            };
+          }
+        } catch {
+          disk = { status: 'unverifiable', reason: '파일 시스템 통계 접근 불가 (확인 불가)', freeGb: null, totalGb: null, freePercent: null };
+        }
+
+        let memory = { status: 'unverifiable', reason: '메모리 정보 접근 불가' };
+        try {
+          const totalMem = os.totalmem();
+          const freeMem = os.freemem();
+          const agentRss = process.memoryUsage().rss;
+          memory = {
+            status: 'ok',
+            agentRssMb: Number((agentRss / (1024 ** 2)).toFixed(1)),
+            freeMemGb: Number((freeMem / (1024 ** 3)).toFixed(1)),
+            totalMemGb: Number((totalMem / (1024 ** 3)).toFixed(1)),
+            freePercent: Math.round((freeMem / totalMem) * 100),
+            unit: 'MB/GB'
+          };
+        } catch {
+          memory = { status: 'unverifiable', reason: '메모리 정보 접근 불가 (확인 불가)' };
+        }
+
+        const cpu = {
+          cores: os.cpus()?.length ?? 1,
+          model: os.cpus()?.[0]?.model ?? 'Standard CPU',
+          arch: os.arch(),
+          platform: os.platform()
+        };
+
+        send(200, {
+          ok: true,
+          data: {
+            measuredAt,
+            memory,
+            disk,
+            cpu,
+            privilege: 'standard_user (일반 사용자 권한 실측)'
+          }
+        });
+        return;
+      }
+      if(req.method==='GET'&&url.pathname==='/api/system-security-audit'){
+        const measuredAt = new Date().toISOString();
+
+        // 1. 네트워크 구성 (os.networkInterfaces - 일반 사용자 권한 실측)
+        const rawNet = os.networkInterfaces();
+        const network = [];
+        for (const [iface, addrs] of Object.entries(rawNet || {})) {
+          if (!Array.isArray(addrs)) continue;
+          for (const addr of addrs) {
+            network.push({
+              interface: iface,
+              family: addr.family,
+              address: addr.address,
+              netmask: addr.netmask,
+              internal: addr.internal
+            });
+          }
+        }
+
+        // 2. 방화벽 설정 (netsh advfirewall - 읽기 전용, 설정 변경 불가)
+        const firewall = await new Promise(resolve => {
+          if (os.platform() !== 'win32') {
+            return resolve({ status: 'unverifiable', reason: 'Windows 전용 방화벽 검사 (현재 OS 미지원)' });
+          }
+          execFile('netsh.exe', ['advfirewall', 'show', 'allprofiles', 'state'], { timeout: 2500 }, (err, stdout) => {
+            if (err || !stdout) {
+              return resolve({ status: 'unverifiable', reason: '방화벽 상태 조회 불가 (권한 또는 서비스 미응답)' });
+            }
+            const profiles = [];
+            const domainMatch = stdout.match(/도메인 프로필 설정[\s\S]*?상태\s+([^\r\n]+)/);
+            const privateMatch = stdout.match(/개인 프로필 설정[\s\S]*?상태\s+([^\r\n]+)/);
+            const publicMatch = stdout.match(/공용 프로필 설정[\s\S]*?상태\s+([^\r\n]+)/);
+            profiles.push({ profile: '도메인 (Domain)', state: domainMatch ? domainMatch[1].trim() : '확인불가' });
+            profiles.push({ profile: '개인 (Private)', state: privateMatch ? privateMatch[1].trim() : '확인불가' });
+            profiles.push({ profile: '공용 (Public)', state: publicMatch ? publicMatch[1].trim() : '확인불가' });
+            resolve({
+              status: 'ok',
+              readOnly: true,
+              profiles,
+              note: '읽기 전용 조회이며 방화벽 설정은 일체 변경되지 않습니다.'
+            });
+          });
+        });
+
+        // 3. 최근 Windows 기록 경고·오류 건수 (wevtutil - Level 2, 3)
+        const eventLogs = await new Promise(resolve => {
+          if (os.platform() !== 'win32') {
+            return resolve({ status: 'unverifiable', reason: 'Windows 전용 이벤트 로그 (현재 OS 미지원)' });
+          }
+          execFile('wevtutil.exe', ['qe', 'System', '/q:*[System[(Level=2 or Level=3)]]', '/c:100', '/f:text'], { timeout: 3000 }, (errSys, outSys) => {
+            const sysCount = errSys ? null : (outSys ? (outSys.match(/Event\[/g) || []).length : 0);
+            execFile('wevtutil.exe', ['qe', 'Application', '/q:*[System[(Level=2 or Level=3)]]', '/c:100', '/f:text'], { timeout: 3000 }, (errApp, outApp) => {
+              const appCount = errApp ? null : (outApp ? (outApp.match(/Event\[/g) || []).length : 0);
+              resolve({
+                status: 'ok',
+                systemWarnErrorCount: sysCount !== null ? `${sysCount}건 (최근 최대 100건 중)` : '「확인 불가」',
+                applicationWarnErrorCount: appCount !== null ? `${appCount}건 (최근 최대 100건 중)` : '「확인 불가」',
+                isAttackOrIntrusion: false,
+                disclaimer: '이 건수는 침해나 공격 탐지 결과가 아니며, Windows 운영체제 및 응용프로그램의 일반 시스템 운영 이벤트 집계입니다.'
+              });
+            });
+          });
+        });
+
+        // 4. SDP 서버 연결 여부 (PC 조회 성공과 명확히 분리)
+        const sdpStatus = mode === 'connected' ? 'SDP 연결됨' : 'SDP 미연결';
+        const sdpNote = 'PC 하드웨어·네트워크 조회가 성공한 것과 SDP 서버 연결 여부는 무관하며 분리하여 관리됩니다.';
+
+        send(200, {
+          ok: true,
+          data: {
+            measuredAt,
+            network: { status: 'ok', interfaces: network },
+            firewall,
+            eventLogs,
+            sdp: {
+              status: sdpStatus,
+              connected: mode === 'connected',
+              mode,
+              note: sdpNote
+            },
+            privilege: 'standard_user (일반 사용자 권한, 읽기 전용)'
+          }
+        });
+        return;
+      }
       if(req.method==='GET'&&url.pathname==='/api/vulnerabilities'){
         const data=await bounded(signal=>scanner.scan({signal}));send(200,{ok:true,data});
         return;
@@ -741,5 +886,16 @@ if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
       ...(actionStartup?{sdpActionStartup:actionStartup.sdpActionStartup}:{})});
   }catch(error){sdpHost?.close();throw error;}
   if(sdpHost){server.once('close',()=>sdpHost.close());server.once('error',()=>sdpHost.close());}
+  server.on('error', err => {
+    if (err?.code === 'EADDRINUSE') {
+      console.error(`\n[오류] 포트 ${port}가 이미 사용 중입니다 (EADDRINUSE).`);
+      console.error(`[해결 방법 1 - 기존 프로세스 정리 (권장)]`);
+      console.error(`  PowerShell: Get-Process node | Stop-Process -Force`);
+      console.error(`  CMD:        taskkill /f /im node.exe`);
+      console.error(`[해결 방법 2 - 다른 포트로 실행]`);
+      console.error(`  PowerShell: $env:ON_PORT=5190; npm start`);
+      process.exit(1);
+    }
+  });
   server.listen(port,'127.0.0.1',()=>console.log(`케셰브 ${demo?'예제':'연결 확인'}: http://127.0.0.1:${port}`));
 }
