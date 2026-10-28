@@ -127,6 +127,8 @@ flowchart TD
 ```
 
 ### 1) [실측 화면] 내 PC 하드웨어 자원 및 방화벽 진단 (다크 테마)
+![내 PC 하드웨어 자원 및 방화벽 진단 실측 화면](docs/screenshots/screenshot-01-dashboard-real.png)
+
 - **실행 명령**:
   ```powershell
   tools\start-standalone.ps1
@@ -135,6 +137,8 @@ flowchart TD
 - **설명**: 일반 사용자 권한으로 현재 PC의 실제 CPU 코어 수, RAM 점유율, 디스크 잔여 용량을 계측하고, Windows 방화벽의 3대 프로필(Domain/Private/Public)이 정상 가동 중임을 읽기 전용으로 증명합니다. SDP 호스트가 미연결된 상태이므로 ZTNA 신원 영역은 안전하게 `[SDP 미연결 (ENGINE_NOT_CONNECTED)]`로 유지됩니다.
 
 ### 2) [예제 시나리오 화면] ZTNA 기기 승인 및 관제 타임라인 시뮬레이션
+![ZTNA 기기 승인 및 관제 타임라인 예제 시나리오](docs/screenshots/screenshot-04-dashboard-demo.png)
+
 - **실행 명령**:
   ```powershell
   tools\start-standalone.ps1 -Demo
@@ -143,8 +147,15 @@ flowchart TD
 - **설명**: SDP 컨트롤러가 연동되었을 때의 동작을 사전에 검증하기 위한 가상 시나리오 화면입니다. 가상 기기(`demo-device-01`), 활성 세션, 그리고 ZTNA 규칙에 따른 접속 허용/차단 기록이 타임라인 형태로 표시됩니다. *(※ 캡처 설명란에 "가상 예제 시나리오 화면"임을 명시)*
 
 ### 3) [실측 화면] Groq 초고속 개인 AI 보안 이벤트 설명
+![Groq 개인 AI 보안 이벤트 설명 화면](docs/screenshots/screenshot-02-personal-ai.png)
+
 - **화면 위치**: `http://127.0.0.1:5189/personal/`
 - **설명**: 로컬 보안 이벤트 발생 시 Groq LLM API(`openai/gpt-oss-120b`)를 통해 900ms 이내에 보안 사건의 근거, 위험도, 조치 권고사항을 사람이 검토할 수 있도록 명확히 제시합니다. API 키는 코드나 브라우저에 노출되지 않고 사용자 홈 디렉터리(`personal.json`)에 안전하게 격리됩니다.
+
+### 4) [반응형 화면] 모바일 뷰포트 최적화 레이아웃
+![모바일 뷰포트 반응형 화면](docs/screenshots/screenshot-03-responsive-mobile.png)
+
+- **설명**: 화면 너비가 좁아질 때 좌측 사이드바가 상단 내비게이션으로 전환되고, 대시보드 카드 및 상세 자원 카드들이 1열로 자동 정렬되어 모바일 환경에서도 가로 깨짐 없이 유연하게 관제할 수 있습니다.
 
 ---
 
