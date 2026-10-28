@@ -18,6 +18,8 @@
   --unknown-soft: #eceff3;
   --student: #6b3fb3;
   --student-soft: #f3edfb;
+  --card-bg: #ffffff;
+  --bg-subtle: #f8fafc;
   --radius: 8px;
   --focus: 0 0 0 3px #f5b400;
   font-family: system-ui, -apple-system, "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
@@ -47,6 +49,8 @@
     --unknown-soft: rgba(148, 163, 184, 0.15);
     --student: #c084fc;
     --student-soft: rgba(192, 132, 252, 0.15);
+    --card-bg: #131d31;
+    --bg-subtle: #1e293b;
   }
 }
 
@@ -68,6 +72,8 @@
   --unknown-soft: rgba(148, 163, 184, 0.15);
   --student: #c084fc;
   --student-soft: rgba(192, 132, 252, 0.15);
+  --card-bg: #131d31;
+  --bg-subtle: #1e293b;
 }
 
 [data-theme="light"] {
@@ -88,6 +94,8 @@
   --unknown-soft: #eceff3;
   --student: #6b3fb3;
   --student-soft: #f3edfb;
+  --card-bg: #ffffff;
+  --bg-subtle: #f8fafc;
 }
 
 * { box-sizing: border-box; }
@@ -529,7 +537,7 @@ main:focus { outline: none; }
 
 .health-container {
   margin-top: 16px;
-  background: var(--card-bg, #fff);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 16px;
@@ -711,7 +719,7 @@ main:focus { outline: none; }
   max-height: 180px;
   overflow-y: auto;
   font-size: 0.8rem;
-  background: var(--card-bg, #fff);
+  background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 4px;
   padding: 6px 10px;
@@ -987,6 +995,351 @@ input:focus-visible,
   font-weight: 600;
   color: #b71c1c;
 }
+
+/* =========================================================================
+   시각화 요소: 자원 게이지 바, 코어 인디케이터, 상태 펄스 점
+   ========================================================================= */
+.metric-meter-track {
+  background: var(--border, #e2e8f0);
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 10px 0 4px;
+}
+
+.metric-meter-bar {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease-in-out;
+}
+
+.bar-safe {
+  background: linear-gradient(90deg, #10b981, #059669);
+}
+
+.bar-warn {
+  background: linear-gradient(90deg, #f59e0b, #d97706);
+}
+
+.bar-danger {
+  background: linear-gradient(90deg, #ef4444, #dc2626);
+}
+
+.bar-cpu {
+  background: linear-gradient(90deg, #3b82f6, #2563eb);
+}
+
+.metric-meter-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.74rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.cpu-cores-indicator {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.core-chip {
+  font-size: 0.68rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 600;
+  background: var(--surface, #f8fafc);
+  border: 1px solid var(--border, #cbd5e1);
+  color: var(--muted, #64748b);
+}
+
+.core-chip.active {
+  background: rgba(59, 130, 246, 0.12);
+  color: #2563eb;
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+.status-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+
+.dot-safe {
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.7);
+}
+
+.dot-off {
+  background: #ef4444;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.7);
+}
+
+/* =========================================================================
+   반응형 레이아웃 개선 (Desktop, Tablet, Mobile)
+   ========================================================================= */
+@media (max-width: 1024px) {
+  .layout {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding: 12px 16px;
+  }
+
+  .sidebar #nav {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .sidebar #nav button {
+    flex: 1 1 auto;
+    text-align: center;
+    padding: 8px 12px;
+  }
+
+  .sidebar-note {
+    display: none;
+  }
+
+  .grid-2 {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .topbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 12px 16px;
+  }
+
+  .topbar-status {
+    flex-wrap: wrap;
+    justify-content: space-between;
+    width: 100%;
+    gap: 6px;
+  }
+
+  .dashboard-cards {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .dash-card {
+    padding: 12px;
+  }
+
+  .health-grid,
+  .audit-grid,
+  .saas-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .health-container {
+    padding: 12px;
+  }
+
+  .student-priority-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .trend-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .trend-legend {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .row .btn {
+    width: 100%;
+  }
+
+  .timeline-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+}
+
+@media (max-width: 480px) {
+  body {
+    font-size: 14px;
+  }
+
+  main {
+    padding: 12px 8px;
+  }
+
+  .dash-metric {
+    font-size: 1.25rem;
+  }
+
+  .health-item-val {
+    font-size: 1.1rem;
+  }
+
+  .audit-status-badge {
+    font-size: 0.72rem;
+  }
+}
+
+/* =========================================================================
+   다크 모드 전체 컴포넌트 배경 및 가시성 최적화
+   ========================================================================= */
+[data-theme="dark"] .student-priority-banner,
+:root:not([data-theme="light"]) .student-priority-banner {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border-color: #334155;
+  color: #f1f5f9;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .student-priority-title,
+:root:not([data-theme="light"]) .student-priority-title {
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .health-analysis-box,
+:root:not([data-theme="light"]) .health-analysis-box {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #34d399;
+}
+
+[data-theme="dark"] .health-analysis-title,
+:root:not([data-theme="light"]) .health-analysis-title {
+  color: #34d399;
+}
+
+[data-theme="dark"] .audit-disclaimer-box,
+:root:not([data-theme="light"]) .audit-disclaimer-box {
+  background: rgba(245, 158, 11, 0.1);
+  border-left-color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.25);
+  color: #fbbf24;
+}
+
+[data-theme="dark"] .audit-disclaimer-title,
+:root:not([data-theme="light"]) .audit-disclaimer-title {
+  color: #f59e0b;
+}
+
+[data-theme="dark"] .audit-status-badge.on,
+:root:not([data-theme="light"]) .audit-status-badge.on {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+[data-theme="dark"] .audit-status-badge.off,
+:root:not([data-theme="light"]) .audit-status-badge.off {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+[data-theme="dark"] .student-sdp-explain-box,
+:root:not([data-theme="light"]) .student-sdp-explain-box {
+  background: var(--surface) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+
+[data-theme="dark"] .tag-demo,
+:root:not([data-theme="light"]) .tag-demo {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.3);
+}
+
+[data-theme="dark"] .tag-unverifiable,
+:root:not([data-theme="light"]) .tag-unverifiable {
+  background: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+  border-color: rgba(148, 163, 184, 0.3);
+}
+
+[data-theme="dark"] .tag-sdp-disconnected,
+:root:not([data-theme="light"]) .tag-sdp-disconnected {
+  background: rgba(249, 115, 22, 0.15);
+  color: #fb923c;
+  border-color: rgba(249, 115, 22, 0.3);
+}
+
+[data-theme="dark"] .failure-action-box,
+:root:not([data-theme="light"]) .failure-action-box {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  border-left-color: #ef4444;
+  color: #f87171;
+}
+
+[data-theme="dark"] .failure-item-title,
+:root:not([data-theme="light"]) .failure-item-title {
+  color: #f87171;
+}
+
+[data-theme="dark"] .failure-reason,
+:root:not([data-theme="light"]) .failure-reason {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .failure-next-action,
+:root:not([data-theme="light"]) .failure-next-action {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .core-chip,
+:root:not([data-theme="light"]) .core-chip {
+  background: var(--bg);
+  border-color: var(--border);
+  color: var(--muted);
+}
+
+[data-theme="dark"] .core-chip.active,
+:root:not([data-theme="light"]) .core-chip.active {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
+[data-theme="dark"] .metric-meter-track,
+:root:not([data-theme="light"]) .metric-meter-track {
+  background: #1e293b;
+}
+
+[data-theme="dark"] .metric-meter-labels,
+:root:not([data-theme="light"]) .metric-meter-labels {
+  color: #94a3b8;
+}
+
+
 
 
 

@@ -893,6 +893,33 @@ export function createStudentView() {
         cpuSub.textContent = `${cpu?.arch || 'x64'} (${cpu?.platform || 'os'}) · ${cpu?.model || 'Standard CPU'}`;
         cpuCard.append(cpuTitle, cpuVal, cpuSub);
 
+        if (cpu && cpu.cores) {
+          const cpuBarContainer = document.createElement('div');
+          cpuBarContainer.className = 'metric-meter-track';
+          const cpuBarFill = document.createElement('div');
+          cpuBarFill.className = 'metric-meter-bar bar-cpu';
+          cpuBarFill.style.width = '100%';
+          cpuBarContainer.append(cpuBarFill);
+          cpuCard.append(cpuBarContainer);
+
+          const cpuCoresGrid = document.createElement('div');
+          cpuCoresGrid.className = 'cpu-cores-indicator';
+          const maxChips = Math.min(cpu.cores, 16);
+          for (let i = 0; i < maxChips; i++) {
+            const chip = document.createElement('span');
+            chip.className = 'core-chip active';
+            chip.textContent = `C${i + 1}`;
+            cpuCoresGrid.append(chip);
+          }
+          if (cpu.cores > 16) {
+            const moreChip = document.createElement('span');
+            moreChip.className = 'core-chip';
+            moreChip.textContent = `+${cpu.cores - 16}개`;
+            cpuCoresGrid.append(moreChip);
+          }
+          cpuCard.append(cpuCoresGrid);
+        }
+
         // 2. 메모리 카드
         const memCard = document.createElement('div');
         memCard.className = 'health-item';
@@ -913,12 +940,30 @@ export function createStudentView() {
         if (memory?.status === 'ok') {
           memVal.textContent = `RSS ${memory.agentRssMb} MB`;
           memSub.textContent = `가용 ${memory.freeMemGb} GB / 전체 ${memory.totalMemGb} GB (${memory.freePercent}% 여유)`;
+
+          const usedMemPct = Math.min(100, Math.max(0, 100 - (memory.freePercent || 0)));
+          const memBarContainer = document.createElement('div');
+          memBarContainer.className = 'metric-meter-track';
+          const memBarFill = document.createElement('div');
+          memBarFill.className = `metric-meter-bar ${usedMemPct > 85 ? 'bar-danger' : usedMemPct > 65 ? 'bar-warn' : 'bar-safe'}`;
+          memBarFill.style.width = `${usedMemPct}%`;
+          memBarContainer.append(memBarFill);
+
+          const memRatioRow = document.createElement('div');
+          memRatioRow.className = 'metric-meter-labels';
+          const memLeft = document.createElement('span');
+          memLeft.textContent = `사용 ${usedMemPct}%`;
+          const memRight = document.createElement('span');
+          memRight.textContent = `여유 ${memory.freePercent}%`;
+          memRatioRow.append(memLeft, memRight);
+
+          memCard.append(memVal, memSub, memBarContainer, memRatioRow);
         } else {
           memVal.textContent = '「확인 불가」';
           memSub.className = 'health-item-sub unverifiable';
           memSub.textContent = `사유: ${memory?.reason || '메모리 통계 접근 불가'}`;
+          memCard.append(memVal, memSub);
         }
-        memCard.append(memTitle, memVal, memSub);
 
         // 3. 디스크 카드
         const diskCard = document.createElement('div');
@@ -940,12 +985,31 @@ export function createStudentView() {
         if (disk?.status === 'ok') {
           diskVal.textContent = `${disk.freeGb} GB 여유`;
           diskSub.textContent = `잔여 ${disk.freePercent}% / 전체 ${disk.totalGb} GB (작업 드라이브)`;
+
+          const usedDiskPct = Math.min(100, Math.max(0, 100 - (disk.freePercent || 0)));
+          const usedDiskGb = (disk.totalGb - disk.freeGb).toFixed(1);
+          const diskBarContainer = document.createElement('div');
+          diskBarContainer.className = 'metric-meter-track';
+          const diskBarFill = document.createElement('div');
+          diskBarFill.className = `metric-meter-bar ${usedDiskPct > 90 ? 'bar-danger' : usedDiskPct > 75 ? 'bar-warn' : 'bar-safe'}`;
+          diskBarFill.style.width = `${usedDiskPct}%`;
+          diskBarContainer.append(diskBarFill);
+
+          const diskRatioRow = document.createElement('div');
+          diskRatioRow.className = 'metric-meter-labels';
+          const diskLeft = document.createElement('span');
+          diskLeft.textContent = `사용 ${usedDiskPct}% (${usedDiskGb} GB)`;
+          const diskRight = document.createElement('span');
+          diskRight.textContent = `여유 ${disk.freePercent}% (${disk.freeGb} GB)`;
+          diskRatioRow.append(diskLeft, diskRight);
+
+          diskCard.append(diskVal, diskSub, diskBarContainer, diskRatioRow);
         } else {
           diskVal.textContent = '「확인 불가」';
           diskSub.className = 'health-item-sub unverifiable';
           diskSub.textContent = `사유: ${disk?.reason || '디스크 통계 접근 불가'}`;
+          diskCard.append(diskVal, diskSub);
         }
-        diskCard.append(diskTitle, diskVal, diskSub);
 
         healthGrid.append(cpuCard, memCard, diskCard);
 
@@ -1152,7 +1216,9 @@ export function createStudentView() {
             const stateSpan = document.createElement('span');
             const isEnabled = p.state && (p.state.includes('ON') || p.state === '사용' || p.state === '켜짐');
             stateSpan.className = isEnabled ? 'audit-status-badge on' : 'audit-status-badge off';
-            stateSpan.textContent = isEnabled ? '사용 (ON)' : p.state;
+            const dot = document.createElement('span');
+            dot.className = `status-dot ${isEnabled ? 'dot-safe' : 'dot-off'}`;
+            stateSpan.append(dot, document.createTextNode(isEnabled ? '사용 중 (ON)' : (p.state || '꺼짐 (OFF)')));
             li.append(nameSpan, stateSpan);
             fwList.append(li);
           });

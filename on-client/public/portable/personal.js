@@ -1,4 +1,30 @@
 const $ = id => document.getElementById(id);
+
+function initTheme() {
+  const toggleBtn = $('theme-toggle');
+  let currentTheme = null;
+  try {
+    currentTheme = localStorage.getItem('keshev_theme');
+  } catch (e) {}
+  if (!currentTheme) {
+    currentTheme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  document.documentElement.setAttribute('data-theme', currentTheme);
+  if (toggleBtn) {
+    toggleBtn.textContent = currentTheme === 'dark' ? '☀️ 라이트 모드' : '🌙 다크 모드';
+    toggleBtn.addEventListener('click', () => {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      const nextTheme = isDark ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', nextTheme);
+      try {
+        localStorage.setItem('keshev_theme', nextTheme);
+      } catch (e) {}
+      toggleBtn.textContent = nextTheme === 'dark' ? '☀️ 라이트 모드' : '🌙 다크 모드';
+    });
+  }
+}
+initTheme();
+
 const ui = Object.fromEntries(['refresh', 'cancel', 'connection', 'events-status', 'events', 'event-detail', 'consent', 'explain', 'result', 'feedback', 'app-name'].map(id => [id, $(id)]));
 const labels = {
   disabled: '사용 안 함', personal: '개인 AI', disconnected: '엔진 미연결', demo: '예제', connected: '실제 연결',
