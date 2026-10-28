@@ -46,7 +46,18 @@ if ($meta.name -ne 'alekov-client-starter') { Stop-With '시작 틀 폴더가 �
 
 # 명시한 설정 파일만 전달한다. 내용·소유 SID·보호 ACL은 native startup이 최종 확인한다.
 $nativeArgument = ''
-if ($PSBoundParameters.ContainsKey('NativeHostConfig')) {
+if (-not $PSBoundParameters.ContainsKey('NativeHostConfig')) {
+  $candidateInstalled = Join-Path $env:LOCALAPPDATA 'ALEPH\AlekovPrivate-Installed\native.json'
+  $candidateDev = Join-Path $env:LOCALAPPDATA 'ALEPH\AlekovPrivate\native.json'
+  if ($root -match 'Programs\\Keshev' -and (Test-Path -LiteralPath $candidateInstalled)) {
+    $NativeHostConfig = $candidateInstalled
+  } elseif (Test-Path -LiteralPath $candidateDev) {
+    $NativeHostConfig = $candidateDev
+  } elseif (Test-Path -LiteralPath $candidateInstalled) {
+    $NativeHostConfig = $candidateInstalled
+  }
+}
+if (-not [string]::IsNullOrWhiteSpace($NativeHostConfig)) {
   if ([string]::IsNullOrWhiteSpace($NativeHostConfig) -or $NativeHostConfig -notmatch '^[A-Za-z]:\\' -or
       $NativeHostConfig -match '["\x00-\x1f\x7f]' -or $NativeHostConfig.Substring(2).Contains(':')) {
     Stop-With 'NativeHostConfig에는 따옴표·제어문자·대체 스트림이 없는 Windows 절대 파일 경로를 지정해 주세요.'
