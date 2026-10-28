@@ -75,8 +75,22 @@ if (-not [string]::IsNullOrWhiteSpace($NativeHostConfig)) {
 }
 
 # SDP 개인 자격은 별도 설정 파일로 선택한다. 이 도구는 파일 내용을 읽지 않는다.
+if (-not $PSBoundParameters.ContainsKey('SdpHostConfig') -and -not $Demo) {
+  $candidateSdpInstalled = Join-Path $env:LOCALAPPDATA 'ALEPH\AlekovPrivate-Installed\sdp-host.json'
+  $candidateSdpDev = Join-Path $env:LOCALAPPDATA 'ALEPH\AlekovPrivate\sdp-host.json'
+  $candidateSdpC = 'C:\AlekovPrivate\sdp-host.json'
+  if ($root -match 'Programs\\Keshev' -and (Test-Path -LiteralPath $candidateSdpInstalled)) {
+    $SdpHostConfig = $candidateSdpInstalled
+  } elseif (Test-Path -LiteralPath $candidateSdpDev) {
+    $SdpHostConfig = $candidateSdpDev
+  } elseif (Test-Path -LiteralPath $candidateSdpInstalled) {
+    $SdpHostConfig = $candidateSdpInstalled
+  } elseif (Test-Path -LiteralPath $candidateSdpC) {
+    $SdpHostConfig = $candidateSdpC
+  }
+}
 $sdpArgument = ''
-if ($PSBoundParameters.ContainsKey('SdpHostConfig')) {
+if (-not [string]::IsNullOrWhiteSpace($SdpHostConfig)) {
   if ($Demo) { Stop-With 'SDP 연결과 예제 모드는 함께 실행할 수 없습니다.' }
   if ([string]::IsNullOrWhiteSpace($SdpHostConfig) -or $SdpHostConfig -notmatch '^[A-Za-z]:\\' -or
       $SdpHostConfig -match '["\x00-\x1f\x7f]' -or $SdpHostConfig.Substring(2).Contains(':')) {

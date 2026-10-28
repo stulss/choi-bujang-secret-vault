@@ -42,7 +42,7 @@ function outputContent(response) {
   if (!Array.isArray(response.choices) || response.choices.length !== 1) throw own('PERSONAL_INVALID_OUTPUT');
   const choice = response.choices[0], message = choice?.message;
   if (!fields(choice, ['message', 'finish_reason'], ['index', 'logprobs']) || choice.finish_reason !== 'stop'
-      || !fields(message, ['content'], ['role', 'refusal', 'tool_calls', 'function_call', 'annotations'])
+      || !fields(message, ['content'], ['role', 'refusal', 'tool_calls', 'function_call', 'annotations', 'reasoning'])
       || ['refusal', 'tool_calls', 'function_call'].some(key => message[key] !== undefined && message[key] !== null)
       || typeof message.content !== 'string') throw own('PERSONAL_INVALID_OUTPUT');
   try { return JSON.parse(message.content); } catch { throw own('PERSONAL_INVALID_OUTPUT'); }
@@ -83,8 +83,8 @@ const systemPrompt = '사건을 설명하고 사람이 검토할 제안만 작�
   + '"evidenceIds":["제공된 근거 ID"],"reason":"제안 근거"}]}. 제공되지 않은 근거나 필드를 쓰지 않는다. 조치가 필요 없거나 허용된 조치가 없으면 proposals는 빈 배열로 둔다.';
 
 export function createPersonalAiService({ config, fetchImpl = globalThis.fetch, timeoutMs = 10000 } = {}) {
-  if (!fields(config, ['appName', 'ai']) || !fields(config.ai, ['enabled', 'provider', 'model'], ['apiKey'])
-      || typeof config.ai.enabled !== 'boolean' || !['openai', 'openrouter', 'xai'].includes(config.ai.provider)
+  if (!fields(config, ['appName', 'ai']) || !fields(config.ai, ['enabled', 'provider', 'model'], ['apiKey', 'API_KEY'])
+      || typeof config.ai.enabled !== 'boolean' || !['openai', 'openrouter', 'xai', 'groq'].includes(config.ai.provider)
       || !isPersonalModelId(config.ai.model)) throw own('PERSONAL_INVALID_CONFIGURATION');
   const { enabled, provider, model: requestedModel, apiKey } = config.ai;
   if (enabled && (typeof apiKey !== 'string' || !/^[\x21-\x7e]{8,4096}$/.test(apiKey))) throw own('PERSONAL_INVALID_CONFIGURATION');

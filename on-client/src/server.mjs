@@ -690,6 +690,32 @@ export function createOnServer(serverOptions={}) {
         send(200,{ok:true,data:{requestId,component:'on-client',version:'0.1.0',engine:{mode,code:mode==='disconnected'?'ENGINE_NOT_CONNECTED':mode==='demo'?'DEMO_ONLY':'ADAPTER_CONFIGURED'},
           ai:{configured:info?.configured===true,authorized:false,authorizationRequired:true},checkedAt:clock().toISOString(),workbenchRequiredAtRuntime:false}});return;
       }
+      if(req.method==='GET'&&url.pathname==='/api/pc/status'){
+        const measuredAt = new Date().toISOString();
+        const totalMem = os.totalmem();
+        const freeMem = os.freemem();
+        let freeGb = null, totalGb = null;
+        try {
+          const stats = statfsSync(process.cwd());
+          freeGb = Number((Number(stats.bavail) * Number(stats.bsize) / (1024 ** 3)).toFixed(1));
+          totalGb = Number((Number(stats.blocks) * Number(stats.bsize) / (1024 ** 3)).toFixed(1));
+        } catch {}
+        send(200, {
+          ok: true,
+          data: {
+            appName: '케셰브',
+            version: '0.1.0',
+            mode,
+            measuredAt,
+            memory: { totalGb: Number((totalMem / (1024 ** 3)).toFixed(1)), freeGb: Number((freeMem / (1024 ** 3)).toFixed(1)) },
+            disk: { totalGb, freeGb },
+            cpu: { cores: os.cpus()?.length ?? 1, model: os.cpus()?.[0]?.model ?? 'Standard CPU' },
+            firewall: '읽기 전용 실측 프로필 가동 중',
+            agentRssMb: Number((process.memoryUsage().rss / (1024 ** 2)).toFixed(1))
+          }
+        });
+        return;
+      }
       if(req.method==='GET'&&url.pathname==='/api/system-health'){
         const measuredAt = new Date().toISOString();
         let disk = { status: 'unverifiable', reason: '권한 또는 OS 미지원으로 디스크 여유 공간을 읽을 수 없음', freeGb: null, totalGb: null, freePercent: null };
@@ -775,12 +801,19 @@ export function createOnServer(serverOptions={}) {
               return resolve({ status: 'unverifiable', reason: '방화벽 상태 조회 불가 (권한 또는 서비스 미응답)' });
             }
             const profiles = [];
-            const domainMatch = stdout.match(/도메인 프로필 설정[\s\S]*?상태\s+([^\r\n]+)/);
-            const privateMatch = stdout.match(/개인 프로필 설정[\s\S]*?상태\s+([^\r\n]+)/);
-            const publicMatch = stdout.match(/공용 프로필 설정[\s\S]*?상태\s+([^\r\n]+)/);
-            profiles.push({ profile: '도메인 (Domain)', state: domainMatch ? domainMatch[1].trim() : '확인불가' });
-            profiles.push({ profile: '개인 (Private)', state: privateMatch ? privateMatch[1].trim() : '확인불가' });
-            profiles.push({ profile: '공용 (Public)', state: publicMatch ? publicMatch[1].trim() : '확인불가' });
+            const domainMatch = stdout.match(/(?:도메인 프로필 설정|Domain Profile Settings)[\s\S]*?(?:상태|State)\s+([^\r\n]+)/i);
+            const privateMatch = stdout.match(/(?:개인 프로필 설정|Private Profile Settings)[\s\S]*?(?:상태|State)\s+([^\r\n]+)/i);
+            const publicMatch = stdout.match(/(?:공용 프로필 설정|Public Profile Settings)[\s\S]*?(?:상태|State)\s+([^\r\n]+)/i);
+            const formatFw = m => {
+              if (!m) return '확인불가';
+              const s = m[1].trim();
+              if (s.toUpperCase() === 'ON' || s === '사용' || s === '켜짐') return 'ON (사용 중)';
+              if (s.toUpperCase() === 'OFF' || s === '사용 안 함' || s === '꺼짐') return 'OFF (꺼짐)';
+              return s;
+            };
+            profiles.push({ profile: '도메인 (Domain)', state: formatFw(domainMatch) });
+            profiles.push({ profile: '개인 (Private)', state: formatFw(privateMatch) });
+            profiles.push({ profile: '공용 (Public)', state: formatFw(publicMatch) });
             resolve({
               status: 'ok',
               readOnly: true,

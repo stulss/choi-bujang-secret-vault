@@ -103,10 +103,17 @@ function syncDashboard(type, payload) {
         } else if (status === 'loading') {
           metric.textContent = '판정 중...';
           badge.textContent = '조회 중';
+          badge.dataset.status = 'loading';
         } else if (status === 'error') {
           metric.textContent = '판정 실패';
           badge.textContent = '통신 오류';
+          badge.dataset.status = 'deny';
           desc.textContent = error?.message || '판정 요청 실패';
+        } else {
+          metric.textContent = '선택 대기';
+          badge.textContent = '대기';
+          badge.dataset.status = 'idle';
+          desc.textContent = '업무 앱 선택 시 접속 통제 판정';
         }
       }
     } else if (type === 'events') {
@@ -140,6 +147,20 @@ function syncDashboard(type, payload) {
               list.append(item);
             });
             timeline.append(list);
+          } else if (timeline) {
+            timeline.innerHTML = '<p class="muted">수집된 보안 관제 기록이 없습니다.</p>';
+          }
+        } else if (status === 'loading') {
+          metric.textContent = '조회 중...';
+          badge.textContent = '조회 중';
+          badge.dataset.status = 'loading';
+        } else {
+          metric.textContent = '-';
+          badge.textContent = '미연결';
+          badge.dataset.status = 'unknown';
+          desc.textContent = 'SDP 호스트 미연결 (관제 대기)';
+          if (timeline) {
+            timeline.innerHTML = '<p class="muted">SDP 호스트 미연결 상태입니다. (실제 XDR 서버 연결 시 관제 기록이 활성화됩니다)</p>';
           }
         }
       }
@@ -158,9 +179,16 @@ function syncDashboard(type, payload) {
         } else if (status === 'loading') {
           metric.textContent = '조회 중...';
           badge.textContent = 'OSV 조회';
+          badge.dataset.status = 'loading';
         } else if (status === 'error') {
           metric.textContent = '조회 실패';
           badge.textContent = '오류';
+          badge.dataset.status = 'deny';
+        } else {
+          metric.textContent = '점검 대기';
+          badge.textContent = '대기';
+          badge.dataset.status = 'idle';
+          desc.textContent = '설치 패키지 OSV 대조 준비';
         }
       }
     } else if (type === 'system-health') {
@@ -331,6 +359,30 @@ export function createStudentView() {
       // 목록 자체의 loading/error는 현재 로그인 정보와 별도로 표시한다.
       addListState('기기 목록', devices);
       addListState('세션 목록', sessions);
+
+      if (me?.mode === 'disconnected' || me?.error?.code === 'ENGINE_NOT_CONNECTED' || me?.error?.message?.includes('ENGINE_NOT_CONNECTED')) {
+        const sdpNotice = document.createElement('div');
+        sdpNotice.className = 'student-sdp-explain-box';
+        sdpNotice.style.marginTop = '12px';
+        sdpNotice.style.padding = '10px 12px';
+        sdpNotice.style.borderRadius = '6px';
+        sdpNotice.style.border = '1px solid var(--border, #e2e8f0)';
+        sdpNotice.style.background = 'var(--bg-subtle, #f8fafc)';
+        sdpNotice.style.fontSize = '0.85rem';
+        sdpNotice.style.lineHeight = '1.5';
+
+        const sdpTitle = document.createElement('div');
+        sdpTitle.style.fontWeight = 'bold';
+        sdpTitle.style.marginBottom = '4px';
+        sdpTitle.textContent = 'ℹ️ ZTNA / SDP 서버 연동 상태 안내';
+
+        const sdpDesc = document.createElement('div');
+        sdpDesc.className = 'muted';
+        sdpDesc.textContent = '현재 로컬 PC 단독 모드이며 SDP 인증 서버가 연결되지 않아 신원·기기·세션이 [연결 없음 / 연결 대기] 상태입니다. 아래의 PC 하드웨어 자원 및 방화벽 진단 실측은 정상 작동 중입니다. 가상 인증 데이터를 확인하시려면 -Demo 모드로 실행하세요.';
+
+        sdpNotice.append(sdpTitle, sdpDesc);
+        root.append(sdpNotice);
+      }
 
       return root;
     },
@@ -1098,8 +1150,9 @@ export function createStudentView() {
             const nameSpan = document.createElement('span');
             nameSpan.textContent = p.profile;
             const stateSpan = document.createElement('span');
-            stateSpan.className = p.state === '사용' ? 'audit-status-badge on' : 'audit-status-badge off';
-            stateSpan.textContent = p.state === '사용' ? '사용 (ON)' : p.state;
+            const isEnabled = p.state && (p.state.includes('ON') || p.state === '사용' || p.state === '켜짐');
+            stateSpan.className = isEnabled ? 'audit-status-badge on' : 'audit-status-badge off';
+            stateSpan.textContent = isEnabled ? '사용 (ON)' : p.state;
             li.append(nameSpan, stateSpan);
             fwList.append(li);
           });
@@ -1523,6 +1576,30 @@ export function createStudentView() {
         addParagraph(`상태 모드: ${modeStr}`, 'student-mode-notice');
       }
 
+      if (mode === 'disconnected' || devices?.error?.code === 'ENGINE_NOT_CONNECTED') {
+        const sdpStatusBox = document.createElement('div');
+        sdpStatusBox.className = 'student-sdp-explain-box';
+        sdpStatusBox.style.margin = '10px 0 16px 0';
+        sdpStatusBox.style.padding = '10px 14px';
+        sdpStatusBox.style.borderRadius = '6px';
+        sdpStatusBox.style.border = '1px solid var(--border, #e2e8f0)';
+        sdpStatusBox.style.background = 'var(--bg-subtle, #f8fafc)';
+        sdpStatusBox.style.fontSize = '0.85rem';
+        sdpStatusBox.style.lineHeight = '1.5';
+
+        const sdpTitle = document.createElement('div');
+        sdpTitle.style.fontWeight = 'bold';
+        sdpTitle.style.marginBottom = '4px';
+        sdpTitle.textContent = 'ℹ️ ZTNA SDP 미연결 정상 상태 안내';
+
+        const sdpDesc = document.createElement('div');
+        sdpDesc.className = 'muted';
+        sdpDesc.textContent = '현재 외부 SDP 인증 서버(호스트)가 설정되지 않은 로컬 단독 실행 상태입니다. ZTNA(Zero Trust) 규격에 따라 임의의 가상 계정/기기를 만들지 않고 「연결 없음(ENGINE_NOT_CONNECTED)」으로 정직하게 응답하는 정상 동작입니다. 로컬 PC 하드웨어(CPU/RAM/디스크) 및 방화벽 실측 보호는 상단에서 정상 가동 중이며, 가상 기기·세션 목록 화면을 확인하시려면 -Demo 옵션으로 실행하세요.';
+
+        sdpStatusBox.append(sdpTitle, sdpDesc);
+        root.append(sdpStatusBox);
+      }
+
       const deviceLabel = (status) => ({
         compliant: '보안 기준 충족(compliant)',
         noncompliant: '보안 기준 미충족(noncompliant)',
@@ -1706,6 +1783,7 @@ export function createStudentView() {
       return root;
     },
     renderVulnerabilities({ status = 'idle', mode = null, data = null, error = null } = {}) {
+      syncDashboard('vulnerabilities', { status, mode, data, error });
       const root = document.createElement('div');
       root.className = 'student-vulnerabilities-card';
 

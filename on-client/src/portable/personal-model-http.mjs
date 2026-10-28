@@ -3,7 +3,7 @@ import { types } from 'node:util';
 import { isPersonalModelId } from './personal-config.mjs';
 
 const bases = Object.freeze({ openai: 'https://api.openai.com/v1',
-  openrouter: 'https://openrouter.ai/api/v1', xai: 'https://api.x.ai/v1' });
+  openrouter: 'https://openrouter.ai/api/v1', xai: 'https://api.x.ai/v1', groq: 'https://api.groq.com/openai/v1' });
 const ownError = Symbol('personal-http-error');
 const fail = code => Object.assign(new Error(code), { code, [ownError]: true });
 const record = value => value !== null && typeof value === 'object' && !types.isProxy(value)

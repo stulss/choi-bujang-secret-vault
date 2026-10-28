@@ -483,6 +483,27 @@ flowchart TD
 - **지원 환경**: Windows 11 Home + Node.js `v24.19.0` + npm `11.17.0`
 - **미지원 / 미해결 사항**: macOS/Linux/Node 22~23 미지원, 19단계 실제 시스템 보안 조치 라이브 집행 연결 미제공.
 
+### 6. 수료용 독립 실행 및 개인 AI 연동 (최신 업데이트)
+- **현재 작동하는 기능**:
+  - **Windows 방화벽 실측 다국어 지원**: English Windows 출력(`Domain/Private/Public Profile Settings: State ON/OFF`) 및 한국어 동시 지원으로 도메인·개인·공용 프로필 실측 정상 표출(`ON (사용 중)`).
+  - **관제 대시보드 무한 로딩 해소**: SDP 엔진 미연결 시 경보 배지 및 타임라인이 `수집 중`/`로딩`에 멈추지 않고 `미연결 (SDP 호스트 미연결)`로 정상 전환.
+  - **수료용 독립 실행 서버**: 워크벤치/학원 계정 없이 단독 실행(`node src/standalone-server.mjs`) 및 사이드바 내 개인 AI 링크(`/personal/`) 자동 연동.
+  - **개인 AI 공급자 확장**: OpenAI, OpenRouter, xAI에 더해 **Groq**(`https://api.groq.com/openai/v1`) 공급자 및 `openai/gpt-oss-120b` 추론 모델 지원 완료.
+  - **AI 보안 도우미 키트 연동**: 키트 수집기(`collect-pc-snapshot.ps1`)와 케셰브 앱(`/api/pc/status`) 간 실측 연동 완료.
+- **다시 실행하는 방법**:
+  - **수료용 독립 실행 (앱 이름 아르고스 + 개인 AI)**:
+    ```powershell
+    node on-client/src/standalone-server.mjs --personal-config "$env:LOCALAPPDATA\KeshevSettings\personal.json"
+    ```
+  - **AI 보안 도우미 키트 (Claude / Codex CLI)**:
+    ```powershell
+    Set-Location "C:\Users\user\AppData\Local\ALEPH\Workbench\projects\keshev-ai-security-kit-1.0"; claude
+    ```
+  - **수료 패키지 무결성 검증**:
+    ```powershell
+    node on-client/tools/export-student-package.mjs --verify "C:\Users\user\AppData\Local\ALEPH\Workbench\projects\keshev-package"
+    ```
+
 ---
 
 ## 다음 단계의 코딩 도구에 전달할 규칙

@@ -31,8 +31,8 @@ async function inspectPath(file) {
 
 function configuration(value, env) {
   if (!fields(value, ['schema', 'ai'], ['appName']) || value.schema !== 'keshev.personal-config.v1'
-      || !fields(value.ai, ['enabled', 'provider', 'model']) || typeof value.ai.enabled !== 'boolean'
-      || !['openai', 'openrouter', 'xai'].includes(value.ai.provider) || !isPersonalModelId(value.ai.model)) throw fail();
+      || !fields(value.ai, ['enabled', 'provider', 'model'], ['API_KEY', 'apiKey']) || typeof value.ai.enabled !== 'boolean'
+      || !['openai', 'openrouter', 'xai', 'groq'].includes(value.ai.provider) || !isPersonalModelId(value.ai.model)) throw fail();
   if (value.appName !== undefined && typeof value.appName !== 'string') throw fail();
   const rawName = value.appName ?? '';
   if (/[\u0000-\u001f\u007f-\u009f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069<>]/u.test(rawName)) throw fail();
@@ -40,7 +40,7 @@ function configuration(value, env) {
   if ([...appName].length > 32) throw fail();
   let apiKey;
   if (value.ai.enabled) {
-    apiKey = env.KESHEV_PERSONAL_API_KEY;
+    apiKey = value.ai.API_KEY || value.ai.apiKey || env.KESHEV_PERSONAL_API_KEY;
     if (typeof apiKey !== 'string' || !/^[\x21-\x7e]{8,4096}$/.test(apiKey)) throw fail();
   }
   return Object.freeze({ appName, ai: Object.freeze({ ...value.ai, apiKey }) });
