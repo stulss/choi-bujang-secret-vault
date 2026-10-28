@@ -1,9 +1,10 @@
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 const userProfile = process.env.USERPROFILE;
 const folder1 = join(userProfile, 'Desktop', '보안_포트폴리오_ZTNA_Agent');
 const folder2 = join(userProfile, 'Desktop', '최부장의비밀금고_보안엔지니어링_포트폴리오');
+const projectRoot = process.cwd();
 
 function getBase64Image(filePath) {
   if (!existsSync(filePath)) return null;
@@ -57,41 +58,53 @@ function renderHtml(title, mdContentWithBase64) {
 </html>`;
 }
 
-function processFolder(targetDir, mdName, htmlName, title) {
+function processFolder(targetDir, mdName, htmlName, title, sourceMdPath = null) {
   const mdPath = join(targetDir, mdName);
   const htmlPath = join(targetDir, htmlName);
   const shotsDir = join(targetDir, 'screenshots');
 
-  if (!existsSync(mdPath)) {
-    console.error('MD not found in', targetDir);
+  let rawContent;
+  if (sourceMdPath && existsSync(sourceMdPath)) {
+    rawContent = readFileSync(sourceMdPath, 'utf8');
+  } else if (existsSync(mdPath)) {
+    rawContent = readFileSync(mdPath, 'utf8');
+  } else {
+    console.error('MD not found for', targetDir);
     return;
   }
 
-  let md = readFileSync(mdPath, 'utf8');
-
-  // Replace any docs/screenshots/ or screenshots/ with actual Base64 for HTML
-  const imageMap = {
-    'screenshot-01-dashboard-real.png': getBase64Image(join(shotsDir, 'screenshot-01-dashboard-real.png')) || getBase64Image(join(shotsDir, 'screenshot-02-endpoint-agent-real.png')),
-    'screenshot-02-endpoint-agent-real.png': getBase64Image(join(shotsDir, 'screenshot-02-endpoint-agent-real.png')) || getBase64Image(join(shotsDir, 'screenshot-01-dashboard-real.png')),
-    'screenshot-04-dashboard-demo.png': getBase64Image(join(shotsDir, 'screenshot-04-dashboard-demo.png')) || getBase64Image(join(shotsDir, 'screenshot-03-ztna-decider-demo.png')),
-    'screenshot-03-ztna-decider-demo.png': getBase64Image(join(shotsDir, 'screenshot-03-ztna-decider-demo.png')) || getBase64Image(join(shotsDir, 'screenshot-04-dashboard-demo.png')),
-    'screenshot-02-personal-ai.png': getBase64Image(join(shotsDir, 'screenshot-02-personal-ai.png')) || getBase64Image(join(shotsDir, 'screenshot-04-personal-ai-groq.png')),
-    'screenshot-04-personal-ai-groq.png': getBase64Image(join(shotsDir, 'screenshot-04-personal-ai-groq.png')) || getBase64Image(join(shotsDir, 'screenshot-02-personal-ai.png')),
-    'screenshot-03-responsive-mobile.png': getBase64Image(join(shotsDir, 'screenshot-03-responsive-mobile.png')) || getBase64Image(join(shotsDir, 'screenshot-05-mobile-responsive.png')),
-    'screenshot-05-mobile-responsive.png': getBase64Image(join(shotsDir, 'screenshot-05-mobile-responsive.png')) || getBase64Image(join(shotsDir, 'screenshot-03-responsive-mobile.png')),
-    'screenshot-01-choi-bujang-vault-web.png': getBase64Image(join(shotsDir, 'screenshot-01-choi-bujang-vault-web.png')) || getBase64Image(join(shotsDir, 'screenshot-00-choi-bujang-vault-web.png')),
-  };
-
-  // For Markdown, keep local relative paths: ./screenshots/...
-  let mdForDisk = md.replace(/docs\/screenshots\//g, './screenshots/');
+  // 1. Markdown with relative links ./screenshots/...
+  let mdForDisk = rawContent.replace(/docs\/screenshots\//g, './screenshots/');
   writeFileSync(mdPath, mdForDisk, 'utf8');
 
-  // For HTML, inline Base64 data URI so it NEVER breaks regardless of file path
-  let mdWithBase64 = md;
-  for (const [filename, base64Uri] of Object.entries(imageMap)) {
-    if (base64Uri) {
+  // 2. Base64 replacement for HTML
+  let mdWithBase64 = mdForDisk;
+
+  // Scan all images in shotsDir and project docs/screenshots
+  const candidateDirs = [shotsDir, join(projectRoot, 'docs', 'screenshots')];
+  const allImages = new Set();
+  for (const dir of candidateDirs) {
+    if (existsSync(dir)) {
+      for (const file of readdirSync(dir)) {
+        if (file.endsWith('.png') || file.endsWith('.jpg') || file.endsWith('.jpeg')) {
+          allImages.add(file);
+        }
+      }
+    }
+  }
+
+  for (const filename of allImages) {
+    let b64 = null;
+    for (const dir of candidateDirs) {
+      const p = join(dir, filename);
+      if (existsSync(p)) {
+        b64 = getBase64Image(p);
+        if (b64) break;
+      }
+    }
+    if (b64) {
       const regex = new RegExp(`(?:docs\\/screenshots\\/|\\.\\/screenshots\\/|screenshots\\/)${filename}`, 'g');
-      mdWithBase64 = mdWithBase64.replace(regex, base64Uri);
+      mdWithBase64 = mdWithBase64.replace(regex, b64);
     }
   }
 
@@ -103,5 +116,11 @@ function processFolder(targetDir, mdName, htmlName, title) {
 // 1. Update 보안_포트폴리오_ZTNA_Agent
 processFolder(folder1, '포트폴리오_ZTNA_보안Agent.md', '포트폴리오_ZTNA_보안Agent.html', '포트폴리오 · 제로 트러스트(ZTNA) 보안 Agent & 침해 방어전');
 
-// 2. Update 최부장의비밀금고_보안엔지니어링_포트폴리오
-processFolder(folder2, '포트폴리오_최부장의비밀금고.md', '포트폴리오_최부장의비밀금고.html', '포트폴리오 · 최부장의 비밀 금고 (BYTE BACK) & ZTNA 보안 Agent');
+// 2. Update 최부장의비밀금고_보안엔지니어링_포트폴리오 (Sync directly from latest PORTFOLIO.md)
+processFolder(
+  folder2,
+  '포트폴리오_최부장의비밀금고.md',
+  '포트폴리오_최부장의비밀금고.html',
+  '포트폴리오 · 최부장의 비밀 금고 (BYTE BACK) & ZTNA 보안 Agent',
+  join(projectRoot, 'PORTFOLIO.md')
+);

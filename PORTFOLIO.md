@@ -118,44 +118,50 @@ flowchart TD
 
 포트폴리오에 시연 화면을 첨부할 때는 **[실측 화면]**과 **[예제 시나리오 화면]**을 명확히 구분하여 기재합니다.
 
-```
-📁 포트폴리오 이미지 권장 구성:
-├── screenshot-01-dashboard-real.png    # [실측] 내 PC 하드웨어/방화벽 실측 및 다크 SOC 테마
-├── screenshot-02-dashboard-demo.png    # [예제] ZTNA 기기/세션 및 XDR 경보 시뮬레이션 (-Demo)
-├── screenshot-03-personal-ai.png       # [실측] Groq LLM 기반 보안 이벤트 설명 (1초 이내 응답)
-└── screenshot-04-responsive-mobile.png # [실측] 모바일 뷰포트 반응형 리플로우 화면
-```
+### 1) [실배포] 최부장 비밀 자료실 — 초기 접속 및 인증 대기 화면
+![최부장 비밀 자료실 초기 접속 화면](docs/screenshots/screenshot-01-choi-bujang-vault-login.png)
+- **접속 URL**: [https://stulss-choi-bujang-secret-vault.vercel.app/](https://stulss-choi-bujang-secret-vault.vercel.app/)
+- **보안 검증 포인트**: 로그인 전에는 브라우저 및 정적 자바스크립트에 가상 메모나 기밀이 일체 포함되어 있지 않으며, 서버리스 API 역시 토큰 없이 요청 시 접근을 거부합니다.
 
-### 1) [실측 화면] 내 PC 하드웨어 자원 및 방화벽 진단 (다크 테마)
-![내 PC 하드웨어 자원 및 방화벽 진단 실측 화면](docs/screenshots/screenshot-01-dashboard-real.png)
+---
 
-- **실행 명령**:
-  ```powershell
-  tools\start-standalone.ps1
-  ```
-- **화면 위치**: `http://127.0.0.1:5189/` 접속 후 [보호 현황]
-- **설명**: 일반 사용자 권한으로 현재 PC의 실제 CPU 코어 수, RAM 점유율, 디스크 잔여 용량을 계측하고, Windows 방화벽의 3대 프로필(Domain/Private/Public)이 정상 가동 중임을 읽기 전용으로 증명합니다. SDP 호스트가 미연결된 상태이므로 ZTNA 신원 영역은 안전하게 `[SDP 미연결 (ENGINE_NOT_CONNECTED)]`로 유지됩니다.
+### 2) [실배포] 최부장 비밀 자료실 — 사용자 인증 및 WebCrypto ECDSA 기기 승인 완료 화면
+![최부장 비밀 자료실 인증 및 기기 승인 완료 화면](docs/screenshots/screenshot-02-choi-bujang-vault-approved.png)
+- **주요 기능**: Supabase Auth 계정(`test@test.com`) 로그인 성공, WebCrypto ECDSA(P-256) 기기 키 쌍 생성 및 서버 승인 완료(`이 기기: 서버 확인 완료`), 가상 메모 CRUD 활성화 및 실제 암호화된 가상 메모 목록 렌더링
 
-### 2) [예제 시나리오 화면] ZTNA 기기 승인 및 관제 타임라인 시뮬레이션
-![ZTNA 기기 승인 및 관제 타임라인 예제 시나리오](docs/screenshots/screenshot-04-dashboard-demo.png)
+---
 
-- **실행 명령**:
-  ```powershell
-  tools\start-standalone.ps1 -Demo
-  ```
-- **화면 위치**: `http://127.0.0.1:5189/` 접속 후 상단 대시보드
-- **설명**: SDP 컨트롤러가 연동되었을 때의 동작을 사전에 검증하기 위한 가상 시나리오 화면입니다. 가상 기기(`demo-device-01`), 활성 세션, 그리고 ZTNA 규칙에 따른 접속 허용/차단 기록이 타임라인 형태로 표시됩니다. *(※ 캡처 설명란에 "가상 예제 시나리오 화면"임을 명시)*
+### 3) [실배포] 최부장 비밀 자료실 — 12단계 탈환 작전실 실시간 보안 점검 요약
+![12단계 탈환 작전실 실시간 보안 점검 요약](docs/screenshots/screenshot-03-choi-bujang-vault-ops.png)
+- **보안 검증 포인트**: 정적 데이터 은닉, 기기 서명 검증, 고위험 2차 인증 강제, XDR 120회 급증 이상 징후 탐지, 비상 복구 파이프라인의 전 항목 통과 상태를 작전실 관제 테이블에서 실시간 집계
 
-### 3) [실측 화면] Groq 초고속 개인 AI 보안 이벤트 설명
-![Groq 개인 AI 보안 이벤트 설명 화면](docs/screenshots/screenshot-02-personal-ai.png)
+---
 
-- **화면 위치**: `http://127.0.0.1:5189/personal/`
-- **설명**: 로컬 보안 이벤트 발생 시 Groq LLM API(`openai/gpt-oss-120b`)를 통해 900ms 이내에 보안 사건의 근거, 위험도, 조치 권고사항을 사람이 검토할 수 있도록 명확히 제시합니다. API 키는 코드나 브라우저에 노출되지 않고 사용자 홈 디렉터리(`personal.json`)에 안전하게 격리됩니다.
+### 4) [실측] 케셰브 ZTNA 엔드포인트 보안 대시보드 (다크 SOC 테마)
+![케셰브 엔드포인트 보안 대시보드 실측 화면](docs/screenshots/screenshot-02-endpoint-agent-real.png)
+- **로컬 실행**: `http://127.0.0.1:5189/` (`tools\start-standalone.ps1`)
+- **실측 지표**: 일반 사용자 권한으로 측정한 실제 CPU 코어 배지, RAM 점유율 동적 색상 게이지, 디스크 가용량, Windows 방화벽 3대 프로필(Domain/Private/Public) 활성 배지 표출
+- **Fail-Safe 동작**: SDP 호스트 미연결 시 임의의 가짜 계정이나 기기를 꾸며내지 않고 정직하게 `[SDP 미연결 (ENGINE_NOT_CONNECTED)]`로 안전하게 표시
 
-### 4) [반응형 화면] 모바일 뷰포트 최적화 레이아웃
-![모바일 뷰포트 반응형 화면](docs/screenshots/screenshot-03-responsive-mobile.png)
+---
 
-- **설명**: 화면 너비가 좁아질 때 좌측 사이드바가 상단 내비게이션으로 전환되고, 대시보드 카드 및 상세 자원 카드들이 1열로 자동 정렬되어 모바일 환경에서도 가로 깨짐 없이 유연하게 관제할 수 있습니다.
+### 5) [예제] ZTNA 기기/세션 판정 및 침해 경보 타임라인 (Demo 모드)
+![ZTNA 기기/세션 판정 및 침해 경보 시뮬레이션](docs/screenshots/screenshot-03-ztna-decider-demo.png)
+- **실행 명령**: `powershell -ExecutionPolicy Bypass -File .\tools\start-standalone.ps1 -Demo`
+- **시뮬레이션 내용**: SDP 컨트롤러 연동 시 가상 기기(`demo-device-01`), 활성 세션, ZTNA 접속 통제 판정 결과(허용/차단) 및 실시간 XDR 침해 경보 타임라인 사전 검증 *(※ 가상 예제 시나리오 화면)*
+
+---
+
+### 6) [실측] Groq 초고속 개인 AI 보안 이벤트 설명
+![Groq 개인 AI 보안 이벤트 설명 화면](docs/screenshots/screenshot-04-personal-ai-groq.png)
+- **접속 URL**: `http://127.0.0.1:5189/personal/`
+- **주요 기능**: 로컬 보안 이벤트 발생 시 Groq LLM API(`openai/gpt-oss-120b`)를 호출하여 900ms 이내에 보안 사고의 핵심 근거, 위험도, 권고 대응 조치를 사람이 이해하기 쉬운 문장으로 요약
+
+---
+
+### 7) [반응형] 모바일 뷰포트 최적화 레이아웃
+![모바일 뷰포트 최적화 레이아웃](docs/screenshots/screenshot-05-mobile-responsive.png)
+- **특징**: 화면 너비가 좁아질 때 좌측 고정 사이드바가 상단 내비게이션으로 유연하게 리플로우되며, 대시보드 카드와 자원 측정 위젯들이 1열로 자동 정렬되어 모바일 환경에서도 가로 깨짐 없는 관제 지원
 
 ---
 
